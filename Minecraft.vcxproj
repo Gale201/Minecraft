@@ -24,6 +24,7 @@
     <ClCompile Include="src\core\main.cpp" />
     <ClCompile Include="src\core\Minecraft.cpp" />
     <ClCompile Include="src\core\Window.cpp" />
+    <ClCompile Include="src\loaders\ModelLoader.cpp" />
     <ClCompile Include="src\render\Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -33,7 +34,10 @@
     <ClInclude Include="src\core\Log.h" />
     <ClInclude Include="src\core\Minecraft.h" />
     <ClInclude Include="src\core\Window.h" />
+    <ClInclude Include="src\loaders\ModelLoader.h" />
     <ClInclude Include="src\math\Math.h" />
+    <ClInclude Include="src\render\Mesh.h" />
+    <ClInclude Include="src\render\Model.h" />
     <ClInclude Include="src\render\Renderer.h" />
     <ClInclude Include="src\render\Triangle.h" />
     <ClInclude Include="src\render\Vertex.h" />

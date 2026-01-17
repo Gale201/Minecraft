@@ -9,6 +9,15 @@ Minecraft::Minecraft()
 	if (!window.Create(WIDTH, HEIGHT, TITLE)) return;
 
 	renderer.Initialize(WIDTH, HEIGHT);
+
+	Model model;
+	modelLoader.LoadModelFromObj("cube.obj", model);
+
+	for (int i = 0; i < model.meshes[0].vertices.size(); i++)
+	{
+		Vertex v = model.meshes[0].vertices[i];
+		LOG_INFO("%f %f %f, %f %f, %f %f %f", v.position.x, v.position.y, v.position.z, v.u, v.v, v.normal.x, v.normal.y, v.normal.z);
+	}
 }
 
 void Minecraft::Run()
@@ -21,7 +30,7 @@ void Minecraft::Run()
 	while (running)
 	{
 		clock.Tick();
-		LOG_INFO(("FPS: " + std::to_string(clock.GetFps())).c_str());
+		LOG_INFO("FPS: %f", clock.GetFps());
 
 		// Poll events
 		events.clear();

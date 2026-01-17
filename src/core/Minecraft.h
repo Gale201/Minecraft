@@ -5,6 +5,7 @@
 #include "Window.h"
 #include "../render/Renderer.h"
 #include "InputManager.h"
+#include "../loaders/ModelLoader.h"
 
 #define TITLE "Minecraft"
 #define WIDTH 720
@@ -25,4 +26,6 @@ private:
 	Window window;
 	Renderer renderer;
 	InputManager inputManager;
+	
+	ModelLoader modelLoader{ "res/objs/" };
 };
