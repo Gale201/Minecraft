@@ -1,43 +1,45 @@
 #include "Minecraft.h"
 
+#include <string>
+
 #include "Clock.h"
 #include "Log.h"
-#include <string>
+#include "../render/RenderObject.h"
+#include "../render/Camera.h"
 
 Minecraft::Minecraft()
 {
-	if (!window.Create(WIDTH, HEIGHT, TITLE)) return;
+	if (!m_Window.Create(WIDTH, HEIGHT, TITLE)) return;
 
-	renderer.Initialize(WIDTH, HEIGHT);
-
-	Model model;
-	modelLoader.LoadModelFromObj("cube.obj", model);
-
-	for (int i = 0; i < model.meshes[0].vertices.size(); i++)
-	{
-		Vertex v = model.meshes[0].vertices[i];
-		LOG_INFO("%f %f %f, %f %f, %f %f %f", v.position.x, v.position.y, v.position.z, v.u, v.v, v.normal.x, v.normal.y, v.normal.z);
-	}
+	m_Renderer.Initialize(WIDTH, HEIGHT);
 }
 
 void Minecraft::Run()
 {
+	Model model;
+	m_ModelLoader.LoadModelFromObj("cube.obj", model);
+	RenderObject cube{ model, Transform(), 0xFFFF0000 };
+
+	Camera camera{ {1,1,10}, 0.3, 0.4, 0, 0.5, WIDTH / HEIGHT, 0.1, 100 };
+
+	// Main loop
+
 	std::vector<Event> events;
 
 	Clock clock(TARGET_FPS);
 
-	bool running = true;
-	while (running)
+	m_Running = true;
+	while (m_Running)
 	{
 		clock.Tick();
 		LOG_INFO("FPS: %f", clock.GetFps());
 
 		// Poll events
 		events.clear();
-		window.PollEvents(running, events);
+		m_Window.PollEvents(m_Running, events);
 
 		// Process input events
-		inputManager.ProcessEvents(events);
+		m_InputManager.ProcessEvents(events);
 
 		// Update
 		Update(clock.GetDeltaTime());
@@ -45,11 +47,13 @@ void Minecraft::Run()
 		// Render
 		Render();
 
+		m_Renderer.DrawRenderObject(cube, camera);
+
 		// Render the frame buffer to the window
-		window.Render(renderer.GetFrameBuffer());
+		m_Window.Render(m_Renderer.GetFrameBuffer());
 	}
 
-	window.Destroy();
+	m_Window.Destroy();
 }
 
 void Minecraft::Update(float deltaTime)
@@ -59,5 +63,6 @@ void Minecraft::Update(float deltaTime)
 
 void Minecraft::Render()
 {
-	renderer.Clear(0xFF000000);
+	m_Renderer.Clear(0xFF000000);
+
 }

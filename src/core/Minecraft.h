@@ -23,9 +23,11 @@ public:
 	void Render();
 	
 private:
-	Window window;
-	Renderer renderer;
-	InputManager inputManager;
+	bool m_Running = false;
+
+	Window m_Window;
+	Renderer m_Renderer;
+	InputManager m_InputManager;
 	
-	ModelLoader modelLoader{ "res/objs/" };
+	ModelLoader m_ModelLoader{ "res/objs/" };
 };

@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
+
 #include "Triangle.h"
+#include "RenderObject.h"
+#include "Camera.h"
 
 /*
  Renderer class handles the 3d rendering of meshes to a frame buffer.
@@ -20,9 +23,14 @@ public:
 
 	void DrawTriangle(const Triangle& triangle, uint32_t color);
 
+	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
+
 	int GetWidth() const { return m_Width; }
 	int GetHeight() const { return m_Height; }
 	uint32_t* GetFrameBuffer() const { return m_FrameBuffer; }
+
+private:
+	void ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom);
 
 private:
 
@@ -31,6 +39,4 @@ private:
 
 	uint32_t* m_FrameBuffer = nullptr;
 	float* m_DepthBuffer = nullptr;
-
-	void ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom);
 };
