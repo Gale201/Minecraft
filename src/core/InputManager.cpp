@@ -46,8 +46,8 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 		{
 			m_MouseX = e.mouseX;
 			m_MouseY = e.mouseY;
-			m_MouseMotionX = e.mouseMotionX;
-			m_MouseMotionY = e.mouseMotionY;
+			m_MouseMotionX += e.mouseMotionX;
+			m_MouseMotionY += e.mouseMotionY;
 		}
 	}
 }

@@ -2,6 +2,7 @@
 
 #include "CameraController.h"
 #include "../core/Log.h"
+#include <algorithm>
 
 void CameraController::Update(float deltaTime)
 {
@@ -27,8 +28,7 @@ void CameraController::Update(float deltaTime)
 	if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
 		m_Camera.position -= upVector * m_CameraSpeed * deltaTime;
 
-	m_Camera.yaw += m_InputManager.GetMouseMotionX() * m_Sensitivity * deltaTime;
-	m_Camera.pitch += m_InputManager.GetMouseMotionY() * m_Sensitivity * deltaTime;
-	if (m_Camera.pitch > m_PitchLimit) m_Camera.pitch = m_PitchLimit;
-	else if (m_Camera.pitch < -m_PitchLimit) m_Camera.pitch = -m_PitchLimit;
+	m_Camera.yaw += m_InputManager.GetMouseMotionX() * m_Sensitivity; // * deltaTime;
+	m_Camera.pitch += m_InputManager.GetMouseMotionY() * m_Sensitivity; // *deltaTime;
+	m_Camera.pitch = std::clamp(m_Camera.pitch, -m_PitchLimit, m_PitchLimit);
 }

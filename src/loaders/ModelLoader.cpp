@@ -15,12 +15,12 @@ ModelLoader::ModelLoader(std::string modelFolderPath)
 	}
 }
 
-bool ModelLoader::LoadModelFromObj(std::string filename, Model& model)
+std::optional<Model> ModelLoader::LoadModelFromObj(const std::string fileName)
 {
 	// Open file and check if it opened successfully
-	std::ifstream file(m_ModelFolderPath + filename);
+	std::ifstream file(m_ModelFolderPath + fileName);
 	if (!file.is_open())
-		return false;
+		return {};
 
 	// Temporary storage for positions, uvs, normals, and indices
 	std::vector<Vec3f> positions;
@@ -124,9 +124,10 @@ bool ModelLoader::LoadModelFromObj(std::string filename, Model& model)
 		uvs
 	);
 
+	Model model;
 	model.meshes = meshes;
 
-	return true;
+	return model;
 }
 
 void ModelLoader::CombineParsedDataForMesh(

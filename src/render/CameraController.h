@@ -20,8 +20,8 @@ private:
 	InputManager& m_InputManager;
 	InputBindings& m_InputBindings;
 
-	float m_CameraSpeed = 5.0f;
-	float m_Sensitivity = 0.5f;
+	float m_CameraSpeed = 10.0f;
+	float m_Sensitivity = 0.001f;
 
 	float m_PitchLimit = 1.55f;
 };

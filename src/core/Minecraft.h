@@ -6,10 +6,11 @@
 #include "../render/Renderer.h"
 #include "InputManager.h"
 #include "../loaders/ModelLoader.h"
+#include "../loaders/TextureLoader.h"
 
 #define TITLE "Minecraft"
-#define WIDTH 720
-#define HEIGHT 480
+#define WIDTH 1280
+#define HEIGHT 720
 
 #define TARGET_FPS 60
 
@@ -30,4 +31,5 @@ private:
 	InputManager m_InputManager;
 	
 	ModelLoader m_ModelLoader{ "res/objs/" };
+	TextureLoader m_TextureLoader{ "res/textures/" };
 };

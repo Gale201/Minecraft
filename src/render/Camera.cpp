@@ -11,12 +11,7 @@ Mat4 Camera::GetViewMatrix() const
 	return translate * rotate;
 	*/
 
-	Vec3f forward = {
-		std::cos(pitch) * std::sin(yaw),
-		std::sin(pitch),
-		std::cos(pitch) * std::cos(yaw)
-	};
-	forward = forward.normalized();
+	Vec3f forward = -GetForward().normalized();
 
 	Vec3f worldUp = { 0, 1, 0 };
 	Vec3f right = -worldUp.Cross(forward).normalized();

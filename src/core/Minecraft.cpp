@@ -17,11 +17,20 @@ Minecraft::Minecraft()
 
 void Minecraft::Run()
 {
-	Model model;
-	m_ModelLoader.LoadModelFromObj("snowman.obj", model);
-	RenderObject cube{ model, Transform(), 0xFFFF0000 };
+	std::optional<Model> model = m_ModelLoader.LoadModelFromObj("cube.obj");
+	if (!model.has_value()) return;
 
-	Camera camera{ {1,1,10}, 0.3, 0.4, 0, 0.5, (float)WIDTH / (float)HEIGHT, 0.1, 100 };
+	Texture texture = m_TextureLoader.LoadTexture("grass.png");
+
+	std::vector<RenderObject> rObjs;
+	for (int i = 0; i < 256 * 256; i++)
+	{
+		Transform transform;
+		transform.SetPosition({ (float) (i % 256) * 2, 0.0f, (float) (i / 256) * 2 });
+		rObjs.emplace_back(model.value(), transform, texture);
+	}
+
+	Camera camera{ {1,1,10}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
 
 	InputBindings inputBindings;
 	inputBindings.AddKeyBinding(InputAction::MoveForward, Key::W);
@@ -54,12 +63,14 @@ void Minecraft::Run()
 
 		// Update
 		Update(clock.GetDeltaTime());
+
 		cameraController.Update(clock.GetDeltaTime());
 
 		// Render
 		Render();
 
-		m_Renderer.DrawRenderObject(cube, camera);
+		for (RenderObject& obj : rObjs)
+			m_Renderer.DrawRenderObject(obj, camera);
 
 		// Render the frame buffer to the window
 		m_Window.Render(m_Renderer.GetFrameBuffer());

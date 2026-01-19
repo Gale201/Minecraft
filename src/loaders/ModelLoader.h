@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <optional>
+
 #include "../render/Mesh.h"
 #include "../render/Model.h"
 
@@ -18,7 +20,7 @@ public:
 	ModelLoader(std::string objFolderPath);
 	~ModelLoader() = default;
 
-	bool LoadModelFromObj(std::string filename, Model& model);
+	std::optional<Model> LoadModelFromObj(const std::string fileName);
 
 	std::string GetModelFolderPath() const { return m_ModelFolderPath; }
 

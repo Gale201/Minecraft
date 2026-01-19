@@ -2,10 +2,11 @@
 
 #include "Model.h"
 #include "Transform.h"
+#include "Texture.h"
 
 struct RenderObject
 {
 	Model model;
 	Transform transform;
-	uint32_t color;
+	Texture texture;
 };
