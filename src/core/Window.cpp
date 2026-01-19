@@ -39,6 +39,8 @@ bool Window::Create(int width, int height, const char* title)
 		width, height
 	);
 
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+
 	m_Width = width;
 	m_Height = height;
 
@@ -94,6 +96,9 @@ void Window::PollEvents(bool& running, std::vector<Event>& outEvents)
 			case SDLK_s: event.key = Key::S; break;
 			case SDLK_d: event.key = Key::D; break;
 			case SDLK_ESCAPE: event.key = Key::ESCAPE; break;
+			case SDLK_LSHIFT:
+			case SDLK_RSHIFT: event.key = Key::SHIFT; break;
+			case SDLK_SPACE: event.key = Key::SPACE; break;
 			default: event.key = Key::UNKNOWN; break;
 			}
 			outEvents.push_back(event);
@@ -102,6 +107,8 @@ void Window::PollEvents(bool& running, std::vector<Event>& outEvents)
 			event.type = Event::Type::MOUSEMOVE;
 			event.mouseX = e.motion.x;
 			event.mouseY = e.motion.y;
+			event.mouseMotionX = e.motion.xrel;
+			event.mouseMotionY = e.motion.yrel;
 			outEvents.push_back(event);
 			break;
 		case SDL_MOUSEBUTTONDOWN:

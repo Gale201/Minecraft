@@ -11,6 +11,7 @@
 			  << "[" << mat.m[2][0] << ", " << mat.m[2][1] << ", " << mat.m[2][2] << ", " << mat.m[2][3] << "]\n" \
 			  << "[" << mat.m[3][0] << ", " << mat.m[3][1] << ", " << mat.m[3][2] << ", " << mat.m[3][3] << "]\n";
 
+
 struct Vec2f
 {
 	float x;
@@ -29,6 +30,11 @@ struct Vec2f
 		return Vec2f(x - other.x, y - other.y);
 	}
 
+	Vec2f operator-() const
+	{
+		return Vec2f(-x, -y);
+	}
+
 	Vec2f operator*(float scalar) const
 	{
 		return Vec2f(x * scalar, y * scalar);
@@ -38,6 +44,13 @@ struct Vec2f
 	{
 		x += other.x;
 		y += other.y;
+		return *this;
+	}
+
+	Vec2f& operator-=(const Vec2f& other)
+	{
+		x -= other.x;
+		y -= other.y;
 		return *this;
 	}
 };
@@ -60,6 +73,11 @@ struct Vec3f
 	{
 		return Vec3f(x - other.x, y - other.y, z - other.z);
 	}
+
+	Vec3f operator-() const
+	{ 
+		return Vec3f(-x, -y, -z);
+	}
 	
 	Vec3f operator*(float scalar) const
 	{
@@ -74,6 +92,14 @@ struct Vec3f
 		return *this;
 	}
 
+	Vec3f& operator-=(const Vec3f& other)
+	{
+		x -= other.x;
+		y -= other.y;
+		z -= other.z;
+		return *this;
+	}
+
 	float length() const
 	{
 		return std::sqrt(x * x + y * y + z * z);
@@ -84,6 +110,20 @@ struct Vec3f
 		float len = length();
 		if (len == 0.0f) return Vec3f(0, 0, 0);
 		return Vec3f(x / len, y / len, z / len);
+	}
+
+	float Dot(const Vec3f& other) const
+	{
+		return x * other.x + y * other.y + z * other.z;
+	}
+
+	Vec3f Cross(const Vec3f& other) const
+	{
+		return {
+			y * other.z - z * other.y,
+			z * other.x - x * other.z,
+			x * other.y - y * other.x
+		};
 	}
 };
 
@@ -201,6 +241,25 @@ struct Vec4f
 		z += other.z;
 		w += other.w;
 		return *this;
+	}
+
+	Vec4f& operator-=(const Vec4f& other)
+	{
+		x -= other.x;
+		y -= other.y;
+		z -= other.z;
+		w -= other.w;
+		return *this;
+	}
+
+	Vec3f ToVec3f() const
+	{
+		return { x, y, z };
+	}
+
+	static Vec4f FromVec3f(Vec3f& v, float w)
+	{
+		return { v.x, v.y, v.z, w };
 	}
 
 	static Vec4f Transform(const Vec4f& v, const Mat4& m)

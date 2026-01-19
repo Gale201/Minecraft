@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "Minecraft.h"
+#include "core/Minecraft.h"
 
 int main(int argc, char* argv[])
 {

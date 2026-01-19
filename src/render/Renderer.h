@@ -18,10 +18,11 @@ public:
 
 	bool Initialize(int width, int height);
 	void Clear(uint32_t color);
-	void DrawPixel(int x, int y, uint32_t color);
-	void DrawDepthPixel(int x, int y, float z, uint32_t color);
+	inline void DrawPixel(int x, int y, uint32_t color);
+	inline void DrawDepthPixel(int x, int y, float z, uint32_t color);
 
 	void DrawTriangle(const Triangle& triangle, uint32_t color);
+	void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
 
 	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
@@ -31,6 +32,8 @@ public:
 
 private:
 	void ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom);
+	bool IsTriangleBackFacing(const Triangle& triangle);
+	int ClipTriangleNearPlane(const Triangle& triangle, Triangle clipped[2], float nearPlane);
 
 private:
 

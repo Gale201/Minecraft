@@ -2,6 +2,8 @@
 
 void InputManager::ProcessEvents(const std::vector<Event>& events)
 {
+	m_MouseMotionX = 0;
+	m_MouseMotionY = 0;
 	m_KeysJustPressed.clear();
 	m_KeysJustReleased.clear();
 	m_MouseButtonsJustPressed.clear();
@@ -44,6 +46,8 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 		{
 			m_MouseX = e.mouseX;
 			m_MouseY = e.mouseY;
+			m_MouseMotionX = e.mouseMotionX;
+			m_MouseMotionY = e.mouseMotionY;
 		}
 	}
 }

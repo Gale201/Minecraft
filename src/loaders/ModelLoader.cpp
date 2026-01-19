@@ -46,7 +46,28 @@ bool ModelLoader::LoadModelFromObj(std::string filename, Model& model)
 		{
 			positions.push_back(position);
 		}
-		// Parsing face lines (triangles only)
+		// Parsin face lines for quads
+		else if (
+			line.starts_with("f ") &&
+			std::sscanf(
+				line.c_str(),
+				"f %d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d",
+				&vertexIndex[0], &uvIndex[0], &normalIndex[0],
+				&vertexIndex[1], &uvIndex[1], &normalIndex[1],
+				&vertexIndex[2], &uvIndex[2], &normalIndex[2],
+				&vertexIndex[3], &uvIndex[3], &normalIndex[3]
+			) == 12
+			)
+		{
+			indices.push_back({ vertexIndex[0], uvIndex[0], normalIndex[0] });
+			indices.push_back({ vertexIndex[1], uvIndex[1], normalIndex[1] });
+			indices.push_back({ vertexIndex[2], uvIndex[2], normalIndex[2] });
+
+			indices.push_back({ vertexIndex[0], uvIndex[0], normalIndex[0] });
+			indices.push_back({ vertexIndex[2], uvIndex[2], normalIndex[2] });
+			indices.push_back({ vertexIndex[3], uvIndex[3], normalIndex[3] });
+		}
+		// Parsing face lines for triangles
 		else if (
 			line.starts_with("f ") &&
 			std::sscanf(
@@ -92,17 +113,16 @@ bool ModelLoader::LoadModelFromObj(std::string filename, Model& model)
 				);
 			}
 			meshes.emplace_back();
-
 		}
-
-		CombineParsedDataForMesh(
-			meshes.back(),
-			indices,
-			positions,
-			normals,
-			uvs
-		);
 	}
+
+	CombineParsedDataForMesh(
+		meshes.back(),
+		indices,
+		positions,
+		normals,
+		uvs
+	);
 
 	model.meshes = meshes;
 

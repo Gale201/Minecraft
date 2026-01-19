@@ -8,7 +8,9 @@ enum class Key
 {
 	UNKNOWN = 0,
 	W, A, S, D,
-	ESCAPE
+	ESCAPE,
+	SPACE,
+	SHIFT
 };
 
 enum class MouseButton
@@ -35,5 +37,7 @@ struct Event
 	Key key;
 	int mouseX;
 	int mouseY;
+	int mouseMotionX;
+	int mouseMotionY;
 	MouseButton mouseButton;
 };

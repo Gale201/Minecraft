@@ -25,6 +25,8 @@ public:
 
 	int GetMouseX() const { return m_MouseX; }
 	int GetMouseY() const { return m_MouseY; }
+	int GetMouseMotionX() const { return m_MouseMotionX; }
+	int GetMouseMotionY() const { return m_MouseMotionY; }
 
 private:
 	std::unordered_map<Key, bool> m_KeysDown;
@@ -36,4 +38,6 @@ private:
 	std::unordered_map<MouseButton, bool> m_MouseButtonsDown;
 	int m_MouseX = 0;
 	int m_MouseY = 0;
+	int m_MouseMotionX = 0;
+	int m_MouseMotionY = 0;
 };
