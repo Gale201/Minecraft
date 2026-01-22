@@ -6,7 +6,7 @@
 
 struct RenderObject
 {
-	Model model;
+	Model& model;
 	Transform transform;
-	Texture texture;
+	Texture& texture;
 };

@@ -18,19 +18,29 @@ Minecraft::Minecraft()
 void Minecraft::Run()
 {
 	std::optional<Model> model = m_ModelLoader.LoadModelFromObj("cube.obj");
-	if (!model.has_value()) return;
-
-	Texture texture = m_TextureLoader.LoadTexture("grass.png");
-
-	std::vector<RenderObject> rObjs;
-	for (int i = 0; i < 256 * 256; i++)
+	if (!model.has_value())
 	{
-		Transform transform;
-		transform.SetPosition({ (float) (i % 256) * 2, 0.0f, (float) (i / 256) * 2 });
-		rObjs.emplace_back(model.value(), transform, texture);
+		LOG_INFO("Failed to load cube.obj!");
+		return;
 	}
 
-	Camera camera{ {1,1,10}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
+	std::optional<Texture> texture = m_TextureLoader.LoadTexture("grass.png");
+	if (!texture.has_value())
+	{
+		LOG_INFO("Failed to load textures!");
+		return;
+	}
+
+	std::vector<RenderObject> rObjs;
+	for (int i = 0; i < 16 * 16; i++)
+	{
+		Transform transform;
+		transform.SetPosition({ (float) (i % 16) * 2, 0.0f, (float) (i / 16) * 2 });
+		rObjs.emplace_back(model.value(), transform, texture.value());
+	}
+	m_Renderer.SetDirectionalLight({ 0.3, 1, 0.6 });
+
+	Camera camera{ {0,0,50}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
 
 	InputBindings inputBindings;
 	inputBindings.AddKeyBinding(InputAction::MoveForward, Key::W);

@@ -4,13 +4,6 @@
 
 Mat4 Camera::GetViewMatrix() const
 {
-	/*
-	Mat4 translate = Mat4::Translate(Vec3f(-position.x, -position.y, -position.z));
-	Mat4 rotate = Mat4::RotateXYZ(Vec3f(-pitch, -yaw, -roll));
-
-	return translate * rotate;
-	*/
-
 	Vec3f forward = -GetForward().normalized();
 
 	Vec3f worldUp = { 0, 1, 0 };

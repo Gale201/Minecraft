@@ -6,9 +6,8 @@
 
 void CameraController::Update(float deltaTime)
 {
-	Vec3f forwardVector = m_Camera.GetForward();
-	forwardVector.y = 0.0f;
 	Vec3f upVector{ 0.0f, 1.0f, 0.0f };
+	Vec3f forwardVector = -upVector.Cross(m_Camera.GetRight()).normalized();
 
 	if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveForward)))
 		m_Camera.position += forwardVector * m_CameraSpeed * deltaTime;

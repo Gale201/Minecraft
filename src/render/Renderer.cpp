@@ -20,6 +20,7 @@ bool Renderer::Initialize(int width, int height)
 	m_DepthBuffer = new float[width * height];
 	if (!m_FrameBuffer || !m_DepthBuffer)
 		return false;
+
 	return true;
 }
 
@@ -92,21 +93,76 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 			{
 				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
 
-				float u0w = triangle.v0.u * triangle.v0.invW;
-				float u1w = triangle.v1.u * triangle.v1.invW;
-				float u2w = triangle.v2.u * triangle.v2.invW;
-
-				float v0w = triangle.v0.v * triangle.v0.invW;
-				float v1w = triangle.v1.v * triangle.v1.invW;
-				float v2w = triangle.v2.v * triangle.v2.invW;
-
 				float invW = w0 * triangle.v0.invW + w1 * triangle.v1.invW + w2 * triangle.v2.invW;
-				float u = (w0 * u0w + w1 * u1w + w2 * u2w) / invW;
-				float v = (w0 * v0w + w1 * v1w + w2 * v2w) / invW;
+				float u = (w0 * triangle.v0.u + w1 * triangle.v1.u + w2 * triangle.v2.u) / invW;
+				float v = (w0 * triangle.v0.v + w1 * triangle.v1.v + w2 * triangle.v2.v) / invW;
 
-				DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u, v));
+				if (0)
+				{
+					DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u, v));
+				}
+				else
+				{
+					Vec3f normal = (triangle.v0.normal * w0 + triangle.v1.normal * w1 + triangle.v2.normal * w2).normalized();
+					uint32_t textureColor = texture.GetPixelAtUV(u, v);
+					DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+				}
 			}
 		}
+	}
+}
+
+void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& texture)
+{
+	Triangle sorted = SortTriangleVerticesByY(triangle);
+
+	Vertex v0 = sorted.v0;
+	Vertex v1 = sorted.v1;
+	Vertex v2 = sorted.v2;
+
+	if ((int)v1.position.y == (int)v2.position.y)
+	{
+		DrawFlatBottomTriangle(
+			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
+			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
+			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
+			texture
+		);
+	}
+	else if ((int)v0.position.y == (int)v1.position.y)
+	{
+		DrawFlatTopTriangle(
+			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
+			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
+			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
+			texture
+		);
+	}
+	else
+	{
+		float t = (v1.position.y - v0.position.y) / (v2.position.y - v0.position.y);
+		Vertex vNew;
+		vNew.position.x = v0.position.x + t * (v2.position.x - v0.position.x);
+		vNew.position.y = v1.position.y;
+		vNew.position.z = v0.position.z + t * (v2.position.z - v0.position.z);
+		vNew.u = v0.u + t * (v2.u - v0.u);
+		vNew.v = v0.v + t * (v2.v - v0.v);
+		vNew.normal = v0.normal + (v2.normal - v0.normal) * t;
+
+		vNew.invW = v0.invW + t * (v2.invW - v0.invW);
+
+		DrawFlatBottomTriangle(
+			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
+			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
+			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, vNew.normal.x, vNew.normal.y, vNew.normal.z, vNew.invW,
+			texture
+		);
+		DrawFlatTopTriangle(
+			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
+			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, vNew.normal.x, vNew.normal.y, vNew.normal.z, vNew.invW,
+			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
+			texture
+		);
 	}
 }
 
@@ -154,64 +210,6 @@ void Renderer::DrawTriangleWireframe(const Triangle& triangle, uint32_t color)
 				DrawDepthPixel(x, y, z - 0.01, color);
 			}
 		}
-	}
-}
-
-void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& texture)
-{
-	Triangle sorted = SortTriangleVerticesByY(triangle);
-
-	Vertex v0 = sorted.v0;
-	Vertex v1 = sorted.v1;
-	Vertex v2 = sorted.v2;
-
-	v0.u = v0.u * v0.invW;
-	v1.u = v1.u * v1.invW;
-	v2.u = v2.u * v2.invW;
-	v0.v = v0.v * v0.invW;
-	v1.v = v1.v * v1.invW;
-	v2.v = v1.v * v2.invW;
-
-	if ((int)v1.position.y == (int)v2.position.y)
-	{
-		DrawFlatBottomTriangle(
-			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, 0, 0, 0,
-			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, 0, 0, 0,
-			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, 0, 0, 0,
-			texture
-		);
-	}
-	else if ((int)v0.position.y == (int)v1.position.y)
-	{
-		DrawFlatTopTriangle(
-			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, 0, 0, 0,
-			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, 0, 0, 0,
-			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, 0, 0, 0,
-			texture
-		);
-	}
-	else
-	{
-		float t = (v1.position.y - v0.position.y) / (v2.position.y - v0.position.y);
-		Vertex vNew;
-		vNew.position.x = v0.position.x + t * (v2.position.x - v0.position.x);
-		vNew.position.y = v1.position.y;
-		vNew.position.z = v0.position.z + t * (v2.position.z - v0.position.z);
-		vNew.u = v0.u + t * (v2.u - v0.u);
-		vNew.v = v0.v + t * (v2.v - v0.v);
-
-		DrawFlatBottomTriangle(
-			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, 0, 0, 0,
-			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, 0, 0, 0,
-			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, 0, 0, 0,
-			texture
-		);
-		DrawFlatTopTriangle(
-			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, 0, 0, 0,
-			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, 0, 0, 0,
-			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, 0, 0, 0,
-			texture
-		);
 	}
 }
 
@@ -263,11 +261,14 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 					perspectiveVertex.y /= perspectiveVertex.w;
 					perspectiveVertex.z /= perspectiveVertex.w;
 
+					clippedVertex.u /= perspectiveVertex.w;
+					clippedVertex.v /= perspectiveVertex.w;
+
 					Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
 
 					// Convert to screen space
-					screenVertex.position.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
-					screenVertex.position.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
+					screenVertex.position.x = (int) ((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
+					screenVertex.position.y = (int) ((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
 					screenVertex.position.z = perspectiveVertex.z;
 					screenVertex.invW = 1.0f / perspectiveVertex.w;
 
@@ -330,6 +331,7 @@ Vertex Renderer::IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, floa
 	r.position.z = -nearPlane;
 	r.u = v0.u + t * (v1.u - v0.u);
 	r.v = v0.v + t * (v1.v - v0.v);
+	r.normal = v0.normal + (v1.normal - v0.normal) * t;
 
 	return r;
 }
@@ -386,12 +388,28 @@ int Renderer::ClipTriangleNearPlane(const Triangle& triangle, Triangle clipped[2
 	return 0;
 }
 
+uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color)
+{
+	float intensity = normal.Dot(lightDir);
+	intensity = std::fminf(std::fmaxf(intensity, 0.0f) + ambientLight, 1.0f);
+
+	uint8_t a = (color >> 24) & 0xFF;
+	uint8_t r = (color >> 16) & 0xFF;
+	uint8_t g = (color >> 8) & 0xFF;
+	uint8_t b = color & 0xFF;
+
+	r = (uint8_t)(r * intensity);
+	g = (uint8_t)(g * intensity);
+	b = (uint8_t)(b * intensity);
+
+	return (a << 24) | (r << 16) | (g << 8) | b;
+}
 
 void Renderer::DrawFlatBottomTriangle(
-	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0,
-	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1,
-	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2,
-	Texture texture
+	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
+	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
+	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
+	const Texture& texture
 )
 {
 	float slope_x1 = (x1 - x0) / (y1 - y0);
@@ -414,6 +432,9 @@ void Renderer::DrawFlatBottomTriangle(
 
 	float slope_zn1 = (zn1 - zn0) / (y1 - y0);
 	float slope_zn2 = (zn2 - zn0) / (y2 - y0);
+
+	float slope_invW1 = (invW1 - invW0) / (y1 - y0);
+	float slope_invW2 = (invW2 - invW0) / (y2 - y0);
 
 	for (int y = y0; y < y1; y++)
 	{
@@ -439,6 +460,9 @@ void Renderer::DrawFlatBottomTriangle(
 		float znl = zn0 + dy * slope_zn1;
 		float znr = zn0 + dy * slope_zn2;
 
+		float invWl = invW0 + dy * slope_invW1;
+		float invWr = invW0 + dy * slope_invW2;
+
 		if (xl > xr)
 		{
 			std::swap(xl, xr);
@@ -448,17 +472,18 @@ void Renderer::DrawFlatBottomTriangle(
 			std::swap(xnl, xnr);
 			std::swap(ynl, ynr);
 			std::swap(znl, znr);
+			std::swap(invWl, invWr);
 		}
 
-		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, texture);
+		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture);
 	}
 }
 
 void Renderer::DrawFlatTopTriangle(
-	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0,
-	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1,
-	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2,
-	Texture texture
+	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
+	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
+	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
+	const Texture& texture
 )
 {
 	float slope_x1 = (x2 - x0) / (y2 - y0);
@@ -481,6 +506,9 @@ void Renderer::DrawFlatTopTriangle(
 
 	float slope_zn1 = (zn2 - zn0) / (y2 - y0);
 	float slope_zn2 = (zn2 - zn1) / (y2 - y1);
+
+	float slope_invW1 = (invW2 - invW0) / (y2 - y0);
+	float slope_invW2 = (invW2 - invW1) / (y2 - y1);
 
 	for (int y = y2 - 1; y >= y0; y--)
 	{
@@ -507,6 +535,9 @@ void Renderer::DrawFlatTopTriangle(
 		float znl = zn0 + dy0 * slope_zn1;
 		float znr = zn1 + dy1 * slope_zn2;
 
+		float invWl = invW0 + dy0 * slope_invW1;
+		float invWr = invW1 + dy1 * slope_invW2;
+
 		if (xl > xr)
 		{
 			std::swap(xl, xr);
@@ -516,22 +547,23 @@ void Renderer::DrawFlatTopTriangle(
 			std::swap(xnl, xnr);
 			std::swap(ynl, ynr);
 			std::swap(znl, znr);
+			std::swap(invWl, invWr);
 		}
 
-		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, texture);
+		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture);
 	}
 }
 
 void Renderer::DrawHorizontalDepthTextureLine(
-	float x0, float x1,
-	int y,
-	float inv_z0, float inv_z1,
-	float u0_over_z, float u1_over_z,
-	float v0_over_z, float v1_over_z,
-	float xn0_over_z, float xn1_over_z,
-	float yn0_over_z, float yn1_over_z,
-	float zn0_over_z, float zn1_over_z,
-	Texture texture
+	float x0, float x1, int y,
+	float z0, float z1,
+	float u0, float u1,
+	float v0, float v1,
+	float xn0, float xn1,
+	float yn0, float yn1,
+	float zn0, float zn1,
+	float invW0, float invW1,
+	const Texture& texture
 )
 {
 	if (y < 0 || y >= m_Height) return;
@@ -539,96 +571,110 @@ void Renderer::DrawHorizontalDepthTextureLine(
 	if (x0 > x1)
 	{
 		std::swap(x0, x1);
-		std::swap(inv_z0, inv_z1);
-		std::swap(u0_over_z, u1_over_z);
-		std::swap(v0_over_z, v1_over_z);
-		std::swap(xn0_over_z, xn1_over_z);
-		std::swap(yn0_over_z, yn1_over_z);
-		std::swap(zn0_over_z, zn1_over_z);
+		std::swap(z0, z1);
+		std::swap(u0, u1);
+		std::swap(v0, v1);
+		std::swap(xn0, xn1);
+		std::swap(yn0, yn1);
+		std::swap(zn0, zn1);
+		std::swap(invW0, invW1);
 	}
 
-	float xl = x0;
-	float xr = x1;
-	float inv_zl = inv_z0;
-	float inv_zr = inv_z1;
-	float uoz_l = u0_over_z;
-	float uoz_r = u1_over_z;
-	float voz_l = v0_over_z;
-	float voz_r = v1_over_z;
-	float xnoz_l = xn0_over_z;
-	float xnoz_r = xn1_over_z;
-	float ynoz_l = yn0_over_z;
-	float ynoz_r = yn1_over_z;
-	float znoz_l = zn0_over_z;
-	float znoz_r = zn1_over_z;
-
-	if (xl < -0.5f)
+	if (x0 < -0.5f)
 	{
-		float t = (-0.5f - xl) / (float)(xr - xl);
-		inv_zl += t * (inv_zr - inv_zl);
-		uoz_l += t * (uoz_r - uoz_l);
-		voz_l += t * (voz_r - voz_l);
-		xnoz_l += t * (xnoz_r - xnoz_l);
-		ynoz_l += t * (ynoz_r - ynoz_l);
-		znoz_l += t * (znoz_r - znoz_l);
-		xl = -0.5f;
+		float t = (-0.5f - x0) / (float)(x1 - x0);
+		z0 += t * (z1 - z0);
+		u0 += t * (u1 - u0);
+		v0 += t * (v1 - v0);
+		xn0 += t * (xn1 - xn0);
+		yn0 += t * (yn1 - yn0);
+		zn0 += t * (zn1 - zn0);
+		invW0 += t * (invW1 - invW0);
+		x0 = -0.5f;
 	}
-	if (xr >= m_Width - 0.5f)
+	if (x1 >= m_Width - 0.5f)
 	{
-		float t = (m_Width - 0.5f - xl) / (float)(xr - xl);
-		inv_zr = inv_zl + t * (inv_zr - inv_zl);
-		uoz_r = uoz_l + t * (uoz_r - uoz_l);
-		voz_r = voz_l + t * (voz_r - voz_l);
-		xnoz_r = xnoz_l + t * (xnoz_r - xnoz_l);
-		ynoz_r = ynoz_l + t * (ynoz_r - ynoz_l);
-		znoz_r = znoz_l + t * (znoz_r - znoz_l);
-		xr = m_Width - 0.5f;
+		float t = (m_Width - 0.5f - x0) / (float)(x1 - x0);
+		z1 = z0 + t * (z1 - z0);
+		u1 = u0 + t * (u1 - u0);
+		v1 = v0 + t * (v1 - v0);
+		xn1 = xn0 + t * (xn1 - xn0);
+		yn1 = yn0 + t * (yn1 - yn0);
+		zn1 = zn0 + t * (zn1 - zn0);
+		invW1 = invW0 + t * (invW1 - invW0);
+		x1 = m_Width - 0.5f;
 	}
 
-	int x_start = (int)ceilf(xl - 0.5f);
-	int x_end = (int)ceilf(xr - 0.5f);
+	int x_start = (int)ceilf(x0 - 0.5f);
+	int x_end = (int)ceilf(x1 - 0.5f);
 
-	float dx = xr - xl;
+	float dx = x1 - x0;
 	if (dx <= 1e-3f)
 	{
-		int x = (int)floorf((xl + xr) * 0.5f);
-		float inv_z = (inv_zl + inv_zr) / 2;
-		float uoz = (uoz_l + uoz_r) / 2;
-		float voz = (voz_l + voz_r) / 2;
-		float xnoz = (xnoz_l + xnoz_r) / (inv_z * 2);
-		float ynoz = (ynoz_l + ynoz_r) / (inv_z * 2);
-		float znoz = (znoz_l + znoz_r) / (inv_z * 2);
+		int x = (int)floorf((x0 + x1) * 0.5f);
+		float z = (z0 + z1) / 2;
+		float u = (u0 + u1) / 2;
+		float v = (v0 + v1) / 2;
 
-		DrawDepthPixel(x, y, inv_z, texture.GetPixelAtUV(uoz / inv_z, voz / inv_z));
+		float invW = (invW0 + invW1) / 2;
+
+		float xn = (xn0 + xn1) / (invW * 2);
+		float yn = (yn0 + yn1) / (invW * 2);
+		float zn = (zn0 + zn1) / (invW * 2);
+
+		if (0)
+		{
+			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
+		}
+		else
+		{
+			Vec3f normal = Vec3f(xn, yn, zn).normalized();
+			uint32_t textureColor = texture.GetPixelAtUV(u / invW, v / invW);
+			DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+		}
 		return;
 	}
 
-	float dinv_z = (inv_zr - inv_zl) / dx;
-	float duoz = (uoz_r - uoz_l) / dx;
-	float dvoz = (voz_r - voz_l) / dx;
-	float dxnoz = (xnoz_r - xnoz_l) / dx;
-	float dynoz = (ynoz_r - ynoz_l) / dx;
-	float dznoz = (znoz_r - znoz_l) / dx;
+	float dz = (z1 - z0) / dx;
+	float du = (u1 - u0) / dx;
+	float dv = (v1 - v0) / dx;
+	float dxn = (xn1 - xn0) / dx;
+	float dyn = (yn1 - yn0) / dx;
+	float dzn = (zn1 - zn0) / dx;
+	
+	float dinvW = (invW1 - invW0) / dx;
 
-	float t2 = (x_start + 0.5f - xl);
+	float t2 = (x_start + 0.5f - x0);
 
-	float inv_z = inv_zl + t2 * dinv_z;
-	float uoz = uoz_l + t2 * duoz;
-	float voz = voz_l + t2 * dvoz;
-	float xnoz = xnoz_l + t2 * dxnoz;
-	float ynoz = ynoz_l + t2 * dynoz;
-	float znoz = znoz_l + t2 * dznoz;
+	float z = z0 + t2 * dz;
+	float u = u0 + t2 * du;
+	float v = v0 + t2 * dv;
+	float xn = xn0 + t2 * dxn;
+	float yn = yn0 + t2 * dyn;
+	float zn = zn0 + t2 * dzn;
+
+	float invW = invW0 + t2 * dinvW;
 
 	for (int x = x_start; x < x_end; x++)
 	{
+		if (0)
+		{
+			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
+		}
+		else
+		{
+			Vec3f normal = Vec3f(xn, yn, zn).normalized();
+			uint32_t textureColor = texture.GetPixelAtUV(u / invW, v / invW);
+			DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+		}
 
-		DrawDepthPixel(x, y, inv_z, texture.GetPixelAtUV(uoz / inv_z, voz / inv_z));
+		z += dz;
+		u += du;
+		v += dv;
+		xn += dxn;
+		yn += dyn;
+		zn += dzn;
 
-		inv_z += dinv_z;
-		uoz += duoz;
-		voz += dvoz;
-		xnoz += dxnoz;
-		ynoz += dynoz;
-		znoz += dznoz;
+		invW += dinvW;
 	}
 }

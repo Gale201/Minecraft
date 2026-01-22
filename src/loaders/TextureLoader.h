@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <optional>
 #include "../render/Texture.h"
 
 class TextureLoader
@@ -8,7 +9,7 @@ public:
 	TextureLoader(const std::string& texturesFolderPath);
 	~TextureLoader() = default;
 
-	Texture LoadTexture(const std::string& fileName);
+	std::optional<Texture> LoadTexture(const std::string& fileName);
 
 	std::string GetTexturesFolderPath()
 	{

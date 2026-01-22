@@ -2,6 +2,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../external/stb_image.h"
+#include "../core/Log.h"
+#include <filesystem>
 
 TextureLoader::TextureLoader(const std::string& texturesFolderPath)
 	: m_TexturesFolderPath(texturesFolderPath)
@@ -12,8 +14,10 @@ TextureLoader::TextureLoader(const std::string& texturesFolderPath)
 	}
 }
 
-Texture TextureLoader::LoadTexture(const std::string& fileName)
+std::optional<Texture> TextureLoader::LoadTexture(const std::string& fileName)
 {
+	if (!std::filesystem::exists(m_TexturesFolderPath + fileName)) return std::optional<Texture>();
+
 	int width, height, channels;
 	unsigned char* data = stbi_load(
 		(m_TexturesFolderPath + fileName).c_str(),
@@ -23,8 +27,9 @@ Texture TextureLoader::LoadTexture(const std::string& fileName)
 		4
 	);
 
-	Texture texture(width, height);
+	if (width < 1 || height < 1) return std::optional<Texture>();
 
+	Texture texture(width, height);
 	
 	for (int i = 0; i < width * height; i++)
 	{
