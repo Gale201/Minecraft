@@ -7,6 +7,8 @@
 #include "InputManager.h"
 #include "../loaders/ModelLoader.h"
 #include "../loaders/TextureLoader.h"
+#include "../world/World.h"
+#include "../render/Camera.h"
 
 #define TITLE "Minecraft"
 #define WIDTH 1280
@@ -27,9 +29,14 @@ private:
 	bool m_Running = false;
 
 	Window m_Window;
+	World m_World;
 	Renderer m_Renderer;
 	InputManager m_InputManager;
 	
 	ModelLoader m_ModelLoader{ "res/objs/" };
 	TextureLoader m_TextureLoader{ "res/textures/" };
+
+	Camera m_Camera{ {0,0,5}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
+	
+	Texture m_TextureAtlas;
 };

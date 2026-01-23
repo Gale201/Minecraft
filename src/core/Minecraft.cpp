@@ -17,30 +17,8 @@ Minecraft::Minecraft()
 
 void Minecraft::Run()
 {
-	std::optional<Model> model = m_ModelLoader.LoadModelFromObj("cube.obj");
-	if (!model.has_value())
-	{
-		LOG_INFO("Failed to load cube.obj!");
-		return;
-	}
 
-	std::optional<Texture> texture = m_TextureLoader.LoadTexture("grass.png");
-	if (!texture.has_value())
-	{
-		LOG_INFO("Failed to load textures!");
-		return;
-	}
-
-	std::vector<RenderObject> rObjs;
-	for (int i = 0; i < 16 * 16; i++)
-	{
-		Transform transform;
-		transform.SetPosition({ (float) (i % 16) * 2, 0.0f, (float) (i / 16) * 2 });
-		rObjs.emplace_back(model.value(), transform, texture.value());
-	}
-	m_Renderer.SetDirectionalLight({ 0.3, 1, 0.6 });
-
-	Camera camera{ {0,0,50}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
+	m_Renderer.SetDirectionalLight({ -0.3f, -0.6f, -1 });
 
 	InputBindings inputBindings;
 	inputBindings.AddKeyBinding(InputAction::MoveForward, Key::W);
@@ -50,7 +28,33 @@ void Minecraft::Run()
 	inputBindings.AddKeyBinding(InputAction::MoveUp, Key::SPACE);
 	inputBindings.AddKeyBinding(InputAction::MoveDown, Key::SHIFT);
 
-	CameraController cameraController{ camera, m_InputManager, inputBindings };
+	CameraController cameraController{ m_Camera, m_InputManager, inputBindings };
+
+	m_TextureAtlas = m_TextureLoader.LoadTexture("texture-atlas.png").value();
+
+	auto genChunk = [&](int x, int z) {
+		x *= 16;
+		z *= 16;
+		for (int j = 0; j < 4; j++)
+			for (int i = 0; i < 16 * 16; i++)
+			{
+				m_World.SetBlock({ x + i / 16, j + 11, z + i % 16}, BlockType::Dirt);
+			}
+
+		for (int j = 0; j < 11; j++)
+			for (int i = 0; i < 16 * 16; i++)
+			{
+				m_World.SetBlock({ x + i / 16, j, z + i % 16 }, BlockType::Stone);
+			}
+		for (int i = 0; i < 16 * 16; i++)
+		{
+			m_World.SetBlock({ x + i / 16, 15, z + i % 16 }, BlockType::Grass);
+		}
+		};
+
+	for (int x = -10; x < 10; x++)
+		for (int z = -10; z < 10; z++)
+			genChunk(x, z);
 
 	// Main loop
 
@@ -79,9 +83,6 @@ void Minecraft::Run()
 		// Render
 		Render();
 
-		for (RenderObject& obj : rObjs)
-			m_Renderer.DrawRenderObject(obj, camera);
-
 		// Render the frame buffer to the window
 		m_Window.Render(m_Renderer.GetFrameBuffer());
 	}
@@ -91,10 +92,17 @@ void Minecraft::Run()
 
 void Minecraft::Update(float deltaTime)
 {
-
+	m_World.Update();
 }
 
 void Minecraft::Render()
 {
 	m_Renderer.Clear(0xFF000000);
+
+	for (auto& [chunkPos, chunk] : m_World.GetChunks())
+	{
+		Transform t;
+		t.SetPosition(m_World.GetChunkWorldPosition(chunk.position).toVec3f());
+		m_Renderer.DrawMesh(chunk.mesh.mesh, t, m_TextureAtlas, m_Camera);
+	}
 }

@@ -6,6 +6,8 @@
 #include "Renderer.h"
 #include "../core/Log.h"
 
+// Destructor & init
+
 Renderer::~Renderer()
 {
 	delete[] m_FrameBuffer;
@@ -23,6 +25,8 @@ bool Renderer::Initialize(int width, int height)
 
 	return true;
 }
+
+// Primitive methods
 
 void Renderer::Clear(uint32_t color)
 {
@@ -50,6 +54,8 @@ inline void Renderer::DrawDepthPixel(int x, int y, float z, uint32_t color)
 		m_FrameBuffer[y * m_Width + x] = color;
 	}
 }
+
+// Drawing triangles and objects
 
 void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture)
 {
@@ -97,15 +103,15 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 				float u = (w0 * triangle.v0.u + w1 * triangle.v1.u + w2 * triangle.v2.u) / invW;
 				float v = (w0 * triangle.v0.v + w1 * triangle.v1.v + w2 * triangle.v2.v) / invW;
 
-				if (0)
-				{
-					DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u, v));
-				}
-				else
+				if (m_PerPixelLighting)
 				{
 					Vec3f normal = (triangle.v0.normal * w0 + triangle.v1.normal * w1 + triangle.v2.normal * w2).normalized();
 					uint32_t textureColor = texture.GetPixelAtUV(u, v);
 					DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+				}
+				else
+				{
+					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u, v), triangle.lightIntensity));
 				}
 			}
 		}
@@ -207,8 +213,91 @@ void Renderer::DrawTriangleWireframe(const Triangle& triangle, uint32_t color)
 			if (w0 >= 0 && w1 >= 0 && w2 >= 0 && (w0 <= 0.01f || w1 <= 0.01f || w2 <= 0.01f))
 			{
 				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
-				DrawDepthPixel(x, y, z - 0.01, color);
+				DrawDepthPixel(x, y, z - 0.01f, color);
 			}
+		}
+	}
+}
+
+void Renderer::DrawMesh(
+	const Mesh& mesh,
+	const Transform& transform,
+	const Texture& texture,
+	const Camera& camera
+)
+{
+	Mat4 modelMatrix = transform.GetMatrix();
+	Mat4 viewMatrix = camera.GetViewMatrix();
+	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
+
+	Vec3f transformedDirectionalLight = (
+		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
+	).ToVec3f(); // Add .normalized() for a classic directional light
+
+	Triangle triangle;
+	for (size_t i = 0; i < mesh.indices.size(); i += 3)
+	{
+		for (size_t j = 0; j < 3; j++)
+		{
+			// Get the model vertex from the mesh
+			const Vertex& v = mesh.vertices[mesh.indices[i + j]];
+
+			// Transform vertex from model space to world space
+			Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
+
+			// Transform world vertex to camera space
+			Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
+
+			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v });
+		}
+
+		// Back face culling (happening in camera space)
+		if (IsTriangleBackFacing(triangle))
+			continue;
+
+		// Near plane clipping (happening in camera space)
+		Triangle clipped[2];
+		int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
+
+		// Compute light intensity for the triangle
+		triangle.lightIntensity = ComputeLightIntensityForTriangle(
+			triangle,
+			transformedDirectionalLight,
+			m_AmbientLight
+		);
+
+		for (size_t c = 0; c < nClipped; c++)
+		{
+			// Loop over vertices and project them
+			for (int j = 0; j < 3; j++)
+			{
+				// Clipped vertex
+				Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
+
+				// Transform the clipped vertex to clip space
+				Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+
+				// Perspective divide
+				perspectiveVertex.x /= perspectiveVertex.w;
+				perspectiveVertex.y /= perspectiveVertex.w;
+				perspectiveVertex.z /= perspectiveVertex.w;
+
+				clippedVertex.u /= perspectiveVertex.w;
+				clippedVertex.v /= perspectiveVertex.w;
+
+				Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
+
+				// Convert to screen space
+				screenVertex.position.x = (int)((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
+				screenVertex.position.y = (int)((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
+				screenVertex.position.z = perspectiveVertex.z;
+				screenVertex.invW = 1.0f / perspectiveVertex.w;
+
+				triangle.SetVertexByIndex(j, screenVertex);
+			}
+
+			DrawTriangleBarycentric(triangle, texture);
+			//DrawTriangleWireframe(triangle, 0xFF0000FF);
 		}
 	}
 }
@@ -218,6 +307,10 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 	Mat4 modelMatrix = renderObject.transform.GetMatrix();
 	Mat4 viewMatrix = camera.GetViewMatrix();
 	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
+
+	Vec3f transformedDirectionalLight = (
+		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
+	).ToVec3f(); // Add .normalized() for a classic directional light
 
 	for (const Mesh& mesh : renderObject.model.meshes)
 	{
@@ -246,8 +339,16 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 			Triangle clipped[2];
 			int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
 			
+			// Compute light intensity for the triangle
+			triangle.lightIntensity = ComputeLightIntensityForTriangle(
+				triangle,
+				transformedDirectionalLight,
+				m_AmbientLight
+			);
+
 			for (size_t c = 0; c < nClipped; c++)
 			{
+				// Loop over vertices and project them
 				for (int j = 0; j < 3; j++)
 				{
 					// Clipped vertex
@@ -276,13 +377,16 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 				}
 
 				DrawTriangleBarycentric(triangle, renderObject.texture);
-				// DrawTriangleWireframe(triangle, 0xFF0000FF);
+				//DrawTriangleWireframe(triangle, 0xFF0000FF);
 			}
 		}
 	}
 }
 
-// private functions
+
+// Private functions
+
+// Triangle math
 
 Triangle Renderer::SortTriangleVerticesByY(const Triangle& triangle)
 {
@@ -388,10 +492,11 @@ int Renderer::ClipTriangleNearPlane(const Triangle& triangle, Triangle clipped[2
 	return 0;
 }
 
-uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color)
+// Color, light and shading
+
+uint32_t Renderer::ShadeColor(uint32_t color, float intensity)
 {
-	float intensity = normal.Dot(lightDir);
-	intensity = std::fminf(std::fmaxf(intensity, 0.0f) + ambientLight, 1.0f);
+	intensity = std::fminf(std::fmaxf(intensity, 0.0f), 1.0f);
 
 	uint8_t a = (color >> 24) & 0xFF;
 	uint8_t r = (color >> 16) & 0xFF;
@@ -404,6 +509,35 @@ uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, flo
 
 	return (a << 24) | (r << 16) | (g << 8) | b;
 }
+
+uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color)
+{
+	float intensity = normal.Dot(lightDir);
+	intensity = std::fminf(std::fmaxf(intensity, 0.0f) + ambientLight, 1.0f);
+
+	return ShadeColor(color, intensity);
+}
+
+uint32_t Renderer::ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight, uint32_t color)
+{
+	Vec3f normal = triangle.v0.position.Cross(triangle.v1.position).normalized();
+	float intensity = normal.Dot(lightDir);
+	intensity = std::fminf(std::fmaxf(intensity, 0.0f) + ambientLight, 1.0f);
+
+	return ShadeColor(color, intensity);
+}
+
+float Renderer::ComputeLightIntensityForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight)
+{
+	Vec3f e1 = triangle.v0.position - triangle.v1.position;
+	Vec3f e2 = triangle.v0.position - triangle.v2.position;
+
+	Vec3f normal = e1.Cross(e2).normalized();
+	float intensity = normal.Dot(lightDir);
+	return std::fminf(std::fmaxf(intensity, 0.0f) + ambientLight, 1.0f);
+}
+
+// Drawing flat triangles and scanlines
 
 void Renderer::DrawFlatBottomTriangle(
 	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
@@ -622,15 +756,15 @@ void Renderer::DrawHorizontalDepthTextureLine(
 		float yn = (yn0 + yn1) / (invW * 2);
 		float zn = (zn0 + zn1) / (invW * 2);
 
-		if (0)
-		{
-			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
-		}
-		else
+		if (m_PerPixelLighting)
 		{
 			Vec3f normal = Vec3f(xn, yn, zn).normalized();
 			uint32_t textureColor = texture.GetPixelAtUV(u / invW, v / invW);
 			DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+		}
+		else
+		{
+			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
 		}
 		return;
 	}
@@ -657,15 +791,15 @@ void Renderer::DrawHorizontalDepthTextureLine(
 
 	for (int x = x_start; x < x_end; x++)
 	{
-		if (0)
-		{
-			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
-		}
-		else
+		if (m_PerPixelLighting)
 		{
 			Vec3f normal = Vec3f(xn, yn, zn).normalized();
 			uint32_t textureColor = texture.GetPixelAtUV(u / invW, v / invW);
 			DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+		}
+		else
+		{
+			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
 		}
 
 		z += dz;

@@ -29,6 +29,8 @@
     <ClCompile Include="src\render\Camera.cpp" />
     <ClCompile Include="src\render\CameraController.cpp" />
     <ClCompile Include="src\render\Renderer.cpp" />
+    <ClCompile Include="src\world\BlockFace.cpp" />
+    <ClCompile Include="src\world\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\Clock.h" />
@@ -51,6 +53,11 @@
     <ClInclude Include="src\render\Transform.h" />
     <ClInclude Include="src\render\Triangle.h" />
     <ClInclude Include="src\render\Vertex.h" />
+    <ClInclude Include="src\world\Block.h" />
+    <ClInclude Include="src\world\BlockFace.h" />
+    <ClInclude Include="src\world\Chunk.h" />
+    <ClInclude Include="src\world\ChunkMesh.h" />
+    <ClInclude Include="src\world\World.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>

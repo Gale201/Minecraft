@@ -25,6 +25,7 @@ public:
 	void DrawTriangleScanline(const Triangle& triangle, const Texture& texture);
 	void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
 
+	void DrawMesh(const Mesh& mesh, const Transform& transform, const Texture& texture, const Camera& camera);
 	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
 	void SetDirectionalLight(Vec3f direction) { m_DirectionalLight = direction; }
@@ -39,7 +40,10 @@ private:
 	static bool IsTriangleBackFacing(const Triangle& triangle);
 	static Vertex IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, float nearPlane);
 	static int ClipTriangleNearPlane(const Triangle& triangle, Triangle clipped[2], float nearPlane);
+	static uint32_t ShadeColor(uint32_t color, float intensity);
 	static uint32_t ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color);
+	static uint32_t ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight, uint32_t color);
+	static float ComputeLightIntensityForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight);
 
 	void DrawFlatBottomTriangle(
 		float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
@@ -78,4 +82,6 @@ private:
 
 	Vec3f m_DirectionalLight;
 	float m_AmbientLight = 0.15f;
+
+	int m_PerPixelLighting = 0;
 };

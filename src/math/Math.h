@@ -272,3 +272,72 @@ struct Vec4f
 		);
 	}
 };
+
+struct Vec3i
+{
+	int x, y, z;
+
+	Vec3i() : x(0), y(0), z(0) {}
+	Vec3i(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {}
+
+	Vec3f toVec3f()
+	{
+		return { (float)x, (float)y, (float)z };
+	}
+
+	Vec3i operator+(const Vec3i& other) const
+	{
+		return Vec3i(x + other.x, y + other.y, z + other.z);
+	}
+
+	Vec3i operator-(const Vec3i& other) const
+	{
+		return Vec3i(x - other.x, y - other.y, z - other.z);
+	}
+
+	Vec3i operator-() const
+	{
+		return Vec3i(-x, -y, -z);
+	}
+
+	Vec3i operator*(int scalar) const
+	{
+		return Vec3i(x * scalar, y * scalar, z * scalar);
+	}
+
+	Vec3i& operator+=(const Vec3i& other)
+	{
+		x += other.x;
+		y += other.y;
+		z += other.z;
+		return *this;
+	}
+
+	Vec3i& operator-=(const Vec3i& other)
+	{
+		x -= other.x;
+		y -= other.y;
+		z -= other.z;
+		return *this;
+	}
+
+	bool operator==(const Vec3i& other) const noexcept
+	{
+		return x == other.x && y == other.y && z == other.z;
+	}
+};
+
+struct Vec3iHash
+{
+	size_t operator()(const Vec3i& v) const noexcept
+	{
+		size_t h1 = std::hash<int>{}(v.x);
+		size_t h2 = std::hash<int>{}(v.y);
+		size_t h3 = std::hash<int>{}(v.z);
+
+		size_t seed = h1;
+		seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+};

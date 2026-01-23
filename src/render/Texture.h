@@ -4,6 +4,8 @@
 class Texture
 {
 public:
+    Texture() {}
+
     Texture(int width, int height)
         : m_Width(width), m_Height(height), m_Pixels(width * height)
     {

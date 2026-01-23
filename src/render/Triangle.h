@@ -9,6 +9,7 @@ struct Triangle
 	Vertex v0;
 	Vertex v1;
 	Vertex v2;
+	float lightIntensity = 0.0f;
 
 	void SetVertexByIndex(size_t index, const Vertex& v)
 	{
