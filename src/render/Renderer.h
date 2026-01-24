@@ -49,14 +49,14 @@ private:
 		float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 		float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 		float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-		const Texture& texture
+		const Texture& texture, float lightIntensity
 	);
 
 	void DrawFlatTopTriangle(
 		float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 		float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 		float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-		const Texture& texture
+		const Texture& texture, float lightIntensity
 	);
 
 	void DrawHorizontalDepthTextureLine(
@@ -69,7 +69,8 @@ private:
 		float yn0, float yn1,
 		float zn0, float zn1,
 		float invW0, float invW1,
-		const Texture& texture
+		const Texture& texture,
+		float lightIntensity
 	);
 
 private:

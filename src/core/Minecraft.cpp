@@ -52,8 +52,8 @@ void Minecraft::Run()
 		}
 		};
 
-	for (int x = -10; x < 10; x++)
-		for (int z = -10; z < 10; z++)
+	for (int x = -3; x < 3; x++)
+		for (int z = -3; z < 3; z++)
 			genChunk(x, z);
 
 	// Main loop

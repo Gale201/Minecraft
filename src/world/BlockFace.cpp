@@ -26,11 +26,17 @@ BlockTypeInfo GetBlockTypeInfo(BlockType type)
 	}
 }
 
-void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset)
+void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvMin, Vec2f& uvMax)
 {
 	BlockTypeInfo info = GetBlockTypeInfo(type);
-	uvScale = info.uvScale;
-	uvOffset = info.uvOffset[(int)dir];
+	Vec2f uvScale = info.uvScale;
+	Vec2f uvOffset = info.uvOffset[(int)dir];
+	uvOffset.x *= uvScale.x;
+	uvOffset.y *= uvScale.y;
+
+	float insetU = 0.01f / 160.f, insetV = 0.01f / 160.f;
+	uvMin = { uvOffset.x + insetU, uvOffset.y + insetV };
+	uvMax = { uvOffset.x + uvScale.x - insetU, uvOffset.y + uvScale.y - insetV };
 }
 
 const FaceDirection FACE_DIRECTIONS[6] = {

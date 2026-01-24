@@ -132,7 +132,7 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
-			texture
+			texture, triangle.lightIntensity
 		);
 	}
 	else if ((int)v0.position.y == (int)v1.position.y)
@@ -141,7 +141,7 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
-			texture
+			texture, triangle.lightIntensity
 		);
 	}
 	else
@@ -161,13 +161,13 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, vNew.normal.x, vNew.normal.y, vNew.normal.z, vNew.invW,
-			texture
+			texture, triangle.lightIntensity
 		);
 		DrawFlatTopTriangle(
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, vNew.normal.x, vNew.normal.y, vNew.normal.z, vNew.invW,
 			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
-			texture
+			texture, triangle.lightIntensity
 		);
 	}
 }
@@ -543,7 +543,7 @@ void Renderer::DrawFlatBottomTriangle(
 	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-	const Texture& texture
+	const Texture& texture, float lightIntensity
 )
 {
 	float slope_x1 = (x1 - x0) / (y1 - y0);
@@ -609,7 +609,7 @@ void Renderer::DrawFlatBottomTriangle(
 			std::swap(invWl, invWr);
 		}
 
-		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture);
+		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture, lightIntensity);
 	}
 }
 
@@ -617,7 +617,7 @@ void Renderer::DrawFlatTopTriangle(
 	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-	const Texture& texture
+	const Texture& texture, float lightIntensity
 )
 {
 	float slope_x1 = (x2 - x0) / (y2 - y0);
@@ -684,7 +684,7 @@ void Renderer::DrawFlatTopTriangle(
 			std::swap(invWl, invWr);
 		}
 
-		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture);
+		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture, lightIntensity);
 	}
 }
 
@@ -697,7 +697,8 @@ void Renderer::DrawHorizontalDepthTextureLine(
 	float yn0, float yn1,
 	float zn0, float zn1,
 	float invW0, float invW1,
-	const Texture& texture
+	const Texture& texture,
+	float lightIntensity
 )
 {
 	if (y < 0 || y >= m_Height) return;
@@ -764,7 +765,7 @@ void Renderer::DrawHorizontalDepthTextureLine(
 		}
 		else
 		{
-			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
+			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u / invW, v / invW), lightIntensity));
 		}
 		return;
 	}
@@ -799,7 +800,7 @@ void Renderer::DrawHorizontalDepthTextureLine(
 		}
 		else
 		{
-			DrawDepthPixel(x, y, z, texture.GetPixelAtUV(u / invW, v / invW));
+			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u / invW, v / invW), lightIntensity));
 		}
 
 		z += dz;

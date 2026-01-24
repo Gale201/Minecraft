@@ -134,10 +134,10 @@ void World::AddFaceToMesh(
 		);
 		v.normal = face.normal;
 
-		Vec2f uvScale, uvOffset;
-		GetFaceUV(type, dir, uvScale, uvOffset);
-		v.u = face.uvs[i].x * uvScale.x + uvOffset.x * uvScale.x;
-		v.v = face.uvs[i].y * uvScale.y + uvOffset.y * uvScale.y;
+		Vec2f uvMin, uvMax;
+		GetFaceUV(type, dir, uvMin, uvMax);
+		v.u = uvMin.x + face.uvs[i].x * (uvMax.x - uvMin.x);
+		v.v = uvMin.y + face.uvs[i].y * (uvMax.y - uvMin.y);
 
 		mesh.vertices.push_back(v);
 	}
