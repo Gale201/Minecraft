@@ -5,6 +5,9 @@
 
 #include "Renderer.h"
 #include "../core/Log.h"
+#include "../timer/Timer.h"
+#include "../timer/AccumTimer.h"
+#include "../world/BlockFace.h"
 
 // Destructor & init
 
@@ -35,6 +38,14 @@ void Renderer::Clear(uint32_t color)
 		m_FrameBuffer[i] = color;
 		m_DepthBuffer[i] = std::numeric_limits<float>::infinity();
 	}
+
+	m_TotalScanlineTime = 0;
+	m_Time1 = 0;
+	m_Time2 = 0;
+	m_Time3 = 0;
+	m_Time4 = 0;
+	m_Time5 = 0;
+	m_Time6 = 0;
 }
 
 inline void Renderer::DrawPixel(int x, int y, uint32_t color)
@@ -118,7 +129,7 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 	}
 }
 
-void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& texture)
+void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo)
 {
 	Triangle sorted = SortTriangleVerticesByY(triangle);
 
@@ -132,7 +143,7 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
-			texture, triangle.lightIntensity
+			texture, triangle.lightIntensity, tileInfo
 		);
 	}
 	else if ((int)v0.position.y == (int)v1.position.y)
@@ -141,7 +152,7 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
-			texture, triangle.lightIntensity
+			texture, triangle.lightIntensity, tileInfo
 		);
 	}
 	else
@@ -161,13 +172,13 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, vNew.normal.x, vNew.normal.y, vNew.normal.z, vNew.invW,
-			texture, triangle.lightIntensity
+			texture, triangle.lightIntensity, tileInfo
 		);
 		DrawFlatTopTriangle(
 			v1.position.x, v1.position.y, v1.position.z, v1.u, v1.v, v1.normal.x, v1.normal.y, v1.normal.z, v1.invW,
 			vNew.position.x, vNew.position.y, vNew.position.z, vNew.u, vNew.v, vNew.normal.x, vNew.normal.y, vNew.normal.z, vNew.invW,
 			v2.position.x, v2.position.y, v2.position.z, v2.u, v2.v, v2.normal.x, v2.normal.y, v2.normal.z, v2.invW,
-			texture, triangle.lightIntensity
+			texture, triangle.lightIntensity, tileInfo
 		);
 	}
 }
@@ -210,10 +221,10 @@ void Renderer::DrawTriangleWireframe(const Triangle& triangle, uint32_t color)
 			float w2 = 1.0f - w0 - w1;
 
 			// Draw if the pixel is inside the triangle and if its on the edge
-			if (w0 >= 0 && w1 >= 0 && w2 >= 0 && (w0 <= 0.01f || w1 <= 0.01f || w2 <= 0.01f))
+			if (w0 >= 0 && w1 >= 0 && w2 >= 0 && (w0 < 0.01f || w1 < 0.01f || w2 < 0.01f))
 			{
 				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
-				DrawDepthPixel(x, y, z - 0.01f, color);
+				DrawDepthPixel(x, y, z - 0.001f, color);
 			}
 		}
 	}
@@ -226,80 +237,124 @@ void Renderer::DrawMesh(
 	const Camera& camera
 )
 {
+	uint64_t t = 0;
+	uint64_t t1 = 0;
+	uint64_t t2 = 0;
+	uint64_t t3 = 0;
+	uint64_t t4 = 0;
+	uint64_t t5 = 0;
+	uint64_t t6 = 0;
+
 	Mat4 modelMatrix = transform.GetMatrix();
 	Mat4 viewMatrix = camera.GetViewMatrix();
 	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
 
 	Vec3f transformedDirectionalLight = (
 		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
-	).ToVec3f(); // Add .normalized() for a classic directional light
-
-	Triangle triangle;
-	for (size_t i = 0; i < mesh.indices.size(); i += 3)
+		).ToVec3f(); // Add .normalized() for a classic directional light
+	
 	{
-		for (size_t j = 0; j < 3; j++)
+		AccumTimer timer5(t5);
+
+		Triangle triangle;
+		AtlasTileInfo tileInfo;
+		for (size_t i = 0; i < mesh.indices.size(); i += 3)
 		{
-			// Get the model vertex from the mesh
-			const Vertex& v = mesh.vertices[mesh.indices[i + j]];
-
-			// Transform vertex from model space to world space
-			Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
-
-			// Transform world vertex to camera space
-			Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
-
-			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v });
-		}
-
-		// Back face culling (happening in camera space)
-		if (IsTriangleBackFacing(triangle))
-			continue;
-
-		// Near plane clipping (happening in camera space)
-		Triangle clipped[2];
-		int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
-
-		// Compute light intensity for the triangle
-		triangle.lightIntensity = ComputeLightIntensityForTriangle(
-			triangle,
-			transformedDirectionalLight,
-			m_AmbientLight
-		);
-
-		for (size_t c = 0; c < nClipped; c++)
-		{
-			// Loop over vertices and project them
-			for (int j = 0; j < 3; j++)
 			{
-				// Clipped vertex
-				Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
+				AccumTimer timer6(t6);
 
-				// Transform the clipped vertex to clip space
-				Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+				{
+					AccumTimer timer1(t1);
+					for (size_t j = 0; j < 3; j++)
+					{
+						// Get the model vertex from the mesh
+						const Vertex& v = mesh.vertices[mesh.indices[i + j]];
 
-				// Perspective divide
-				perspectiveVertex.x /= perspectiveVertex.w;
-				perspectiveVertex.y /= perspectiveVertex.w;
-				perspectiveVertex.z /= perspectiveVertex.w;
+						tileInfo = v.tileInfo;
 
-				clippedVertex.u /= perspectiveVertex.w;
-				clippedVertex.v /= perspectiveVertex.w;
+						// Transform vertex from model space to world space
+						Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
 
-				Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
+						// Transform world vertex to camera space
+						Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
 
-				// Convert to screen space
-				screenVertex.position.x = (int)((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
-				screenVertex.position.y = (int)((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
-				screenVertex.position.z = perspectiveVertex.z;
-				screenVertex.invW = 1.0f / perspectiveVertex.w;
+						triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });
+					}
+				}
 
-				triangle.SetVertexByIndex(j, screenVertex);
+				{
+					AccumTimer timer2(t2);
+					// Back face culling (happening in camera space)
+					if (IsTriangleBackFacing(triangle))
+						continue;
+				}
+
+				Triangle clipped[2];
+				int nClipped;
+				{
+					AccumTimer timer3(t3);
+					// Near plane clipping (happening in camera space)
+
+					nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
+
+					// Compute light intensity for the triangle
+					triangle.lightIntensity = ComputeLightIntensityForTriangle(
+						triangle,
+						transformedDirectionalLight,
+						m_AmbientLight
+					);
+				}
+
+				{
+					AccumTimer timer4(t4);
+					for (size_t c = 0; c < nClipped; c++)
+					{
+						// Loop over vertices and project them
+						for (int j = 0; j < 3; j++)
+						{
+							// Clipped vertex
+							Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
+
+							// Transform the clipped vertex to clip space
+							Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+
+							// Perspective divide
+							perspectiveVertex.x /= perspectiveVertex.w;
+							perspectiveVertex.y /= perspectiveVertex.w;
+							perspectiveVertex.z /= perspectiveVertex.w;
+
+							clippedVertex.u /= perspectiveVertex.w;
+							clippedVertex.v /= perspectiveVertex.w;
+
+							Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
+
+							// Convert to screen space
+							screenVertex.position.x = (int)((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
+							screenVertex.position.y = (int)((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
+							screenVertex.position.z = perspectiveVertex.z;
+							screenVertex.invW = 1.0f / perspectiveVertex.w;
+
+							triangle.SetVertexByIndex(j, screenVertex);
+						}
+
+						{
+							AccumTimer scanline(t);
+							DrawTriangleScanline(triangle, texture, tileInfo);
+						}
+						//DrawTriangleWireframe(triangle, 0xFF0000FF);
+					}
+				}
 			}
-
-			DrawTriangleBarycentric(triangle, texture);
-			//DrawTriangleWireframe(triangle, 0xFF0000FF);
 		}
 	}
+	m_TotalScanlineTime += t;
+	m_Time1 += t1;
+	m_Time2 += t2;
+	m_Time3 += t3;
+	m_Time4 += t4;
+	m_Time5 += t5;
+	m_Time6 += t6;
+	
 }
 
 void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& camera)
@@ -543,7 +598,7 @@ void Renderer::DrawFlatBottomTriangle(
 	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-	const Texture& texture, float lightIntensity
+	const Texture& texture, float lightIntensity, AtlasTileInfo tileInfo
 )
 {
 	float slope_x1 = (x1 - x0) / (y1 - y0);
@@ -609,7 +664,7 @@ void Renderer::DrawFlatBottomTriangle(
 			std::swap(invWl, invWr);
 		}
 
-		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture, lightIntensity);
+		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture, lightIntensity, tileInfo);
 	}
 }
 
@@ -617,7 +672,7 @@ void Renderer::DrawFlatTopTriangle(
 	float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 	float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 	float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-	const Texture& texture, float lightIntensity
+	const Texture& texture, float lightIntensity, AtlasTileInfo tileInfo
 )
 {
 	float slope_x1 = (x2 - x0) / (y2 - y0);
@@ -684,7 +739,7 @@ void Renderer::DrawFlatTopTriangle(
 			std::swap(invWl, invWr);
 		}
 
-		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture, lightIntensity);
+		DrawHorizontalDepthTextureLine(xl, xr, y, zl, zr, ul, ur, vl, vr, xnl, xnr, ynl, ynr, znl, znr, invWl, invWr, texture, lightIntensity, tileInfo);
 	}
 }
 
@@ -698,7 +753,8 @@ void Renderer::DrawHorizontalDepthTextureLine(
 	float zn0, float zn1,
 	float invW0, float invW1,
 	const Texture& texture,
-	float lightIntensity
+	float lightIntensity,
+	AtlasTileInfo tileInfo
 )
 {
 	if (y < 0 || y >= m_Height) return;
@@ -765,7 +821,16 @@ void Renderer::DrawHorizontalDepthTextureLine(
 		}
 		else
 		{
-			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u / invW, v / invW), lightIntensity));
+			float uLocal = u / invW;
+			float vLocal = v / invW;
+
+			uLocal -= std::floorf(uLocal);
+			vLocal -= std::floorf(vLocal);
+
+			float atlasU = tileInfo.u0 + uLocal * tileInfo.uScale;
+			float atlasV = tileInfo.v0 + vLocal * tileInfo.vScale;
+
+			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), lightIntensity));
 		}
 		return;
 	}
@@ -800,7 +865,18 @@ void Renderer::DrawHorizontalDepthTextureLine(
 		}
 		else
 		{
-			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u / invW, v / invW), lightIntensity));
+			float uLocal = u / invW;
+			float vLocal = v / invW;
+
+			uLocal -= std::floorf(uLocal);
+			vLocal -= std::floorf(vLocal);
+
+			constexpr float inset = 0.01f / 160.f;
+
+			float atlasU = tileInfo.u0 + inset + uLocal * (tileInfo.uScale - 2 * inset);
+			float atlasV = tileInfo.v0 + inset + vLocal * (tileInfo.vScale - 2 * inset);
+
+			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), lightIntensity));
 		}
 
 		z += dz;

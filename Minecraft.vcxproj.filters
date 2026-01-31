@@ -128,5 +128,11 @@
     <ClInclude Include="src\world\BlockFace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\timer\Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\timer\AccumTimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

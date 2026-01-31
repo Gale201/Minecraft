@@ -7,6 +7,8 @@
 #include "../render/RenderObject.h"
 #include "../render/Camera.h"
 #include "../render/CameraController.h"
+#include "../timer/Timer.h"
+#include "../timer/AccumTimer.h"
 
 Minecraft::Minecraft()
 {
@@ -38,7 +40,7 @@ void Minecraft::Run()
 		for (int j = 0; j < 4; j++)
 			for (int i = 0; i < 16 * 16; i++)
 			{
-				m_World.SetBlock({ x + i / 16, j + 11, z + i % 16}, BlockType::Dirt);
+				m_World.SetBlock({ x + i / 32, j + 11, z + i % 16}, BlockType::Dirt);
 			}
 
 		for (int j = 0; j < 11; j++)
@@ -48,13 +50,17 @@ void Minecraft::Run()
 			}
 		for (int i = 0; i < 16 * 16; i++)
 		{
-			m_World.SetBlock({ x + i / 16, 15, z + i % 16 }, BlockType::Grass);
+			m_World.SetBlock({ x + i / 10, 15, z + i % 10 }, BlockType::Grass);
 		}
 		};
 
 	for (int x = -3; x < 3; x++)
 		for (int z = -3; z < 3; z++)
 			genChunk(x, z);
+
+	for (int i = 0; i < 0; i++)
+		m_World.SetBlock({ rand() % 90 - 45, rand() % 10 + 5, rand() % 90 - 45}, BlockType::Air);
+
 
 	// Main loop
 
@@ -65,8 +71,12 @@ void Minecraft::Run()
 	m_Running = true;
 	while (m_Running)
 	{
+		std::cout << std::endl;
+
 		clock.Tick();
 		LOG_INFO("FPS: %f", clock.GetFps());
+
+		Timer frame("Frame");
 
 		// Poll events
 		events.clear();
@@ -83,6 +93,8 @@ void Minecraft::Run()
 		// Render
 		Render();
 
+		m_Renderer.PrintTimingStats();
+		
 		// Render the frame buffer to the window
 		m_Window.Render(m_Renderer.GetFrameBuffer());
 	}
@@ -99,10 +111,16 @@ void Minecraft::Render()
 {
 	m_Renderer.Clear(0xFF000000);
 
-	for (auto& [chunkPos, chunk] : m_World.GetChunks())
 	{
-		Transform t;
-		t.SetPosition(m_World.GetChunkWorldPosition(chunk.position).toVec3f());
-		m_Renderer.DrawMesh(chunk.mesh.mesh, t, m_TextureAtlas, m_Camera);
+		int c = 0;
+		Timer timer("Render Chunks");
+		for (auto& [chunkPos, chunk] : m_World.GetChunks())
+		{
+			c += (int)chunk.mesh.mesh.indices.size() / 3;
+			Transform t;
+			t.SetPosition(m_World.GetChunkWorldPosition(chunk.position).toVec3f());
+			m_Renderer.DrawMesh(chunk.mesh.mesh, t, m_TextureAtlas, m_Camera);
+		}
+		printf("%d\n", c);
 	}
 }

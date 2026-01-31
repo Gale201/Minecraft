@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 #define PRINT_VEC3(v) std::cout << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
 #define PRINT_VEC4(v) std::cout << "(" << v.x << ", " << v.y << ", " << v.z << ", " << v.w << ")\n";
@@ -252,17 +253,17 @@ struct Vec4f
 		return *this;
 	}
 
-	Vec3f ToVec3f() const
+	inline Vec3f ToVec3f() const
 	{
 		return { x, y, z };
 	}
 
-	static Vec4f FromVec3f(Vec3f& v, float w)
+	static inline Vec4f FromVec3f(Vec3f& v, float w)
 	{
 		return { v.x, v.y, v.z, w };
 	}
 
-	static Vec4f Transform(const Vec4f& v, const Mat4& m)
+	static inline Vec4f Transform(const Vec4f& v, const Mat4& m)
 	{
 		return Vec4f(
 			v.x * m.m[0][0] + v.y * m.m[1][0] + v.z * m.m[2][0] + v.w * m.m[3][0],
@@ -341,3 +342,26 @@ struct Vec3iHash
 		return seed;
 	}
 };
+
+template<typename T>
+struct Mat3D
+{
+	size_t sizeX, sizeY, sizeZ;
+	std::vector<T> m;
+
+	Mat3D(size_t sizeX, size_t sizeY, size_t sizeZ) : sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ)
+	{
+		m.resize(sizeX * sizeY * sizeZ);
+	}
+
+	T& operator()(size_t x, size_t y, size_t z)
+	{
+		return m[(x * sizeY + y) * sizeZ + z];
+	}
+
+	const T& operator()(size_t x, size_t y, size_t z) const
+	{
+		return m[(x * sizeY + y) * sizeZ + z];
+	}
+};
+

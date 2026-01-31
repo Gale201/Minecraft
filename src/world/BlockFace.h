@@ -28,7 +28,24 @@ struct BlockTypeInfo
 	Vec2f uvScale;
 };
 
-void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset);
+enum class TileType : uint8_t
+{
+	Undefined = 0,
+	GrassSide,
+	Dirt,
+	GrassTop,
+	Stone
+};
+
+struct AtlasTileInfo
+{
+	float u0, v0;
+	float uScale, vScale;
+};
+
+void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset, int uWraps, int vWraps);
+
+AtlasTileInfo GetAtlasTileInfo(TileType type);
 
 extern const FaceDirection FACE_DIRECTIONS[6];
 

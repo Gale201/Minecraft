@@ -1,5 +1,6 @@
 #pragma once
 #include "../math/Math.h"
+#include "../world/BlockFace.h"
 
 struct Vertex
 {
@@ -7,4 +8,5 @@ struct Vertex
 	Vec3f normal;
 	float u, v;
 	float invW;
+	AtlasTileInfo tileInfo;
 };

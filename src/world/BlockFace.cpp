@@ -26,7 +26,36 @@ BlockTypeInfo GetBlockTypeInfo(BlockType type)
 	}
 }
 
-void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvMin, Vec2f& uvMax)
+AtlasTileInfo GetAtlasTileInfo(TileType type)
+{
+	switch (type)
+	{
+	case TileType::GrassSide:
+		return {
+			0.0f, 0.0f,
+			0.1f, 0.1f
+		};
+	case TileType::Dirt:
+		return {
+			0.1f, 0.0f,
+			0.1f, 0.1f
+		};
+	case TileType::GrassTop:
+		return {
+			0.2f, 0.0f,
+			0.1f, 0.1f
+		};
+	case TileType::Stone:
+		return {
+			0.3f, 0.0f,
+			0.1f, 0.1f
+		};
+	default:
+		return {};
+	}
+}
+
+void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvMin, Vec2f& uvMax, int uWraps, int vWraps)
 {
 	BlockTypeInfo info = GetBlockTypeInfo(type);
 	Vec2f uvScale = info.uvScale;
@@ -36,7 +65,7 @@ void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvMin, Vec2f& uvMax)
 
 	float insetU = 0.01f / 160.f, insetV = 0.01f / 160.f;
 	uvMin = { uvOffset.x + insetU, uvOffset.y + insetV };
-	uvMax = { uvOffset.x + uvScale.x - insetU, uvOffset.y + uvScale.y - insetV };
+	uvMax = { uvOffset.x + uvScale.x + uWraps - insetU, uvOffset.y + uvScale.y + vWraps - insetV };
 }
 
 const FaceDirection FACE_DIRECTIONS[6] = {

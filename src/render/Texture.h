@@ -4,7 +4,7 @@
 class Texture
 {
 public:
-    Texture() {}
+    Texture() : m_Width(0), m_Height(0) {};
 
     Texture(int width, int height)
         : m_Width(width), m_Height(height), m_Pixels(width * height)
@@ -19,7 +19,12 @@ public:
         int x = (int)(u * m_Width);
         int y = (int)(v * m_Height);
 
-        if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return 0;
+        //if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return 0;
+        if (x < 0) x = 0;
+		else if (x >= m_Width) x = m_Width - 1;
+		if (y < 0) y = 0;
+		else if (y >= m_Height) y = m_Height - 1;
+
         return m_Pixels[y * m_Width + x];
     }
 

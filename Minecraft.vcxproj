@@ -53,6 +53,8 @@
     <ClInclude Include="src\render\Transform.h" />
     <ClInclude Include="src\render\Triangle.h" />
     <ClInclude Include="src\render\Vertex.h" />
+    <ClInclude Include="src\timer\AccumTimer.h" />
+    <ClInclude Include="src\timer\Timer.h" />
     <ClInclude Include="src\world\Block.h" />
     <ClInclude Include="src\world\BlockFace.h" />
     <ClInclude Include="src\world\Chunk.h" />

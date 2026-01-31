@@ -22,10 +22,15 @@ public:
 	inline void DrawDepthPixel(int x, int y, float z, uint32_t color);
 
 	void DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture);
-	void DrawTriangleScanline(const Triangle& triangle, const Texture& texture);
+	void DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 	void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
 
-	void DrawMesh(const Mesh& mesh, const Transform& transform, const Texture& texture, const Camera& camera);
+	void DrawMesh(
+		const Mesh& mesh,
+		const Transform& transform,
+		const Texture& texture,
+		const Camera& camera
+	);
 	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
 	void SetDirectionalLight(Vec3f direction) { m_DirectionalLight = direction; }
@@ -33,6 +38,17 @@ public:
 	int GetWidth() const { return m_Width; }
 	int GetHeight() const { return m_Height; }
 	uint32_t* GetFrameBuffer() const { return m_FrameBuffer; }
+
+	void PrintTimingStats() const
+	{
+		printf("whole loop: %llu us\n", m_Time5);
+		printf("whole loop inside: %llu us\n", m_Time6);
+		printf("Scanline: %llu us\n", m_TotalScanlineTime);
+		printf("1.Loop: %llu us\n", m_Time1);
+		printf("Backface: %llu us\n", m_Time2);
+		printf("Clipping: %llu us\n", m_Time3);
+		printf("2.Loop: %llu us\n", m_Time4);
+	}
 
 private:
 	static Triangle SortTriangleVerticesByY(const Triangle& triangle);
@@ -49,14 +65,14 @@ private:
 		float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 		float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 		float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-		const Texture& texture, float lightIntensity
+		const Texture& texture, float lightIntensity, AtlasTileInfo tileInfo
 	);
 
 	void DrawFlatTopTriangle(
 		float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,
 		float x1, float y1, float z1, float u1, float v1, float xn1, float yn1, float zn1, float invW1,
 		float x2, float y2, float z2, float u2, float v2, float xn2, float yn2, float zn2, float invW2,
-		const Texture& texture, float lightIntensity
+		const Texture& texture, float lightIntensity, AtlasTileInfo tileInfo
 	);
 
 	void DrawHorizontalDepthTextureLine(
@@ -70,7 +86,8 @@ private:
 		float zn0, float zn1,
 		float invW0, float invW1,
 		const Texture& texture,
-		float lightIntensity
+		float lightIntensity,
+		AtlasTileInfo tileInfo
 	);
 
 private:
@@ -82,7 +99,15 @@ private:
 	float* m_DepthBuffer = nullptr;
 
 	Vec3f m_DirectionalLight;
-	float m_AmbientLight = 0.15f;
+	float m_AmbientLight = 0.45f;
 
 	int m_PerPixelLighting = 0;
+
+	uint64_t m_TotalScanlineTime = 0;
+	uint64_t m_Time1 = 0;
+	uint64_t m_Time2 = 0;
+	uint64_t m_Time3 = 0;
+	uint64_t m_Time4 = 0;
+	uint64_t m_Time5 = 0;
+	uint64_t m_Time6 = 0;
 };

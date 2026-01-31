@@ -11,7 +11,7 @@ enum class BlockType : uint8_t
 	Stone
 };
 
-inline const int BLOCK_TYPE_COUNT = 4;
+inline const int BLOCK_TYPE_COUNT = 5;
 
 struct Block
 {
