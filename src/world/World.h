@@ -31,12 +31,12 @@ public:
 private:
 	void BuildChunkMesh(Chunk& chunk);
 	
-	void MergePosX(Mat3D<Block> grid, Mesh& mesh);
-	void MergePosY(Mat3D<Block> grid, Mesh& mesh);
-	void MergePosZ(Mat3D<Block> grid, Mesh& mesh);
-	void MergeNegX(Mat3D<Block> grid, Mesh& mesh);
-	void MergeNegY(Mat3D<Block> grid, Mesh& mesh);
-	void MergeNegZ(Mat3D<Block> grid, Mesh& mesh);
+	void MergePosX(Mat3D<Block>& grid, Mesh& mesh);
+	void MergePosY(Mat3D<Block>& grid, Mesh& mesh);
+	void MergePosZ(Mat3D<Block>& grid, Mesh& mesh);
+	void MergeNegX(Mat3D<Block>& grid, Mesh& mesh);
+	void MergeNegY(Mat3D<Block>& grid, Mesh& mesh);
+	void MergeNegZ(Mat3D<Block>& grid, Mesh& mesh);
 
 	void AddMergedFaceToMesh(
 		Mesh& mesh,

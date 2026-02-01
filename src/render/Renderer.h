@@ -21,7 +21,7 @@ public:
 	inline void DrawPixel(int x, int y, uint32_t color);
 	inline void DrawDepthPixel(int x, int y, float z, uint32_t color);
 
-	void DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture);
+	void DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 	void DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 	void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
 

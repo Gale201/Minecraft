@@ -68,7 +68,7 @@ inline void Renderer::DrawDepthPixel(int x, int y, float z, uint32_t color)
 
 // Drawing triangles and objects
 
-void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture)
+void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo)
 {
 	// Calculate the bound box
 	int left, right, top, bottom;
@@ -92,21 +92,25 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 	{
 		for (int x = left; x <= right; x++)
 		{
+			float px = x + 0.5f;
+			float py = y + 0.5f;
+
 			// Barycentric coordinates
 			float w0 = (
-				(triangle.v1.position.y - triangle.v2.position.y) * (x - triangle.v2.position.x) +
-				(triangle.v2.position.x - triangle.v1.position.x) * (y - triangle.v2.position.y)
+				(triangle.v1.position.y - triangle.v2.position.y) * (px - triangle.v2.position.x) +
+				(triangle.v2.position.x - triangle.v1.position.x) * (py - triangle.v2.position.y)
 				) / divisor;
 
 			float w1 = (
-				(triangle.v2.position.y - triangle.v0.position.y) * (x - triangle.v2.position.x) +
-				(triangle.v0.position.x - triangle.v2.position.x) * (y - triangle.v2.position.y)
+				(triangle.v2.position.y - triangle.v0.position.y) * (px - triangle.v2.position.x) +
+				(triangle.v0.position.x - triangle.v2.position.x) * (py - triangle.v2.position.y)
 				) / divisor;
 
 			float w2 = 1.0f - w0 - w1;
 
 			// If the pixel is inside the triangle
-			if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+			float eps = -1e-3f;
+			if (w0 >= eps && w1 >= eps && w2 >= eps)
 			{
 				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
 
@@ -122,7 +126,15 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 				}
 				else
 				{
-					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u, v), triangle.lightIntensity));
+					u -= std::floorf(u);
+					v -= std::floorf(v);
+
+					constexpr float inset = 0.01f / 160.f;
+
+					float atlasU = tileInfo.u0 + inset + u * (tileInfo.uScale - 2.0f * inset);
+					float atlasV = tileInfo.v0 + inset + v * (tileInfo.vScale - 2.0f * inset);
+
+					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), triangle.lightIntensity));
 				}
 			}
 		}
@@ -137,7 +149,7 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 	Vertex v1 = sorted.v1;
 	Vertex v2 = sorted.v2;
 
-	if ((int)v1.position.y == (int)v2.position.y)
+	if ((int)std::ceilf(v1.position.y - 0.5f) == (int)std::ceilf(v2.position.y - 0.5f))
 	{
 		DrawFlatBottomTriangle(
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
@@ -146,7 +158,7 @@ void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& tex
 			texture, triangle.lightIntensity, tileInfo
 		);
 	}
-	else if ((int)v0.position.y == (int)v1.position.y)
+	else if ((int)std::ceilf(v0.position.y - 0.5f) == (int)std::ceilf(v1.position.y - 0.5f))
 	{
 		DrawFlatTopTriangle(
 			v0.position.x, v0.position.y, v0.position.z, v0.u, v0.v, v0.normal.x, v0.normal.y, v0.normal.z, v0.invW,
@@ -329,8 +341,8 @@ void Renderer::DrawMesh(
 							Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
 
 							// Convert to screen space
-							screenVertex.position.x = (int)((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
-							screenVertex.position.y = (int)((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
+							screenVertex.position.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
+							screenVertex.position.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
 							screenVertex.position.z = perspectiveVertex.z;
 							screenVertex.invW = 1.0f / perspectiveVertex.w;
 
@@ -341,7 +353,7 @@ void Renderer::DrawMesh(
 							AccumTimer scanline(t);
 							DrawTriangleScanline(triangle, texture, tileInfo);
 						}
-						//DrawTriangleWireframe(triangle, 0xFF0000FF);
+						DrawTriangleWireframe(triangle, 0xFF0000FF);
 					}
 				}
 			}
@@ -431,7 +443,7 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 					triangle.SetVertexByIndex(j, screenVertex);
 				}
 
-				DrawTriangleBarycentric(triangle, renderObject.texture);
+				DrawTriangleBarycentric(triangle, renderObject.texture, {});
 				//DrawTriangleWireframe(triangle, 0xFF0000FF);
 			}
 		}
@@ -625,7 +637,10 @@ void Renderer::DrawFlatBottomTriangle(
 	float slope_invW1 = (invW1 - invW0) / (y1 - y0);
 	float slope_invW2 = (invW2 - invW0) / (y2 - y0);
 
-	for (int y = y0; y < y1; y++)
+	int y_start = (int)std::ceilf(y0 - 0.5);
+	int y_end = (int)std::ceilf(y1 - 0.5);
+
+	for (int y = y_start; y < y_end; y++)
 	{
 		if (y < 0 || y >= m_Height) continue;
 
@@ -699,7 +714,10 @@ void Renderer::DrawFlatTopTriangle(
 	float slope_invW1 = (invW2 - invW0) / (y2 - y0);
 	float slope_invW2 = (invW2 - invW1) / (y2 - y1);
 
-	for (int y = y2 - 1; y >= y0; y--)
+	int y_start = (int)std::ceilf(y0 - 0.5);
+	int y_end = (int)std::ceilf(y2 - 0.5);
+
+	for (int y = y_start; y < y_end; y++)
 	{
 		if (y < 0 || y >= m_Height) continue;
 
@@ -873,9 +891,13 @@ void Renderer::DrawHorizontalDepthTextureLine(
 
 			constexpr float inset = 0.01f / 160.f;
 
-			float atlasU = tileInfo.u0 + inset + uLocal * (tileInfo.uScale - 2 * inset);
-			float atlasV = tileInfo.v0 + inset + vLocal * (tileInfo.vScale - 2 * inset);
+			float atlasU = tileInfo.u0 + inset + uLocal * (tileInfo.uScale - 2.0f * inset);
+			float atlasV = tileInfo.v0 + inset + vLocal * (tileInfo.vScale - 2.0f * inset);
 
+			atlasU = std::clamp(atlasU, tileInfo.u0 + inset, tileInfo.u0 + tileInfo.uScale - inset);
+			atlasV = std::clamp(atlasV, tileInfo.v0 + inset, tileInfo.v0 + tileInfo.vScale - inset);
+				
+			//DrawDepthPixel(x, y, z, ShadeColor(0xFF00FF00, 1));
 			DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), lightIntensity));
 		}
 

@@ -113,7 +113,7 @@ void World::BuildChunkMesh(Chunk& chunk)
 					Vec3i neighborPos = GetAbsoluteBlockPosition({ x, y, z }, chunk) + CUBE_NEIGHBOR_OFFSET[(int)dir];
 					if (IsFaceVisible(neighborPos))
 					{
-						//AddFaceToMesh(chunk.mesh.mesh, CUBE_FACES[(int)dir], Vec3i(x, y, z), block.type, dir);
+						// AddFaceToMesh(chunk.mesh.mesh, CUBE_FACES[(int)dir], Vec3i(x, y, z), block.type, dir);
 						
 						if (dir == FaceDirection::PosY)
 							gridPosY(y, x, z).type = block.type;
@@ -158,7 +158,7 @@ void World::BuildChunkMesh(Chunk& chunk)
 	chunk.mesh.needsUpdate = false;
 }
 
-void World::MergePosX(Mat3D<Block> grid, Mesh& mesh)
+void World::MergePosX(Mat3D<Block>& grid, Mesh& mesh)
 {
 	int x, y, z;
 	for (x = 0; x < CHUNK_SIZE; x++)
@@ -219,13 +219,13 @@ void World::MergePosX(Mat3D<Block> grid, Mesh& mesh)
 
 				AddMergedFaceToMesh(mesh, mergedFace, type, FaceDirection::PosX, endZ - z, endY - y);
 
-				y = endY - 1;
+				z = endZ - 1;
 			}
 		}
 	}
 }
 
-void World::MergePosY(Mat3D<Block> grid, Mesh& mesh)
+void World::MergePosY(Mat3D<Block>& grid, Mesh& mesh)
 {
 	int x, y, z;
 	for (y = 0; y < CHUNK_HEIGHT; y++)
@@ -292,7 +292,7 @@ void World::MergePosY(Mat3D<Block> grid, Mesh& mesh)
 	}
 }
 
-void World::MergePosZ(Mat3D<Block> grid, Mesh& mesh)
+void World::MergePosZ(Mat3D<Block>& grid, Mesh& mesh)
 {
 	int x, y, z;
 	for (z = 0; z < CHUNK_SIZE; z++)
@@ -359,7 +359,7 @@ void World::MergePosZ(Mat3D<Block> grid, Mesh& mesh)
 	}
 }
 
-void World::MergeNegX(Mat3D<Block> grid, Mesh& mesh)
+void World::MergeNegX(Mat3D<Block>& grid, Mesh& mesh)
 {
 	int x, y, z;
 	for (x = 0; x < CHUNK_SIZE; x++)
@@ -426,17 +426,17 @@ void World::MergeNegX(Mat3D<Block> grid, Mesh& mesh)
 	}
 }
 
-void World::MergeNegY(Mat3D<Block> grid, Mesh& mesh)
+void World::MergeNegY(Mat3D<Block>& grid, Mesh& mesh)
 {
 	int x, y, z;
 	for (y = 0; y < CHUNK_HEIGHT; y++)
 	{
-		for (x = 0; x < CHUNK_SIZE; x++)
+		for (z = 0; z < CHUNK_SIZE; z++)
 		{
-			for (z = 0; z < CHUNK_SIZE; z++)
+			for (x = 0; x < CHUNK_SIZE; x++)
 			{
 				BlockFace face = CUBE_FACES[(int)FaceDirection::NegY];
-				BlockType type = grid(y, x, z).type;
+				BlockType type = grid(y, z, x).type;
 
 				if (type == BlockType::Air || type == BlockType::Undefined)
 					continue;
@@ -446,18 +446,18 @@ void World::MergeNegY(Mat3D<Block> grid, Mesh& mesh)
 				Vec3f bottomRight;
 				Vec3f bottomLeft;
 
-				int endX, endZ;
-				for (endZ = z + 1; endZ < CHUNK_SIZE && grid(y, x, endZ).type == type; endZ++)
+				int endZ, endX;
+				for (endX = x + 1; endX < CHUNK_SIZE && grid(y, z, endX).type == type; endX++)
 				{
-					grid(y, x, endZ).type = BlockType::Undefined;
+					grid(y, z, endX).type = BlockType::Undefined;
 				}
 
-				for (endX = x + 1; endX < CHUNK_SIZE; endX++)
+				for (endZ = z + 1; endZ < CHUNK_SIZE; endZ++)
 				{
 					bool passed = true;
-					for (int cz = z; cz < endZ; cz++)
+					for (int cx = x; cx < endX; cx++)
 					{
-						if (grid(y, endX, cz).type != type)
+						if (grid(y, endZ, cx).type != type)
 						{
 							passed = false;
 							break;
@@ -465,8 +465,8 @@ void World::MergeNegY(Mat3D<Block> grid, Mesh& mesh)
 					}
 					if (passed)
 					{
-						for (int cz = z; cz < endZ; cz++)
-							grid(y, endX, cz).type = BlockType::Undefined;
+						for (int cx = x; cx < endX; cx++)
+							grid(y, endZ, cx).type = BlockType::Undefined;
 					}
 					else
 						break;
@@ -477,23 +477,23 @@ void World::MergeNegY(Mat3D<Block> grid, Mesh& mesh)
 				bottomLeft = face.vertices[0] + Vec3f(x, y, endZ - 1);
 
 				BlockFace mergedFace;
-				mergedFace.vertices[3] = bottomLeft;
-				mergedFace.vertices[2] = bottomRight;
-				mergedFace.vertices[1] = topRight;
-				mergedFace.vertices[0] = topLeft;
+				mergedFace.vertices[0] = bottomLeft;
+				mergedFace.vertices[3] = bottomRight;
+				mergedFace.vertices[2] = topRight;
+				mergedFace.vertices[1] = topLeft;
 				mergedFace.normal = face.normal;
 				for (int i = 0; i < 4; i++)
 					mergedFace.uvs[i] = face.uvs[i];
 
 				AddMergedFaceToMesh(mesh, mergedFace, type, FaceDirection::NegY, endX - x, endZ - z);
 
-				z = endZ - 1;
+				x = endX - 1;
 			}
 		}
 	}
 }
 
-void World::MergeNegZ(Mat3D<Block> grid, Mesh& mesh)
+void World::MergeNegZ(Mat3D<Block>& grid, Mesh& mesh)
 {
 	int x, y, z;
 	for (z = 0; z < CHUNK_SIZE; z++)
@@ -633,8 +633,20 @@ void World::AddFaceToMesh(
 
 		Vec2f uvMin, uvMax;
 		GetFaceUV(type, dir, uvMin, uvMax, 0, 0);
-		v.u = uvMin.x + face.uvs[i].x * (uvMax.x - uvMin.x);
-		v.v = uvMin.y + face.uvs[i].y * (uvMax.y - uvMin.y);
+		v.u = face.uvs[i].x; // uvMin.x + face.uvs[i].x * (uvMax.x - uvMin.x);
+		v.v = face.uvs[i].y; // uvMin.y + face.uvs[i].y * (uvMax.y - uvMin.y);
+
+		TileType tileType = TileType::Undefined;
+		if (type == BlockType::Grass)
+		{
+			if (dir == FaceDirection::PosY) tileType = TileType::GrassTop;
+			else if (dir == FaceDirection::NegY) tileType = TileType::Dirt;
+			else tileType = TileType::GrassSide;
+		}
+		else if (type == BlockType::Dirt) tileType = TileType::Dirt;
+		else if (type == BlockType::Stone) tileType = TileType::Stone;
+
+		v.tileInfo = GetAtlasTileInfo(tileType);
 
 		mesh.vertices.push_back(v);
 	}

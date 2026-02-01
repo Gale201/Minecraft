@@ -58,9 +58,8 @@ void Minecraft::Run()
 		for (int z = -3; z < 3; z++)
 			genChunk(x, z);
 
-	for (int i = 0; i < 0; i++)
-		m_World.SetBlock({ rand() % 90 - 45, rand() % 10 + 5, rand() % 90 - 45}, BlockType::Air);
-
+	for (int i = 0; i < 2000; i++)
+		m_World.SetBlock({ rand() % 90 - 45, 15, rand() % 90 - 45}, BlockType::Air);
 
 	// Main loop
 
