@@ -7,11 +7,19 @@
 #include "ChunkMesh.h"
 #include "BlockFace.h"
 #include "../math/Math.h"
+#include "../render/Frustum.h"
+#include "../render/Camera.h"
+#include "../render/RenderCommand.h"
 
 class World
 {
 public:
 	void Update();
+
+	void BuildRenderList(
+		const Camera& camera,
+		std::vector<RenderCommand>& outCommands
+	);
 
 	Block GetBlock(Vec3i pos) const;
 	const Chunk* TryGetChunk(Vec3i pos) const;
@@ -21,12 +29,18 @@ public:
 	Vec3i GetChunkPosition(Vec3i pos) const;
 	Vec3i GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const;
 
+	const std::vector<const Chunk*> GetFrustumVisibleChunks(const Camera& camera) const;
+
 	const std::unordered_map<Vec3i, Chunk, Vec3iHash>& GetChunks() const
 	{
 		return m_Chunks;
 	}
 
 	void SetBlock(Vec3i pos, BlockType type);
+	void SetTextureAtlas(const Texture& texture)
+	{
+		m_TextureAtlas = texture;
+	}
 
 private:
 	void BuildChunkMesh(Chunk& chunk);
@@ -55,6 +69,9 @@ private:
 		FaceDirection dir
 	);
 
+	Frustum GetFrustumForCamera(const Camera& camera) const;
+	bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
+
 	bool IsFaceVisible(Vec3i neighborPos);
 
 	inline static int FloorDiv(int a, int b);
@@ -62,5 +79,6 @@ private:
 
 private:
 	std::unordered_map<Vec3i, Chunk, Vec3iHash> m_Chunks;
-	
+
+	Texture m_TextureAtlas;
 };

@@ -281,7 +281,7 @@ struct Vec3i
 	Vec3i() : x(0), y(0), z(0) {}
 	Vec3i(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {}
 
-	Vec3f toVec3f()
+	Vec3f toVec3f() const
 	{
 		return { (float)x, (float)y, (float)z };
 	}

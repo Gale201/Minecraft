@@ -45,8 +45,10 @@
     <ClInclude Include="src\math\Math.h" />
     <ClInclude Include="src\render\Camera.h" />
     <ClInclude Include="src\render\CameraController.h" />
+    <ClInclude Include="src\render\Frustum.h" />
     <ClInclude Include="src\render\Mesh.h" />
     <ClInclude Include="src\render\Model.h" />
+    <ClInclude Include="src\render\RenderCommand.h" />
     <ClInclude Include="src\render\Renderer.h" />
     <ClInclude Include="src\render\RenderObject.h" />
     <ClInclude Include="src\render\Texture.h" />

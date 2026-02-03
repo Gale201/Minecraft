@@ -4,6 +4,7 @@
 
 #include "Triangle.h"
 #include "RenderObject.h"
+#include "RenderCommand.h"
 #include "Camera.h"
 
 /*
@@ -33,22 +34,13 @@ public:
 	);
 	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
+	void Render(const std::vector<RenderCommand>& renderList, const Camera& camera);
+
 	void SetDirectionalLight(Vec3f direction) { m_DirectionalLight = direction; }
 
 	int GetWidth() const { return m_Width; }
 	int GetHeight() const { return m_Height; }
 	uint32_t* GetFrameBuffer() const { return m_FrameBuffer; }
-
-	void PrintTimingStats() const
-	{
-		printf("whole loop: %llu us\n", m_Time5);
-		printf("whole loop inside: %llu us\n", m_Time6);
-		printf("Scanline: %llu us\n", m_TotalScanlineTime);
-		printf("1.Loop: %llu us\n", m_Time1);
-		printf("Backface: %llu us\n", m_Time2);
-		printf("Clipping: %llu us\n", m_Time3);
-		printf("2.Loop: %llu us\n", m_Time4);
-	}
 
 private:
 	static Triangle SortTriangleVerticesByY(const Triangle& triangle);
@@ -103,11 +95,6 @@ private:
 
 	int m_PerPixelLighting = 0;
 
-	uint64_t m_TotalScanlineTime = 0;
-	uint64_t m_Time1 = 0;
-	uint64_t m_Time2 = 0;
-	uint64_t m_Time3 = 0;
-	uint64_t m_Time4 = 0;
-	uint64_t m_Time5 = 0;
-	uint64_t m_Time6 = 0;
+	const std::vector<RenderCommand>* m_ActiveRenderList;
+	const Camera* m_ActiveCamera;
 };

@@ -1,6 +1,8 @@
 #include "World.h"
 #include "BlockFace.h"
 #include "../core/Log.h"
+#include "../render/Frustum.h"
+#include "../render/Camera.h"
 
 void World::Update()
 {
@@ -9,6 +11,25 @@ void World::Update()
 		if (chunk.mesh.needsUpdate)
 		{
 			BuildChunkMesh(chunk);
+		}
+	}
+}
+
+void World::BuildRenderList(const Camera& camera, std::vector<RenderCommand>& outCommands)
+{
+	const std::vector<const Chunk*> visibleChunks = GetFrustumVisibleChunks(camera);
+	for (const Chunk* chunk : visibleChunks)
+	{
+		Transform t;
+		t.SetPosition(GetChunkWorldPosition(chunk->position).toVec3f());
+
+		for (int dir = 0; dir < 6; dir++)
+		{
+			outCommands.push_back({
+				&chunk->mesh.meshes[dir],
+				t,
+				&m_TextureAtlas
+			});
 		}
 	}
 }
@@ -83,19 +104,38 @@ void World::SetBlock(Vec3i pos, BlockType type)
 	chunk.mesh.needsUpdate = true;
 }
 
+const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& camera) const
+{
+	std::vector<const Chunk*> visible;
+	visible.reserve(m_Chunks.size());
+
+	const Frustum& frustum = GetFrustumForCamera(camera);
+
+	for (const auto& [chunkPos, chunk] : m_Chunks)
+	{
+		if (FrustumTestChunk(chunkPos, frustum))
+		{
+			visible.push_back(&chunk);
+		}
+	}
+	return visible;
+}
+
 // Private functions
 
 void World::BuildChunkMesh(Chunk& chunk)
 {
-	chunk.mesh.mesh.vertices.clear();
-	chunk.mesh.mesh.indices.clear();
+	for (Mesh& meshPart : chunk.mesh.meshes)
+	{
+		meshPart.vertices.clear();
+		meshPart.indices.clear();
+	}
 
 	Mat3D<Block> gridPosX = { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE };
-	Mat3D<Block> gridPosY = { CHUNK_HEIGHT, CHUNK_SIZE, CHUNK_SIZE };
-	Mat3D<Block> gridPosZ = { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE };
-
 	Mat3D<Block> gridNegX = { CHUNK_SIZE, CHUNK_SIZE, CHUNK_HEIGHT };
+	Mat3D<Block> gridPosY = { CHUNK_HEIGHT, CHUNK_SIZE, CHUNK_SIZE };
 	Mat3D<Block> gridNegY = { CHUNK_HEIGHT, CHUNK_SIZE, CHUNK_SIZE };
+	Mat3D<Block> gridPosZ = { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE };
 	Mat3D<Block> gridNegZ = { CHUNK_SIZE, CHUNK_SIZE, CHUNK_HEIGHT };
 
 
@@ -148,12 +188,12 @@ void World::BuildChunkMesh(Chunk& chunk)
 		}
 	}
 
-	MergePosX(gridPosX, chunk.mesh.mesh);
-	MergePosY(gridPosY, chunk.mesh.mesh);
-	MergePosZ(gridPosZ, chunk.mesh.mesh);
-	MergeNegX(gridNegX, chunk.mesh.mesh);
-	MergeNegY(gridNegY, chunk.mesh.mesh);
-	MergeNegZ(gridNegZ, chunk.mesh.mesh);
+	MergePosX(gridPosX, chunk.mesh.meshes[0]);
+	MergeNegX(gridNegX, chunk.mesh.meshes[1]);
+	MergePosY(gridPosY, chunk.mesh.meshes[2]);
+	MergeNegY(gridNegY, chunk.mesh.meshes[3]);
+	MergePosZ(gridPosZ, chunk.mesh.meshes[4]);
+	MergeNegZ(gridNegZ, chunk.mesh.meshes[5]);
 
 	chunk.mesh.needsUpdate = false;
 }
@@ -577,13 +617,6 @@ void World::AddMergedFaceToMesh(
 		v.position = face.vertices[i];
 		v.normal = face.normal;
 
-		/*
-		Vec2f uvMin, uvMax;
-		GetFaceUV(type, dir, uvMin, uvMax, 0, 0);
-		v.u = uvMin.x + face.uvs[i].x * (uvMax.x - uvMin.x + uWraps);
-		v.v = uvMin.y + face.uvs[i].y * (uvMax.y - uvMin.y + vWraps);
-		*/
-
 		v.u = face.uvs[i].x * uWraps;
 		v.v = face.uvs[i].y * vWraps;
 
@@ -658,6 +691,99 @@ void World::AddFaceToMesh(
 	mesh.indices.push_back(startIndex + 0);
 	mesh.indices.push_back(startIndex + 2);
 	mesh.indices.push_back(startIndex + 3);
+}
+
+Frustum World::GetFrustumForCamera(const Camera& camera) const
+{
+	Frustum f;
+
+	const Mat4 viewProj = camera.GetViewMatrix() * camera.GetPerspectiveMatrix();
+
+	// left
+	f.planes[0].normal = {
+		viewProj.m[0][3] + viewProj.m[0][0],
+		viewProj.m[1][3] + viewProj.m[1][0],
+		viewProj.m[2][3] + viewProj.m[2][0]
+	};
+	f.planes[0].d = viewProj.m[3][3] + viewProj.m[3][0];
+
+	// right
+	f.planes[1].normal = {
+		viewProj.m[0][3] - viewProj.m[0][0],
+		viewProj.m[1][3] - viewProj.m[1][0],
+		viewProj.m[2][3] - viewProj.m[2][0]
+	};
+	f.planes[1].d = viewProj.m[3][3] - viewProj.m[3][0];
+
+	// bottom
+	f.planes[2].normal = {
+		viewProj.m[0][3] + viewProj.m[0][1],
+		viewProj.m[1][3] + viewProj.m[1][1],
+		viewProj.m[2][3] + viewProj.m[2][1]
+	};
+	f.planes[2].d = viewProj.m[3][3] + viewProj.m[3][1];
+
+	// top
+	f.planes[3].normal = {
+		viewProj.m[0][3] - viewProj.m[0][1],
+		viewProj.m[1][3] - viewProj.m[1][1],
+		viewProj.m[2][3] - viewProj.m[2][1]
+	};
+	f.planes[3].d = viewProj.m[3][3] - viewProj.m[3][1];
+
+	// near
+	f.planes[4].normal = {
+		viewProj.m[0][3] + viewProj.m[0][2],
+		viewProj.m[1][3] + viewProj.m[1][2],
+		viewProj.m[2][3] + viewProj.m[2][2]
+	};
+	f.planes[4].d = viewProj.m[3][3] + viewProj.m[3][2];
+
+	// far
+	f.planes[5].normal = {
+		viewProj.m[0][3] - viewProj.m[0][2],
+		viewProj.m[1][3] - viewProj.m[1][2],
+		viewProj.m[2][3] - viewProj.m[2][2]
+	};
+	f.planes[5].d = viewProj.m[3][3] - viewProj.m[3][2];
+
+	for (int i = 0; i < 6; i++)
+	{
+		float length = f.planes[i].normal.length();
+		f.planes[i].normal = f.planes[i].normal * (1 / length);
+		f.planes[i].d = f.planes[i].d / length;
+	}
+
+	return f;
+}
+
+bool World::FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const 
+{
+	Vec3f min = Vec3f(
+		chunkPos.x * CHUNK_SIZE,
+		chunkPos.y * CHUNK_HEIGHT,
+		chunkPos.z * CHUNK_SIZE
+	);
+	Vec3f max = Vec3f(
+		(chunkPos.x + 1) * CHUNK_SIZE,
+		(chunkPos.y + 1) * CHUNK_HEIGHT,
+		(chunkPos.z + 1) * CHUNK_SIZE
+	);
+
+	for (int i = 0; i < 6; i++)
+	{
+		const Plane& plane = frustum.planes[i];
+		Vec3f positiveVertex = min;
+		if (plane.normal.x >= 0) positiveVertex.x = max.x;
+		if (plane.normal.y >= 0) positiveVertex.y = max.y;
+		if (plane.normal.z >= 0) positiveVertex.z = max.z;
+
+		if (plane.normal.Dot(positiveVertex) + plane.d < 0)
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 bool World::IsFaceVisible(Vec3i neighborPos)

@@ -15,6 +15,8 @@ Minecraft::Minecraft()
 	if (!m_Window.Create(WIDTH, HEIGHT, TITLE)) return;
 
 	m_Renderer.Initialize(WIDTH, HEIGHT);
+
+	m_RenderList.reserve(10000);
 }
 
 void Minecraft::Run()
@@ -32,7 +34,9 @@ void Minecraft::Run()
 
 	CameraController cameraController{ m_Camera, m_InputManager, inputBindings };
 
-	m_TextureAtlas = m_TextureLoader.LoadTexture("texture-atlas.png").value();
+	std::optional<Texture> textureAtlas = m_TextureLoader.LoadTexture("texture-atlas.png");
+	if (textureAtlas.has_value())
+		m_World.SetTextureAtlas(textureAtlas.value());
 
 	auto genChunk = [&](int x, int z) {
 		x *= 16;
@@ -54,12 +58,12 @@ void Minecraft::Run()
 		}
 		};
 
-	for (int x = -3; x < 3; x++)
-		for (int z = -3; z < 3; z++)
+	for (int x = -16; x < 16; x++)
+		for (int z = -16; z < 16; z++)
 			genChunk(x, z);
 
-	for (int i = 0; i < 2000; i++)
-		m_World.SetBlock({ rand() % 90 - 45, 15, rand() % 90 - 45}, BlockType::Air);
+	for (int i = 0; i < 0; i++)
+		m_World.SetBlock({ rand() % 200 - 300, rand() % 16, rand() % 200 - 300}, BlockType::Air);
 
 	// Main loop
 
@@ -91,8 +95,6 @@ void Minecraft::Run()
 
 		// Render
 		Render();
-
-		m_Renderer.PrintTimingStats();
 		
 		// Render the frame buffer to the window
 		m_Window.Render(m_Renderer.GetFrameBuffer());
@@ -104,22 +106,24 @@ void Minecraft::Run()
 void Minecraft::Update(float deltaTime)
 {
 	m_World.Update();
+
+	{
+		Timer timer("Build Render List");
+		m_World.BuildRenderList(m_Camera, m_RenderList);
+	}
+
+	printf("Render List Size: %zu\n", m_RenderList.size());
 }
+
 
 void Minecraft::Render()
 {
 	m_Renderer.Clear(0xFF000000);
 
 	{
-		int c = 0;
-		Timer timer("Render Chunks");
-		for (auto& [chunkPos, chunk] : m_World.GetChunks())
-		{
-			c += (int)chunk.mesh.mesh.indices.size() / 3;
-			Transform t;
-			t.SetPosition(m_World.GetChunkWorldPosition(chunk.position).toVec3f());
-			m_Renderer.DrawMesh(chunk.mesh.mesh, t, m_TextureAtlas, m_Camera);
-		}
-		printf("%d\n", c);
+		Timer timer("Render");
+		m_Renderer.Render(m_RenderList, m_Camera);
 	}
+
+	m_RenderList.clear();
 }

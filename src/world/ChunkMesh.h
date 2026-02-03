@@ -7,6 +7,6 @@
 
 struct ChunkMesh
 {
-	Mesh mesh;
+	Mesh meshes[6];
 	bool needsUpdate = true;
 };
