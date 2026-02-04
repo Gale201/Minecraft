@@ -6,6 +6,8 @@
 #include "RenderObject.h"
 #include "RenderCommand.h"
 #include "Camera.h"
+#include <thread>
+#include <condition_variable>
 
 /*
  Renderer class handles the 3d rendering of meshes to a frame buffer.
@@ -36,6 +38,9 @@ public:
 
 	void Render(const std::vector<RenderCommand>& renderList, const Camera& camera);
 
+	void CreateTiles();
+	void InitThreads();
+
 	void SetDirectionalLight(Vec3f direction) { m_DirectionalLight = direction; }
 
 	int GetWidth() const { return m_Width; }
@@ -43,6 +48,34 @@ public:
 	uint32_t* GetFrameBuffer() const { return m_FrameBuffer; }
 
 private:
+	struct ScreenTriangle
+	{
+		Triangle triangle;
+		const Texture* texture;
+		AtlasTileInfo tileInfo;
+	};
+
+	struct ScreenTile
+	{
+		int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+		std::vector<ScreenTriangle> triangles;
+	};
+
+	void WorkerThread();
+	void RasterizeTile(const ScreenTile& tile);
+	void DrawMeshToTiles(
+		const Mesh& mesh,
+		const Transform& transform,
+		const Texture& texture,
+		const Camera& camera
+	);
+	void DrawTriangleBarycentricToTile(
+		const Triangle& triangle, 
+		const Texture& texture, 
+		AtlasTileInfo tileInfo,
+		ScreenTile tile
+	);
+
 	static Triangle SortTriangleVerticesByY(const Triangle& triangle);
 	static void ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom);
 	static bool IsTriangleBackFacing(const Triangle& triangle);
@@ -87,6 +120,8 @@ private:
 	int m_Width = 0;
 	int m_Height = 0;
 
+	const int TILE_SIZE = 32;
+
 	uint32_t* m_FrameBuffer = nullptr;
 	float* m_DepthBuffer = nullptr;
 
@@ -95,6 +130,15 @@ private:
 
 	int m_PerPixelLighting = 0;
 
-	const std::vector<RenderCommand>* m_ActiveRenderList;
-	const Camera* m_ActiveCamera;
+	std::vector<ScreenTile> m_ScreenTiles;
+	std::vector<std::thread> m_WorkerThreads;
+	std::atomic<int> m_NextTile;
+	std::atomic<int> m_WorkersFinished = 0;
+	std::mutex m_Mutex;
+	std::condition_variable m_ConditionVar;
+	bool m_HasWork = false;
+	bool m_Shutdown = false;
+
+	const std::vector<RenderCommand>* m_ActiveRenderList = nullptr;
+	const Camera* m_ActiveCamera = nullptr;
 };

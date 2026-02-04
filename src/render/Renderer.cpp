@@ -16,6 +16,18 @@ Renderer::~Renderer()
 {
 	delete[] m_FrameBuffer;
 	delete[] m_DepthBuffer;
+
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_Shutdown = true;
+	}
+
+	m_ConditionVar.notify_all();
+
+	for (std::thread& t : m_WorkerThreads)
+	{
+		if (t.joinable()) t.join();
+	}
 }
 
 bool Renderer::Initialize(int width, int height)
@@ -137,7 +149,6 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 		}
 	}
 }
-
 
 void Renderer::DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo)
 {
@@ -413,13 +424,291 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 	m_ActiveRenderList = &renderList;
 	m_ActiveCamera = &camera;
 
-	for (const RenderCommand& renderCommand : renderList)
+	for (ScreenTile& tile : m_ScreenTiles)
 	{
-		DrawMesh(*renderCommand.mesh, renderCommand.transform, *renderCommand.texture, camera);
+		tile.triangles.clear();
+	}
+
+	for (const RenderCommand& command : renderList)
+	{
+		DrawMeshToTiles(
+			*command.mesh,
+			command.transform,
+			*command.texture,
+			camera
+		);
+	}
+
+	m_NextTile = 0;
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_HasWork = true;
+	}
+	m_ConditionVar.notify_all();
+	{
+		std::unique_lock<std::mutex> lock(m_Mutex);
+		m_ConditionVar.wait(lock, [this]() { return !m_HasWork; });
+	}
+}
+
+void Renderer::CreateTiles()
+{
+	for (int y = 0; y < m_Height; y += TILE_SIZE)
+	{
+		for (int x = 0; x < m_Width; x += TILE_SIZE)
+		{
+			ScreenTile tile;
+			tile.x0 = x;
+			tile.y0 = y;
+			tile.x1 = std::min(x + TILE_SIZE - 1, m_Width - 1);
+			tile.y1 = std::min(y + TILE_SIZE - 1, m_Height - 1);
+			m_ScreenTiles.push_back(tile);
+		}
+	}
+}
+
+void Renderer::InitThreads()
+{
+	int threadCount = std::thread::hardware_concurrency();
+
+	for (int i = 0; i < threadCount; i++)
+	{
+		m_WorkerThreads.emplace_back(&Renderer::WorkerThread, this);
 	}
 }
 
 // Private functions
+
+void Renderer::WorkerThread()
+{
+	while (true)
+	{
+		{
+			std::unique_lock<std::mutex> lock(m_Mutex);
+			m_ConditionVar.wait(lock, [this]() { return m_HasWork || m_Shutdown; });
+			if (m_Shutdown)
+				return;
+		}
+
+		while (true)
+		{
+			int tileIndex = m_NextTile.fetch_add(1);
+			if (tileIndex >= (int)m_ScreenTiles.size())
+				break;
+
+			RasterizeTile(m_ScreenTiles[tileIndex]);
+		}
+
+		if (++m_WorkersFinished == (int)m_WorkerThreads.size())
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+			m_HasWork = false;
+			m_WorkersFinished = 0;
+			m_ConditionVar.notify_one();
+		}
+	}
+}
+
+void Renderer::RasterizeTile(const ScreenTile& tile)
+{
+	for (const ScreenTriangle& triangle : tile.triangles)
+	{
+		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
+		//DrawTriangleWireframe(*triangle, 0xFF0000FF);
+	}
+}
+
+void Renderer::DrawMeshToTiles(
+	const Mesh& mesh,
+	const Transform& transform,
+	const Texture& texture,
+	const Camera& camera
+)
+{
+	Mat4 modelMatrix = transform.GetMatrix();
+	Mat4 viewMatrix = camera.GetViewMatrix();
+	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
+
+	Vec3f transformedDirectionalLight = (
+		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
+		).ToVec3f(); // Add .normalized() for a classic directional light
+
+	Triangle triangle;
+	AtlasTileInfo tileInfo;
+	for (size_t i = 0; i < mesh.indices.size(); i += 3)
+	{
+		for (size_t j = 0; j < 3; j++)
+		{
+			// Get the model vertex from the mesh
+			const Vertex& v = mesh.vertices[mesh.indices[i + j]];
+
+			tileInfo = v.tileInfo;
+
+			// Transform vertex from model space to world space
+			Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
+
+			// Transform world vertex to camera space
+			Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
+
+			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });
+		}
+
+		// Back face culling (happening in camera space)
+		if (IsTriangleBackFacing(triangle))
+			continue;
+
+		// Near plane clipping (happening in camera space)
+		Triangle clipped[2];
+		int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
+
+		// Compute light intensity for the triangle
+		triangle.lightIntensity = ComputeLightIntensityForTriangle(
+			triangle,
+			transformedDirectionalLight,
+			m_AmbientLight
+		);
+
+		for (size_t c = 0; c < nClipped; c++)
+		{
+			// Loop over vertices and project them
+			for (int j = 0; j < 3; j++)
+			{
+				// Clipped vertex
+				Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
+
+				// Transform the clipped vertex to clip space
+				Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+
+				// Perspective divide
+				perspectiveVertex.x /= perspectiveVertex.w;
+				perspectiveVertex.y /= perspectiveVertex.w;
+				perspectiveVertex.z /= perspectiveVertex.w;
+
+				clippedVertex.u /= perspectiveVertex.w;
+				clippedVertex.v /= perspectiveVertex.w;
+
+				Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
+
+				// Convert to screen space
+				screenVertex.position.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
+				screenVertex.position.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
+				screenVertex.position.z = perspectiveVertex.z;
+				screenVertex.invW = 1.0f / perspectiveVertex.w;
+
+				triangle.SetVertexByIndex(j, screenVertex);
+			}
+
+			int minX, maxX, minY, maxY;
+			minX = (int)std::floorf(std::min({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }));
+			maxX = (int)std::ceilf(std::max({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }));
+			minY = (int)std::floorf(std::min({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }));
+			maxY = (int)std::ceilf(std::max({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }));
+
+			int minTileX = minX / TILE_SIZE;
+			int maxTileX = maxX / TILE_SIZE;
+			int minTileY = minY / TILE_SIZE;
+			int maxTileY = maxY / TILE_SIZE;
+
+			minTileX = std::clamp(minTileX, 0, m_Width / TILE_SIZE - 1);
+			maxTileX = std::clamp(maxTileX, 0, m_Width / TILE_SIZE - 1);
+			minTileY = std::clamp(minTileY, 0, m_Height / TILE_SIZE - 1);
+			maxTileY = std::clamp(maxTileY, 0, m_Height / TILE_SIZE - 1);
+
+			for (int ty = minTileY; ty <= maxTileY; ty++)
+			{
+				for (int tx = minTileX; tx <= maxTileX; tx++)
+				{
+					m_ScreenTiles[ty * (m_Width / TILE_SIZE) + tx].triangles.push_back({ triangle, &texture, tileInfo });
+				}
+			}
+		}
+	}
+}
+
+void Renderer::DrawTriangleBarycentricToTile(
+	const Triangle& triangle,
+	const Texture& texture,
+	AtlasTileInfo tileInfo,
+	ScreenTile tile
+)
+{
+	// Calculate the bound box
+	int left, right, top, bottom;
+	ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
+
+	// Clamp to screen bounds
+	left = std::max(left, tile.x0);
+	right = std::min(right, tile.x1);
+	top = std::max(top, tile.y0);
+	bottom = std::min(bottom, tile.y1);
+
+	if (left > right || top > bottom)
+		return;
+
+	float divisor = (
+		(triangle.v1.position.y - triangle.v2.position.y) * (triangle.v0.position.x - triangle.v2.position.x) +
+		(triangle.v2.position.x - triangle.v1.position.x) * (triangle.v0.position.y - triangle.v2.position.y)
+		);
+
+	if (divisor == 0.0f) return;
+
+	// Rasterize the triangle
+	for (int y = top; y <= bottom; y++)
+	{
+		for (int x = left; x <= right; x++)
+		{
+			float px = x + 0.5f;
+			float py = y + 0.5f;
+
+			// Barycentric coordinates
+			float w0 = (
+				(triangle.v1.position.y - triangle.v2.position.y) * (px - triangle.v2.position.x) +
+				(triangle.v2.position.x - triangle.v1.position.x) * (py - triangle.v2.position.y)
+				) / divisor;
+
+			float w1 = (
+				(triangle.v2.position.y - triangle.v0.position.y) * (px - triangle.v2.position.x) +
+				(triangle.v0.position.x - triangle.v2.position.x) * (py - triangle.v2.position.y)
+				) / divisor;
+
+			float w2 = 1.0f - w0 - w1;
+
+			// If the pixel is inside the triangle
+			float eps = 0.0f;
+			if (w0 >= eps && w1 >= eps && w2 >= eps)
+			{
+				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
+
+				// Early depth rejection
+				if (z >= m_DepthBuffer[y * m_Width + x])
+					continue;
+
+				float invW = w0 * triangle.v0.invW + w1 * triangle.v1.invW + w2 * triangle.v2.invW;
+				float u = (w0 * triangle.v0.u + w1 * triangle.v1.u + w2 * triangle.v2.u) / invW;
+				float v = (w0 * triangle.v0.v + w1 * triangle.v1.v + w2 * triangle.v2.v) / invW;
+
+				if (m_PerPixelLighting)
+				{
+					Vec3f normal = (triangle.v0.normal * w0 + triangle.v1.normal * w1 + triangle.v2.normal * w2).normalized();
+					uint32_t textureColor = texture.GetPixelAtUV(u, v);
+					DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+				}
+				else
+				{
+					u -= (int)u;
+					v -= (int)v;
+
+					constexpr float inset = 0.01f / 160.f;
+
+					float atlasU = tileInfo.u0 + inset + u * (tileInfo.uScale - 2.0f * inset);
+					float atlasV = tileInfo.v0 + inset + v * (tileInfo.vScale - 2.0f * inset);
+
+					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), triangle.lightIntensity));
+				}
+			}
+		}
+	}
+}
 
 // Triangle math
 

@@ -15,6 +15,8 @@ Minecraft::Minecraft()
 	if (!m_Window.Create(WIDTH, HEIGHT, TITLE)) return;
 
 	m_Renderer.Initialize(WIDTH, HEIGHT);
+	m_Renderer.CreateTiles();
+	m_Renderer.InitThreads();
 
 	m_RenderList.reserve(10000);
 }
