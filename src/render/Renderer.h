@@ -63,7 +63,7 @@ private:
 
 	void WorkerThread();
 	void RasterizeTile(const ScreenTile& tile);
-	void DrawMeshToTiles(
+	void BuildScreenTileTriangles(
 		const Mesh& mesh,
 		const Transform& transform,
 		const Texture& texture,
@@ -73,7 +73,7 @@ private:
 		const Triangle& triangle, 
 		const Texture& texture, 
 		AtlasTileInfo tileInfo,
-		ScreenTile tile
+		const ScreenTile& tile
 	);
 
 	static Triangle SortTriangleVerticesByY(const Triangle& triangle);
@@ -120,22 +120,22 @@ private:
 	int m_Width = 0;
 	int m_Height = 0;
 
-	const int TILE_SIZE = 32;
+	const int TILE_SIZE = 200;
 
 	uint32_t* m_FrameBuffer = nullptr;
 	float* m_DepthBuffer = nullptr;
 
 	Vec3f m_DirectionalLight;
-	float m_AmbientLight = 0.45f;
+	float m_AmbientLight = 0.2f;
 
 	int m_PerPixelLighting = 0;
 
 	std::vector<ScreenTile> m_ScreenTiles;
 	std::vector<std::thread> m_WorkerThreads;
 	std::atomic<int> m_NextTile;
-	std::atomic<int> m_WorkersFinished = 0;
+	std::atomic<int> m_TilesRemaining = 0;
 	std::mutex m_Mutex;
-	std::condition_variable m_ConditionVar;
+	std::condition_variable m_WorkersDoneCV;
 	bool m_HasWork = false;
 	bool m_Shutdown = false;
 

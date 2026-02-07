@@ -22,7 +22,7 @@ Renderer::~Renderer()
 		m_Shutdown = true;
 	}
 
-	m_ConditionVar.notify_all();
+	m_WorkersDoneCV.notify_all();
 
 	for (std::thread& t : m_WorkerThreads)
 	{
@@ -431,7 +431,7 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 
 	for (const RenderCommand& command : renderList)
 	{
-		DrawMeshToTiles(
+		BuildScreenTileTriangles(
 			*command.mesh,
 			command.transform,
 			*command.texture,
@@ -440,19 +440,21 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 	}
 
 	m_NextTile = 0;
+	m_TilesRemaining = static_cast<int>(m_ScreenTiles.size());
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		m_HasWork = true;
 	}
-	m_ConditionVar.notify_all();
+	m_WorkersDoneCV.notify_all();
 	{
 		std::unique_lock<std::mutex> lock(m_Mutex);
-		m_ConditionVar.wait(lock, [this]() { return !m_HasWork; });
+		m_WorkersDoneCV.wait(lock, [this]() { return !m_HasWork || m_Shutdown; });
 	}
 }
 
 void Renderer::CreateTiles()
 {
+	m_ScreenTiles.clear();
 	for (int y = 0; y < m_Height; y += TILE_SIZE)
 	{
 		for (int x = 0; x < m_Width; x += TILE_SIZE)
@@ -462,6 +464,7 @@ void Renderer::CreateTiles()
 			tile.y0 = y;
 			tile.x1 = std::min(x + TILE_SIZE - 1, m_Width - 1);
 			tile.y1 = std::min(y + TILE_SIZE - 1, m_Height - 1);
+			tile.triangles.reserve(256);
 			m_ScreenTiles.push_back(tile);
 		}
 	}
@@ -485,7 +488,7 @@ void Renderer::WorkerThread()
 	{
 		{
 			std::unique_lock<std::mutex> lock(m_Mutex);
-			m_ConditionVar.wait(lock, [this]() { return m_HasWork || m_Shutdown; });
+			m_WorkersDoneCV.wait(lock, [this]() { return m_HasWork || m_Shutdown; });
 			if (m_Shutdown)
 				return;
 		}
@@ -497,14 +500,14 @@ void Renderer::WorkerThread()
 				break;
 
 			RasterizeTile(m_ScreenTiles[tileIndex]);
-		}
 
-		if (++m_WorkersFinished == (int)m_WorkerThreads.size())
-		{
-			std::lock_guard<std::mutex> lock(m_Mutex);
-			m_HasWork = false;
-			m_WorkersFinished = 0;
-			m_ConditionVar.notify_one();
+			if (m_TilesRemaining.fetch_sub(1) == 1)
+			{
+				std::lock_guard<std::mutex> lock(m_Mutex);
+				m_HasWork = false;
+				m_WorkersDoneCV.notify_one();
+				break;
+			}
 		}
 	}
 }
@@ -514,11 +517,10 @@ void Renderer::RasterizeTile(const ScreenTile& tile)
 	for (const ScreenTriangle& triangle : tile.triangles)
 	{
 		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
-		//DrawTriangleWireframe(*triangle, 0xFF0000FF);
 	}
 }
 
-void Renderer::DrawMeshToTiles(
+void Renderer::BuildScreenTileTriangles(
 	const Mesh& mesh,
 	const Transform& transform,
 	const Texture& texture,
@@ -598,29 +600,27 @@ void Renderer::DrawMeshToTiles(
 				triangle.SetVertexByIndex(j, screenVertex);
 			}
 
-			int minX, maxX, minY, maxY;
-			minX = (int)std::floorf(std::min({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }));
-			maxX = (int)std::ceilf(std::max({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }));
-			minY = (int)std::floorf(std::min({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }));
-			maxY = (int)std::ceilf(std::max({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }));
+			int left, right, top, bottom;
+			ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
 
-			int minTileX = minX / TILE_SIZE;
-			int maxTileX = maxX / TILE_SIZE;
-			int minTileY = minY / TILE_SIZE;
-			int maxTileY = maxY / TILE_SIZE;
+			int tileLeft = left / TILE_SIZE;
+			int tileRight = right / TILE_SIZE;
+			int tileTop = top / TILE_SIZE;
+			int tileBottom = bottom / TILE_SIZE;
 
-			minTileX = std::clamp(minTileX, 0, m_Width / TILE_SIZE - 1);
-			maxTileX = std::clamp(maxTileX, 0, m_Width / TILE_SIZE - 1);
-			minTileY = std::clamp(minTileY, 0, m_Height / TILE_SIZE - 1);
-			maxTileY = std::clamp(maxTileY, 0, m_Height / TILE_SIZE - 1);
+			int tilesPerRow = (m_Width + TILE_SIZE - 1) / TILE_SIZE;
+			int tilesPerCol = (m_Height + TILE_SIZE - 1) / TILE_SIZE;
 
-			for (int ty = minTileY; ty <= maxTileY; ty++)
-			{
-				for (int tx = minTileX; tx <= maxTileX; tx++)
+			tileLeft = std::clamp(tileLeft, 0, tilesPerRow - 1);
+			tileRight = std::clamp(tileRight, 0, tilesPerRow - 1);
+			tileTop = std::clamp(tileTop, 0, tilesPerCol - 1);
+			tileBottom = std::clamp(tileBottom, 0, tilesPerCol - 1);
+
+			for (int ty = tileTop; ty <= tileBottom; ty++)
+				for (int tx = tileLeft; tx <= tileRight; tx++)
 				{
-					m_ScreenTiles[ty * (m_Width / TILE_SIZE) + tx].triangles.push_back({ triangle, &texture, tileInfo });
+					m_ScreenTiles[ty * tilesPerRow + tx].triangles.push_back({ triangle, &texture, tileInfo });
 				}
-			}
 		}
 	}
 }
@@ -629,7 +629,7 @@ void Renderer::DrawTriangleBarycentricToTile(
 	const Triangle& triangle,
 	const Texture& texture,
 	AtlasTileInfo tileInfo,
-	ScreenTile tile
+	const ScreenTile& tile
 )
 {
 	// Calculate the bound box
@@ -637,10 +637,10 @@ void Renderer::DrawTriangleBarycentricToTile(
 	ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
 
 	// Clamp to screen bounds
-	left = std::max(left, tile.x0);
-	right = std::min(right, tile.x1);
-	top = std::max(top, tile.y0);
-	bottom = std::min(bottom, tile.y1);
+	left = std::max(std::max(left, tile.x0), 0);
+	right = std::min(std::min(right, tile.x1), m_Width - 1);
+	top = std::max(std::max(top, tile.y0), 0);
+	bottom = std::min(std::min(bottom, tile.y1), m_Height - 1);
 
 	if (left > right || top > bottom)
 		return;
@@ -680,7 +680,7 @@ void Renderer::DrawTriangleBarycentricToTile(
 				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
 
 				// Early depth rejection
-				if (z >= m_DepthBuffer[y * m_Width + x])
+				if (y * m_Width + x < m_Width * m_Height && z >= m_DepthBuffer[y * m_Width + x])
 					continue;
 
 				float invW = w0 * triangle.v0.invW + w1 * triangle.v1.invW + w2 * triangle.v2.invW;
@@ -695,8 +695,8 @@ void Renderer::DrawTriangleBarycentricToTile(
 				}
 				else
 				{
-					u -= (int)u;
-					v -= (int)v;
+					u -= static_cast<int>(u);
+					v -= static_cast<int>(v);
 
 					constexpr float inset = 0.01f / 160.f;
 
@@ -728,10 +728,18 @@ Triangle Renderer::SortTriangleVerticesByY(const Triangle& triangle)
 
 void Renderer::ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom)
 {
-	left = static_cast<int>(std::min({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }));
-	right = static_cast<int>(std::max({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }));
-	top = static_cast<int>(std::min({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }));
-	bottom = static_cast<int>(std::max({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }));
+	left = static_cast<int>(
+		std::floorf(std::min({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }))
+	);
+	right = static_cast<int>(
+		std::ceilf(std::max({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }))
+	);
+	top = static_cast<int>(
+		std::floorf(std::min({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }))
+	);
+	bottom = static_cast<int>(
+		std::ceilf(std::max({ triangle.v0.position.y, triangle.v1.position.y, triangle.v2.position.y }))
+	);
 }
 
 bool Renderer::IsTriangleBackFacing(const Triangle& triangle)

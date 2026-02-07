@@ -46,26 +46,23 @@ void Minecraft::Run()
 		for (int j = 0; j < 4; j++)
 			for (int i = 0; i < 16 * 16; i++)
 			{
-				m_World.SetBlock({ x + i / 32, j + 11, z + i % 16}, BlockType::Dirt);
+				m_World.SetBlock({ x + i / 24, j + 11, z + i % 12}, BlockType::Dirt);
 			}
 
 		for (int j = 0; j < 11; j++)
 			for (int i = 0; i < 16 * 16; i++)
 			{
-				m_World.SetBlock({ x + i / 16, j, z + i % 16 }, BlockType::Stone);
+				m_World.SetBlock({ x + i / 32, j, z + i % 16 }, BlockType::Stone);
 			}
 		for (int i = 0; i < 16 * 16; i++)
 		{
-			m_World.SetBlock({ x + i / 10, 15, z + i % 10 }, BlockType::Grass);
+			m_World.SetBlock({ x + i / 20, 15, z + i % 4 }, BlockType::Grass);
 		}
-		};
+	};
 
 	for (int x = -16; x < 16; x++)
 		for (int z = -16; z < 16; z++)
 			genChunk(x, z);
-
-	for (int i = 0; i < 0; i++)
-		m_World.SetBlock({ rand() % 200 - 300, rand() % 16, rand() % 200 - 300}, BlockType::Air);
 
 	// Main loop
 
@@ -114,7 +111,7 @@ void Minecraft::Update(float deltaTime)
 		m_World.BuildRenderList(m_Camera, m_RenderList);
 	}
 
-	printf("Render List Size: %zu\n", m_RenderList.size());
+	printf("Render List Size: %d\n", static_cast<int>(m_RenderList.size()));
 }
 
 
