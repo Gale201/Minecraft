@@ -55,3 +55,67 @@ Vec3f Camera::GetRight() const
 		std::sin(yaw)
 	};
 }
+
+Frustum Camera::GetFrustum() const
+{
+	Frustum f;
+
+	const Mat4 viewProj = GetViewMatrix() * GetPerspectiveMatrix();
+
+	// left
+	f.planes[0].normal = {
+		viewProj.m[0][3] + viewProj.m[0][0],
+		viewProj.m[1][3] + viewProj.m[1][0],
+		viewProj.m[2][3] + viewProj.m[2][0]
+	};
+	f.planes[0].d = viewProj.m[3][3] + viewProj.m[3][0];
+
+	// right
+	f.planes[1].normal = {
+		viewProj.m[0][3] - viewProj.m[0][0],
+		viewProj.m[1][3] - viewProj.m[1][0],
+		viewProj.m[2][3] - viewProj.m[2][0]
+	};
+	f.planes[1].d = viewProj.m[3][3] - viewProj.m[3][0];
+
+	// bottom
+	f.planes[2].normal = {
+		viewProj.m[0][3] + viewProj.m[0][1],
+		viewProj.m[1][3] + viewProj.m[1][1],
+		viewProj.m[2][3] + viewProj.m[2][1]
+	};
+	f.planes[2].d = viewProj.m[3][3] + viewProj.m[3][1];
+
+	// top
+	f.planes[3].normal = {
+		viewProj.m[0][3] - viewProj.m[0][1],
+		viewProj.m[1][3] - viewProj.m[1][1],
+		viewProj.m[2][3] - viewProj.m[2][1]
+	};
+	f.planes[3].d = viewProj.m[3][3] - viewProj.m[3][1];
+
+	// near
+	f.planes[4].normal = {
+		viewProj.m[0][3] + viewProj.m[0][2],
+		viewProj.m[1][3] + viewProj.m[1][2],
+		viewProj.m[2][3] + viewProj.m[2][2]
+	};
+	f.planes[4].d = viewProj.m[3][3] + viewProj.m[3][2];
+
+	// far
+	f.planes[5].normal = {
+		viewProj.m[0][3] - viewProj.m[0][2],
+		viewProj.m[1][3] - viewProj.m[1][2],
+		viewProj.m[2][3] - viewProj.m[2][2]
+	};
+	f.planes[5].d = viewProj.m[3][3] - viewProj.m[3][2];
+
+	for (int i = 0; i < 6; i++)
+	{
+		float length = f.planes[i].normal.length();
+		f.planes[i].normal = f.planes[i].normal * (1 / length);
+		f.planes[i].d = f.planes[i].d / length;
+	}
+
+	return f;
+}

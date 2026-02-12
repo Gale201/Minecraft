@@ -15,6 +15,12 @@ void World::Update()
 	}
 }
 
+void World::LoadAndUnloadChunks(Vec3f playerPosition)
+{
+	LoadChunks(playerPosition);
+	UnloadChunks(playerPosition);
+}
+
 void World::BuildRenderList(const Camera& camera, std::vector<RenderCommand>& outCommands)
 {
 	const std::vector<const Chunk*> visibleChunks = GetFrustumVisibleChunks(camera);
@@ -109,7 +115,7 @@ const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& cam
 	std::vector<const Chunk*> visible;
 	visible.reserve(m_Chunks.size());
 
-	const Frustum& frustum = GetFrustumForCamera(camera);
+	const Frustum& frustum = camera.GetFrustum();
 
 	for (const auto& [chunkPos, chunk] : m_Chunks)
 	{
@@ -121,7 +127,61 @@ const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& cam
 	return visible;
 }
 
-// Private functions
+/* 
+ Private functions 
+*/
+
+/* Chunk loading */
+
+void World::LoadChunks(Vec3f playerPosition)
+{
+	if (playerPosition == m_LastChunkLoadPosition) return;
+
+	int playerX = FloorDiv(static_cast<int>(std::floor(playerPosition.x)), CHUNK_SIZE);
+	int playerZ = FloorDiv(static_cast<int>(std::floor(playerPosition.z)), CHUNK_SIZE);
+
+
+	// WRONG!! Just check for x,-x,z,-z if the player moved in that dir, and then load the 32 chunk row in that dir
+	for (int x = playerX - m_ChunkLoadRadius; x <= playerX + m_ChunkLoadRadius; x++) 
+	{ 
+		for (int z = playerZ - m_ChunkLoadRadius; z <= playerZ + m_ChunkLoadRadius; z++)
+		{
+			Vec3i chunkPos = Vec3i(x, 0, z);
+			if (m_Chunks.find(chunkPos) != m_Chunks.end())  // If the chunk is already loaded, skip it
+				continue;
+
+			// Load the chunk and add it to the world
+			Chunk chunk = m_ChunkLoader.LoadChunk(chunkPos);
+			m_Chunks.emplace(chunkPos, std::move(chunk));
+		}
+	}
+}
+
+void World::UnloadChunks(Vec3f playerPosition)
+{
+	if (playerPosition == m_LastChunkLoadPosition) return;
+
+	int playerX = FloorDiv(static_cast<int>(std::floor(playerPosition.x)), CHUNK_SIZE);
+	int playerZ = FloorDiv(static_cast<int>(std::floor(playerPosition.z)), CHUNK_SIZE);
+
+	std::vector<Vec3i> chunksToUnload; 
+	for (const auto& [chunkPos, chunk] : m_Chunks)
+	{
+		if (chunkPos.x < playerX - m_ChunkLoadRadius || chunkPos.x > playerX + m_ChunkLoadRadius ||
+			chunkPos.z < playerZ - m_ChunkLoadRadius || chunkPos.z > playerZ + m_ChunkLoadRadius) 
+		{
+			chunksToUnload.push_back(chunkPos); 
+		} 
+	}
+	for (const Vec3i& pos : chunksToUnload)
+	{ 
+		m_Chunks.erase(pos);
+	}
+
+	m_LastChunkLoadPosition = playerPosition;
+}
+
+/* Chunk mesh building */
 
 void World::BuildChunkMesh(Chunk& chunk)
 {
@@ -693,69 +753,7 @@ void World::AddFaceToMesh(
 	mesh.indices.push_back(startIndex + 3);
 }
 
-Frustum World::GetFrustumForCamera(const Camera& camera) const
-{
-	Frustum f;
 
-	const Mat4 viewProj = camera.GetViewMatrix() * camera.GetPerspectiveMatrix();
-
-	// left
-	f.planes[0].normal = {
-		viewProj.m[0][3] + viewProj.m[0][0],
-		viewProj.m[1][3] + viewProj.m[1][0],
-		viewProj.m[2][3] + viewProj.m[2][0]
-	};
-	f.planes[0].d = viewProj.m[3][3] + viewProj.m[3][0];
-
-	// right
-	f.planes[1].normal = {
-		viewProj.m[0][3] - viewProj.m[0][0],
-		viewProj.m[1][3] - viewProj.m[1][0],
-		viewProj.m[2][3] - viewProj.m[2][0]
-	};
-	f.planes[1].d = viewProj.m[3][3] - viewProj.m[3][0];
-
-	// bottom
-	f.planes[2].normal = {
-		viewProj.m[0][3] + viewProj.m[0][1],
-		viewProj.m[1][3] + viewProj.m[1][1],
-		viewProj.m[2][3] + viewProj.m[2][1]
-	};
-	f.planes[2].d = viewProj.m[3][3] + viewProj.m[3][1];
-
-	// top
-	f.planes[3].normal = {
-		viewProj.m[0][3] - viewProj.m[0][1],
-		viewProj.m[1][3] - viewProj.m[1][1],
-		viewProj.m[2][3] - viewProj.m[2][1]
-	};
-	f.planes[3].d = viewProj.m[3][3] - viewProj.m[3][1];
-
-	// near
-	f.planes[4].normal = {
-		viewProj.m[0][3] + viewProj.m[0][2],
-		viewProj.m[1][3] + viewProj.m[1][2],
-		viewProj.m[2][3] + viewProj.m[2][2]
-	};
-	f.planes[4].d = viewProj.m[3][3] + viewProj.m[3][2];
-
-	// far
-	f.planes[5].normal = {
-		viewProj.m[0][3] - viewProj.m[0][2],
-		viewProj.m[1][3] - viewProj.m[1][2],
-		viewProj.m[2][3] - viewProj.m[2][2]
-	};
-	f.planes[5].d = viewProj.m[3][3] - viewProj.m[3][2];
-
-	for (int i = 0; i < 6; i++)
-	{
-		float length = f.planes[i].normal.length();
-		f.planes[i].normal = f.planes[i].normal * (1 / length);
-		f.planes[i].d = f.planes[i].d / length;
-	}
-
-	return f;
-}
 
 bool World::FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const 
 {

@@ -21,6 +21,8 @@ struct Vec2f
 	Vec2f() : x(0), y(0) {}
 	Vec2f(float xx, float yy) : x(xx), y(yy) {}
 
+	inline static Vec2f zero() { return Vec2f(0.0f, 0.0f); }
+
 	Vec2f operator+(const Vec2f& other) const
 	{
 		return Vec2f(x + other.x, y + other.y);
@@ -54,6 +56,8 @@ struct Vec2f
 		y -= other.y;
 		return *this;
 	}
+
+	bool operator==(const Vec2f& other) const { return x == other.x && y == other.y; }
 };
 
 struct Vec3f
@@ -64,6 +68,8 @@ struct Vec3f
 
 	Vec3f() : x(0), y(0), z(0) {}
 	Vec3f(float xx, float yy, float zz) : x(xx), y(yy), z(zz) {}
+
+	inline static Vec3f zero() { return Vec3f(0.0f, 0.0f, 0.0f); }
 
 	Vec3f operator+(const Vec3f& other) const
 	{
@@ -100,6 +106,8 @@ struct Vec3f
 		z -= other.z;
 		return *this;
 	}
+
+	bool operator==(const Vec3f& other) const { return x == other.x && y == other.y && z == other.z; }
 
 	float length() const
 	{
@@ -220,6 +228,8 @@ struct Vec4f
 	Vec4f() : x(0), y(0), z(0), w(0) {}
 	Vec4f(float xx, float yy, float zz, float ww) : x(xx), y(yy), z(zz), w(ww) {}
 
+	inline static Vec4f zero() { return Vec4f(0.0f, 0.0f, 0.0f, 0.0f); }
+
 	Vec4f operator+(const Vec4f& other) const
 	{
 		return Vec4f(x + other.x, y + other.y, z + other.z, w + other.w);
@@ -271,6 +281,51 @@ struct Vec4f
 			v.x * m.m[0][2] + v.y * m.m[1][2] + v.z * m.m[2][2] + v.w * m.m[3][2],
 			v.x * m.m[0][3] + v.y * m.m[1][3] + v.z * m.m[2][3] + v.w * m.m[3][3]
 		);
+	}
+};
+
+struct Vec2i
+{
+	int x;
+	int y;
+
+	Vec2i() : x(0), y(0) {}
+	Vec2i(int xx, int yy) : x(xx), y(yy) {}
+
+	inline static Vec2i zero() { return Vec2i(0, 0); }
+
+	Vec2i operator+(const Vec2i& other) const
+	{
+		return Vec2i(x + other.x, y + other.y);
+	}
+
+	Vec2i operator-(const Vec2i& other) const
+	{
+		return Vec2i(x - other.x, y - other.y);
+	}
+
+	Vec2i operator-() const
+	{
+		return Vec2i(-x, -y);
+	}
+
+	Vec2i operator*(float scalar) const
+	{
+		return Vec2i(x * scalar, y * scalar);
+	}
+
+	Vec2i& operator+=(const Vec2i& other)
+	{
+		x += other.x;
+		y += other.y;
+		return *this;
+	}
+
+	Vec2i& operator-=(const Vec2i& other)
+	{
+		x -= other.x;
+		y -= other.y;
+		return *this;
 	}
 };
 

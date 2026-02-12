@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "Frustum.h"
 #include "../math/Math.h"
 
 struct Camera
@@ -20,4 +21,6 @@ struct Camera
 	
 	Vec3f GetForward() const;
 	Vec3f GetRight() const;
+
+	Frustum GetFrustum() const;
 };

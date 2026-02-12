@@ -40,30 +40,6 @@ void Minecraft::Run()
 	if (textureAtlas.has_value())
 		m_World.SetTextureAtlas(textureAtlas.value());
 
-	auto genChunk = [&](int x, int z) {
-		x *= 16;
-		z *= 16;
-		for (int j = 0; j < 4; j++)
-			for (int i = 0; i < 16 * 16; i++)
-			{
-				m_World.SetBlock({ x + i / 24, j + 11, z + i % 12}, BlockType::Dirt);
-			}
-
-		for (int j = 0; j < 11; j++)
-			for (int i = 0; i < 16 * 16; i++)
-			{
-				m_World.SetBlock({ x + i / 32, j, z + i % 16 }, BlockType::Stone);
-			}
-		for (int i = 0; i < 16 * 16; i++)
-		{
-			m_World.SetBlock({ x + i / 20, 15, z + i % 4 }, BlockType::Grass);
-		}
-	};
-
-	for (int x = -16; x < 16; x++)
-		for (int z = -16; z < 16; z++)
-			genChunk(x, z);
-
 	// Main loop
 
 	std::vector<Event> events;
@@ -104,6 +80,7 @@ void Minecraft::Run()
 
 void Minecraft::Update(float deltaTime)
 {
+	m_World.LoadAndUnloadChunks(m_Camera.position);
 	m_World.Update();
 
 	{

@@ -10,11 +10,17 @@
 #include "../render/Frustum.h"
 #include "../render/Camera.h"
 #include "../render/RenderCommand.h"
+#include "ChunkLoader.h"
 
 class World
 {
 public:
+	World(uint64_t seed) : m_Seed(seed) {}
+	~World() = default;
+
 	void Update();
+
+	void LoadAndUnloadChunks(Vec3f playerPosition);
 
 	void BuildRenderList(
 		const Camera& camera,
@@ -31,6 +37,10 @@ public:
 
 	const std::vector<const Chunk*> GetFrustumVisibleChunks(const Camera& camera) const;
 
+	/* Getters & setters */
+
+	const uint64_t GetSeed() const { return m_Seed; }
+
 	const std::unordered_map<Vec3i, Chunk, Vec3iHash>& GetChunks() const
 	{
 		return m_Chunks;
@@ -43,6 +53,11 @@ public:
 	}
 
 private:
+	/* Chunk loading functions */
+	void LoadChunks(Vec3f playerPosition);
+	void UnloadChunks(Vec3f playerPosition);
+
+	/* Mesh building functions */
 	void BuildChunkMesh(Chunk& chunk);
 	
 	void MergePosX(Mat3D<Block>& grid, Mesh& mesh);
@@ -69,7 +84,6 @@ private:
 		FaceDirection dir
 	);
 
-	Frustum GetFrustumForCamera(const Camera& camera) const;
 	bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
 
 	bool IsFaceVisible(Vec3i neighborPos);
@@ -79,6 +93,10 @@ private:
 
 private:
 	std::unordered_map<Vec3i, Chunk, Vec3iHash> m_Chunks;
-
+	std::unordered_map<Vec3i, std::unordered_map<Vec3i, BlockType, Vec3i>, Vec3i> m_ModifiedChunks;
 	Texture m_TextureAtlas;
+	const uint64_t m_Seed;
+	Vec3f m_LastChunkLoadPosition;
+	int m_ChunkLoadRadius = 16;
+	ChunkLoader m_ChunkLoader{ m_Seed };
 };
