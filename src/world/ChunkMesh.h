@@ -8,5 +8,4 @@
 struct ChunkMesh
 {
 	Mesh meshes[6];
-	bool needsUpdate = true;
 };

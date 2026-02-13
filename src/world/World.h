@@ -11,6 +11,7 @@
 #include "../render/Camera.h"
 #include "../render/RenderCommand.h"
 #include "ChunkLoader.h"
+#include <queue>
 
 class World
 {
@@ -59,7 +60,7 @@ private:
 
 	/* Mesh building functions */
 	void BuildChunkMesh(Chunk& chunk);
-	
+
 	void MergePosX(Mat3D<Block>& grid, Mesh& mesh);
 	void MergePosY(Mat3D<Block>& grid, Mesh& mesh);
 	void MergePosZ(Mat3D<Block>& grid, Mesh& mesh);
@@ -84,6 +85,8 @@ private:
 		FaceDirection dir
 	);
 
+	void AddChunkToMeshingQueue(Chunk& chunk);
+
 	bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
 
 	bool IsFaceVisible(Vec3i neighborPos);
@@ -94,9 +97,14 @@ private:
 private:
 	std::unordered_map<Vec3i, Chunk, Vec3iHash> m_Chunks;
 	std::unordered_map<Vec3i, std::unordered_map<Vec3i, BlockType, Vec3i>, Vec3i> m_ModifiedChunks;
+	std::queue<Vec3i> m_ChunkMeshingQueue;
+	int m_MaxMeshedChunksPerFrame = 4;
+
 	Texture m_TextureAtlas;
+
 	const uint64_t m_Seed;
+	
 	Vec3f m_LastChunkLoadPosition;
-	int m_ChunkLoadRadius = 16;
+	int m_ChunkLoadRadius = 8;
 	ChunkLoader m_ChunkLoader{ m_Seed };
 };

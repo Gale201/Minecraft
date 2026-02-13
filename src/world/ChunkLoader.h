@@ -2,6 +2,7 @@
 
 #include "Chunk.h"
 #include "../math/Math.h"
+#include "../math/PerlinNoise.h"
 
 class ChunkLoader
 {
@@ -11,5 +12,6 @@ public:
 
 	Chunk LoadChunk(Vec3i chunkPosition);
 private:
-	uint64_t m_Seed = 0;
+	const uint64_t m_Seed;
+	PerlinNoise m_Perlin{ m_Seed };
 };

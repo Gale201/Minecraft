@@ -80,15 +80,20 @@ void Minecraft::Run()
 
 void Minecraft::Update(float deltaTime)
 {
-	m_World.LoadAndUnloadChunks(m_Camera.position);
-	m_World.Update();
+	{
+		Timer timer("Chunk Loading");
+		m_World.LoadAndUnloadChunks(m_Camera.position);
+	}
+
+	{
+		Timer timer("Building Chunk Meshes");
+		m_World.Update();
+	}
 
 	{
 		Timer timer("Build Render List");
 		m_World.BuildRenderList(m_Camera, m_RenderList);
 	}
-
-	printf("Render List Size: %d\n", static_cast<int>(m_RenderList.size()));
 }
 
 

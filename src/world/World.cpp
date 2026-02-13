@@ -6,12 +6,18 @@
 
 void World::Update()
 {
-	for (auto& [chunkPos, chunk] : m_Chunks)
+	int meshedChunks = 0;
+	while (!m_ChunkMeshingQueue.empty() && meshedChunks < m_MaxMeshedChunksPerFrame)
 	{
-		if (chunk.mesh.needsUpdate)
+		Vec3i chunkPos = m_ChunkMeshingQueue.front();
+		auto it = m_Chunks.find(chunkPos);
+		if (it == m_Chunks.end())
 		{
-			BuildChunkMesh(chunk);
+			m_ChunkMeshingQueue.pop();
+			continue;
 		}
+		BuildChunkMesh(it->second);
+		meshedChunks++;
 	}
 }
 
@@ -107,7 +113,7 @@ void World::SetBlock(Vec3i pos, BlockType type)
 	Vec3i blockPos = GetBlockChunkPosition(pos);
 	chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = block;
 	
-	chunk.mesh.needsUpdate = true;
+	AddChunkToMeshingQueue(chunk);
 }
 
 const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& camera) const
@@ -140,8 +146,6 @@ void World::LoadChunks(Vec3f playerPosition)
 	int playerX = FloorDiv(static_cast<int>(std::floor(playerPosition.x)), CHUNK_SIZE);
 	int playerZ = FloorDiv(static_cast<int>(std::floor(playerPosition.z)), CHUNK_SIZE);
 
-
-	// WRONG!! Just check for x,-x,z,-z if the player moved in that dir, and then load the 32 chunk row in that dir
 	for (int x = playerX - m_ChunkLoadRadius; x <= playerX + m_ChunkLoadRadius; x++) 
 	{ 
 		for (int z = playerZ - m_ChunkLoadRadius; z <= playerZ + m_ChunkLoadRadius; z++)
@@ -153,6 +157,7 @@ void World::LoadChunks(Vec3f playerPosition)
 			// Load the chunk and add it to the world
 			Chunk chunk = m_ChunkLoader.LoadChunk(chunkPos);
 			m_Chunks.emplace(chunkPos, std::move(chunk));
+			AddChunkToMeshingQueue(m_Chunks[chunkPos]);
 		}
 	}
 }
@@ -185,6 +190,8 @@ void World::UnloadChunks(Vec3f playerPosition)
 
 void World::BuildChunkMesh(Chunk& chunk)
 {
+	chunk.state = ChunkState::Meshing;
+
 	for (Mesh& meshPart : chunk.mesh.meshes)
 	{
 		meshPart.vertices.clear();
@@ -197,7 +204,6 @@ void World::BuildChunkMesh(Chunk& chunk)
 	Mat3D<Block> gridNegY = { CHUNK_HEIGHT, CHUNK_SIZE, CHUNK_SIZE };
 	Mat3D<Block> gridPosZ = { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE };
 	Mat3D<Block> gridNegZ = { CHUNK_SIZE, CHUNK_SIZE, CHUNK_HEIGHT };
-
 
 	for (int x = 0; x < CHUNK_SIZE; x++)
 	{
@@ -255,7 +261,8 @@ void World::BuildChunkMesh(Chunk& chunk)
 	MergePosZ(gridPosZ, chunk.mesh.meshes[4]);
 	MergeNegZ(gridNegZ, chunk.mesh.meshes[5]);
 
-	chunk.mesh.needsUpdate = false;
+	chunk.state = ChunkState::Ready;
+	m_ChunkMeshingQueue.pop();
 }
 
 void World::MergePosX(Mat3D<Block>& grid, Mesh& mesh)
@@ -753,7 +760,12 @@ void World::AddFaceToMesh(
 	mesh.indices.push_back(startIndex + 3);
 }
 
-
+void World::AddChunkToMeshingQueue(Chunk& chunk)
+{
+	if (chunk.state == ChunkState::NeedsMeshing) return;
+	chunk.state = ChunkState::NeedsMeshing;
+	m_ChunkMeshingQueue.push(chunk.position);
+}
 
 bool World::FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const 
 {
@@ -776,7 +788,7 @@ bool World::FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) cons
 		if (plane.normal.y >= 0) positiveVertex.y = max.y;
 		if (plane.normal.z >= 0) positiveVertex.z = max.z;
 
-		if (plane.normal.Dot(positiveVertex) + plane.d < 0)
+		if (plane.normal.Dot(positiveVertex) + plane.d < 0.0f)
 		{
 			return false;
 		}

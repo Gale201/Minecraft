@@ -36,7 +36,7 @@ private:
 	ModelLoader m_ModelLoader{ "res/objs/" };
 	TextureLoader m_TextureLoader{ "res/textures/" };
 
-	Camera m_Camera{ {0,20,0}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
+	Camera m_Camera{ {0,60,0}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100 };
 
 	std::vector<RenderCommand> m_RenderList;
 };
