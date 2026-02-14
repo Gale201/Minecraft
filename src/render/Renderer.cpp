@@ -16,18 +16,6 @@ Renderer::~Renderer()
 {
 	delete[] m_FrameBuffer;
 	delete[] m_DepthBuffer;
-
-	{
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_Shutdown = true;
-	}
-
-	m_WorkersDoneCV.notify_all();
-
-	for (std::thread& t : m_WorkerThreads)
-	{
-		if (t.joinable()) t.join();
-	}
 }
 
 bool Renderer::Initialize(int width, int height)
@@ -419,7 +407,7 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 	}
 }
 
-void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera)
+void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera, ThreadSystem& threadSystem)
 {
 	m_ActiveRenderList = &renderList;
 	m_ActiveCamera = &camera;
@@ -439,17 +427,13 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 		);
 	}
 
-	m_NextTile = 0;
-	m_TilesRemaining = static_cast<int>(m_ScreenTiles.size());
-	{
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_HasWork = true;
-	}
-	m_WorkersDoneCV.notify_all();
-	{
-		std::unique_lock<std::mutex> lock(m_Mutex);
-		m_WorkersDoneCV.wait(lock, [this]() { return !m_HasWork || m_Shutdown; });
-	}
+	threadSystem.ParallelFor(
+		(int)m_ScreenTiles.size(),
+		[&](int tileIndex)
+		{
+			RasterizeTile(m_ScreenTiles[tileIndex]);
+		}
+	);
 }
 
 void Renderer::CreateTiles()
@@ -470,50 +454,12 @@ void Renderer::CreateTiles()
 	}
 }
 
-void Renderer::InitThreads()
-{
-	int threadCount = std::thread::hardware_concurrency();
-
-	for (int i = 0; i < threadCount; i++)
-	{
-		m_WorkerThreads.emplace_back(&Renderer::WorkerThread, this);
-	}
-}
-
 // Private functions
-
-void Renderer::WorkerThread()
-{
-	while (true)
-	{
-		{
-			std::unique_lock<std::mutex> lock(m_Mutex);
-			m_WorkersDoneCV.wait(lock, [this]() { return m_HasWork || m_Shutdown; });
-			if (m_Shutdown)
-				return;
-		}
-
-		while (true)
-		{
-			int tileIndex = m_NextTile.fetch_add(1);
-			if (tileIndex >= (int)m_ScreenTiles.size())
-				break;
-
-			RasterizeTile(m_ScreenTiles[tileIndex]);
-
-			if (m_TilesRemaining.fetch_sub(1) == 1)
-			{
-				std::lock_guard<std::mutex> lock(m_Mutex);
-				m_HasWork = false;
-				m_WorkersDoneCV.notify_one();
-				break;
-			}
-		}
-	}
-}
 
 void Renderer::RasterizeTile(const ScreenTile& tile)
 {
+	//if (tile.triangles.size() > 10000)
+	//	printf("triangle isze for %d %d: %zu\n", tile.x0, tile.y0, tile.triangles.size());
 	for (const ScreenTriangle& triangle : tile.triangles)
 	{
 		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
@@ -619,7 +565,7 @@ void Renderer::BuildScreenTileTriangles(
 			for (int ty = tileTop; ty <= tileBottom; ty++)
 				for (int tx = tileLeft; tx <= tileRight; tx++)
 				{
-					m_ScreenTiles[ty * tilesPerRow + tx].triangles.push_back({ triangle, &texture, tileInfo });
+					m_ScreenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, &texture, tileInfo);
 				}
 		}
 	}

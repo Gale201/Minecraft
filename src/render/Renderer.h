@@ -6,6 +6,7 @@
 #include "RenderObject.h"
 #include "RenderCommand.h"
 #include "Camera.h"
+#include "../thread/ThreadSystem.h"
 #include <thread>
 #include <condition_variable>
 
@@ -36,10 +37,9 @@ public:
 	);
 	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
-	void Render(const std::vector<RenderCommand>& renderList, const Camera& camera);
+	void Render(const std::vector<RenderCommand>& renderList, const Camera& camera, ThreadSystem& threadSystem);
 
 	void CreateTiles();
-	void InitThreads();
 
 	void SetDirectionalLight(Vec3f direction) { m_DirectionalLight = direction; }
 
@@ -61,7 +61,6 @@ private:
 		std::vector<ScreenTriangle> triangles;
 	};
 
-	void WorkerThread();
 	void RasterizeTile(const ScreenTile& tile);
 	void BuildScreenTileTriangles(
 		const Mesh& mesh,
@@ -131,13 +130,6 @@ private:
 	int m_PerPixelLighting = 0;
 
 	std::vector<ScreenTile> m_ScreenTiles;
-	std::vector<std::thread> m_WorkerThreads;
-	std::atomic<int> m_NextTile;
-	std::atomic<int> m_TilesRemaining = 0;
-	std::mutex m_Mutex;
-	std::condition_variable m_WorkersDoneCV;
-	bool m_HasWork = false;
-	bool m_Shutdown = false;
 
 	const std::vector<RenderCommand>* m_ActiveRenderList = nullptr;
 	const Camera* m_ActiveCamera = nullptr;

@@ -9,6 +9,7 @@
 #include "../loaders/TextureLoader.h"
 #include "../world/World.h"
 #include "../render/Camera.h"
+#include "../thread/ThreadSystem.h"
 
 #define TITLE "Minecraft"
 #define WIDTH 1280
@@ -29,6 +30,7 @@ private:
 	bool m_Running = false;
 
 	Window m_Window;
+	ThreadSystem m_ThreadSystem;
 	World m_World{ 0 };
 	Renderer m_Renderer;
 	InputManager m_InputManager;

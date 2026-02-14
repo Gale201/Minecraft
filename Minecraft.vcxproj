@@ -30,6 +30,7 @@
     <ClCompile Include="src\render\Camera.cpp" />
     <ClCompile Include="src\render\CameraController.cpp" />
     <ClCompile Include="src\render\Renderer.cpp" />
+    <ClCompile Include="src\thread\ThreadSystem.cpp" />
     <ClCompile Include="src\world\BlockFace.cpp" />
     <ClCompile Include="src\world\ChunkLoader.cpp" />
     <ClCompile Include="src\world\World.cpp" />
@@ -58,6 +59,7 @@
     <ClInclude Include="src\render\Transform.h" />
     <ClInclude Include="src\render\Triangle.h" />
     <ClInclude Include="src\render\Vertex.h" />
+    <ClInclude Include="src\thread\ThreadSystem.h" />
     <ClInclude Include="src\timer\AccumTimer.h" />
     <ClInclude Include="src\timer\Timer.h" />
     <ClInclude Include="src\world\Block.h" />

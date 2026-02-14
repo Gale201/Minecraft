@@ -1,6 +1,6 @@
 #include "ChunkLoader.h"
 
-Chunk ChunkLoader::LoadChunk(Vec3i chunkPosition)
+Chunk ChunkLoader::LoadChunk(Vec3i chunkPosition) const
 {
 	Chunk chunk;
 	chunk.position = chunkPosition;

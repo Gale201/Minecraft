@@ -14,9 +14,10 @@ Minecraft::Minecraft()
 {
 	if (!m_Window.Create(WIDTH, HEIGHT, TITLE)) return;
 
+	m_ThreadSystem.Initialize();
+
 	m_Renderer.Initialize(WIDTH, HEIGHT);
 	m_Renderer.CreateTiles();
-	m_Renderer.InitThreads();
 
 	m_RenderList.reserve(10000);
 }
@@ -75,19 +76,16 @@ void Minecraft::Run()
 		m_Window.Render(m_Renderer.GetFrameBuffer());
 	}
 
+	m_ThreadSystem.Shutdown();
 	m_Window.Destroy();
 }
 
 void Minecraft::Update(float deltaTime)
 {
-	{
-		Timer timer("Chunk Loading");
-		m_World.LoadAndUnloadChunks(m_Camera.position);
-	}
-
+	m_World.LoadAndUnloadChunks(m_Camera.position);
 	{
 		Timer timer("Building Chunk Meshes");
-		m_World.Update();
+		m_World.Update(m_ThreadSystem);
 	}
 
 	{
@@ -103,7 +101,7 @@ void Minecraft::Render()
 
 	{
 		Timer timer("Render");
-		m_Renderer.Render(m_RenderList, m_Camera);
+		m_Renderer.Render(m_RenderList, m_Camera, m_ThreadSystem);
 	}
 
 	m_RenderList.clear();

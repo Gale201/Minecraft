@@ -3,20 +3,28 @@
 #include "../core/Log.h"
 #include "../render/Frustum.h"
 #include "../render/Camera.h"
+#include "../timer/Timer.h"
 
-void World::Update()
+void World::Update(ThreadSystem& threadSystem)
 {
 	int meshedChunks = 0;
 	while (!m_ChunkMeshingQueue.empty() && meshedChunks < m_MaxMeshedChunksPerFrame)
 	{
 		Vec3i chunkPos = m_ChunkMeshingQueue.front();
 		auto it = m_Chunks.find(chunkPos);
-		if (it == m_Chunks.end())
+		if (it == m_Chunks.end() || it->second.state != ChunkState::NeedsMeshing)
 		{
 			m_ChunkMeshingQueue.pop();
 			continue;
 		}
-		BuildChunkMesh(it->second);
+		{
+			Chunk* chunk = &it->second;
+			Timer timer("Build mesh");
+			threadSystem.Submit([this, chunk]() {
+				BuildChunkMesh(*chunk);
+			});
+			m_ChunkMeshingQueue.pop();
+		}
 		meshedChunks++;
 	}
 }
@@ -64,6 +72,15 @@ Vec3i World::GetBlockChunkPosition(Vec3i pos) const
 	);
 }
 
+inline Vec3i World::GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const
+{
+	return {
+		relPos.x + chunk.position.x * CHUNK_SIZE,
+		relPos.y + chunk.position.y * CHUNK_HEIGHT,
+		relPos.z + chunk.position.z * CHUNK_SIZE
+	};
+}
+
 Vec3i World::GetChunkWorldPosition(Vec3i pos) const
 {
 	return Vec3i(
@@ -87,10 +104,10 @@ Chunk& World::GetChunk(Vec3i pos)
 	auto it = m_Chunks.find(pos);
 	if (it != m_Chunks.end()) return it->second;
 
-	Chunk chunk;
-	chunk.position = pos;
-	auto [newIt, _] = m_Chunks.emplace(pos, std::move(chunk));
-	return newIt->second;
+	Chunk chunk = m_ChunkLoader.LoadChunk(pos);
+	m_Chunks.emplace(pos, std::move(chunk));
+	AddChunkToMeshingQueue(m_Chunks[pos]);
+	return m_Chunks[pos];
 }
 
 Block World::GetBlock(Vec3i pos) const
@@ -198,6 +215,36 @@ void World::BuildChunkMesh(Chunk& chunk)
 		meshPart.indices.clear();
 	}
 
+	const Chunk* chunkPosX = TryGetChunk({ chunk.position.x + 1, chunk.position.y, chunk.position.z });
+	const Chunk* chunkNegX = TryGetChunk({ chunk.position.x - 1, chunk.position.y, chunk.position.z });
+	const Chunk* chunkPosZ = TryGetChunk({ chunk.position.x, chunk.position.y, chunk.position.z + 1 });
+	const Chunk* chunkNegZ = TryGetChunk({ chunk.position.x, chunk.position.y, chunk.position.z - 1 });
+
+	Chunk chunkPosXGen;
+	Chunk chunkNegXGen;
+	Chunk chunkPosZGen;
+	Chunk chunkNegZGen;
+
+	if (!chunkPosX)
+		chunkPosXGen = m_ChunkLoader.LoadChunk({ chunk.position.x + 1, chunk.position.y, chunk.position.z });
+	else
+		chunkPosXGen = *chunkPosX;
+	
+	if (!chunkNegX)
+		chunkNegXGen = m_ChunkLoader.LoadChunk({ chunk.position.x - 1, chunk.position.y, chunk.position.z });
+	else
+		chunkNegXGen = *chunkNegX;
+	
+	if (!chunkPosZ)
+		chunkPosZGen = m_ChunkLoader.LoadChunk({ chunk.position.x, chunk.position.y, chunk.position.z + 1 });
+	else
+		chunkPosZGen = *chunkPosZ;
+	
+	if (!chunkNegZ)
+		chunkNegZGen = m_ChunkLoader.LoadChunk({ chunk.position.x, chunk.position.y, chunk.position.z - 1 });
+	else
+		chunkNegZGen = *chunkNegZ;
+
 	Mat3D<Block> gridPosX = { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE };
 	Mat3D<Block> gridNegX = { CHUNK_SIZE, CHUNK_SIZE, CHUNK_HEIGHT };
 	Mat3D<Block> gridPosY = { CHUNK_HEIGHT, CHUNK_SIZE, CHUNK_SIZE };
@@ -216,11 +263,11 @@ void World::BuildChunkMesh(Chunk& chunk)
 
 				for (FaceDirection dir : FACE_DIRECTIONS)
 				{
-					Vec3i neighborPos = GetAbsoluteBlockPosition({ x, y, z }, chunk) + CUBE_NEIGHBOR_OFFSET[(int)dir];
-					if (IsFaceVisible(neighborPos))
+					Vec3i neighborPos = Vec3i(x, y, z) + CUBE_NEIGHBOR_OFFSET[static_cast<int>(dir)];
+					if (IsFaceVisible(neighborPos, chunk, &chunkPosXGen, &chunkNegXGen, &chunkPosZGen, &chunkNegZGen))
 					{
 						// AddFaceToMesh(chunk.mesh.mesh, CUBE_FACES[(int)dir], Vec3i(x, y, z), block.type, dir);
-						
+
 						if (dir == FaceDirection::PosY)
 							gridPosY(y, x, z).type = block.type;
 						else if (dir == FaceDirection::PosX)
@@ -262,7 +309,6 @@ void World::BuildChunkMesh(Chunk& chunk)
 	MergeNegZ(gridNegZ, chunk.mesh.meshes[5]);
 
 	chunk.state = ChunkState::Ready;
-	m_ChunkMeshingQueue.pop();
 }
 
 void World::MergePosX(Mat3D<Block>& grid, Mesh& mesh)
@@ -796,19 +842,45 @@ bool World::FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) cons
 	return true;
 }
 
-bool World::IsFaceVisible(Vec3i neighborPos)
+inline bool World::IsFaceVisible(
+	Vec3i neighborPos, 
+	const Chunk& chunk,
+	const Chunk* chunkPosX,
+	const Chunk* chunkNegX, 
+	const Chunk* chunkPosZ,
+	const Chunk* chunkNegZ
+) const
 {
-	Block block = GetBlock(neighborPos);
-	return block.type == BlockType::Air || block.type == BlockType::Undefined;
-}
+	Block block;
+	bool overflowed = false;
 
-Vec3i World::GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const
-{
-	return { 
-		relPos.x + chunk.position.x * CHUNK_SIZE,
-		relPos.y + chunk.position.y * CHUNK_HEIGHT,
-		relPos.z + chunk.position.z * CHUNK_SIZE
-	};
+	if (neighborPos.x < 0)
+	{
+		block = chunkNegX->blocks[CHUNK_SIZE - 1][neighborPos.y][neighborPos.z];
+		overflowed = true;
+	}
+	if (neighborPos.x > CHUNK_SIZE - 1)
+	{
+		block = chunkPosX->blocks[0][neighborPos.y][neighborPos.z];
+		overflowed = true;
+	}
+	if (neighborPos.z < 0)
+	{
+		block = chunkNegZ->blocks[neighborPos.x][neighborPos.y][CHUNK_SIZE - 1];
+		overflowed = true;
+	}
+	if (neighborPos.z > CHUNK_SIZE - 1)
+	{
+		block = chunkPosZ->blocks[neighborPos.x][neighborPos.y][0];
+		overflowed = true;
+	}
+	if (neighborPos.y < 0) return true;
+	if (neighborPos.y >= CHUNK_HEIGHT) return true;
+
+	if (!overflowed)
+		block = chunk.blocks[neighborPos.x][neighborPos.y][neighborPos.z];
+
+	return block.type == BlockType::Air || block.type == BlockType::Undefined;
 }
 
 inline int World::FloorDiv(int a, int b)

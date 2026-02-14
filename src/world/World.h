@@ -12,6 +12,7 @@
 #include "../render/RenderCommand.h"
 #include "ChunkLoader.h"
 #include <queue>
+#include "../thread/ThreadSystem.h"
 
 class World
 {
@@ -19,7 +20,7 @@ public:
 	World(uint64_t seed) : m_Seed(seed) {}
 	~World() = default;
 
-	void Update();
+	void Update(ThreadSystem& threadSystem);
 
 	void LoadAndUnloadChunks(Vec3f playerPosition);
 
@@ -34,7 +35,7 @@ public:
 	Vec3i GetBlockChunkPosition(Vec3i pos) const;
 	Vec3i GetChunkWorldPosition(Vec3i pos) const;
 	Vec3i GetChunkPosition(Vec3i pos) const;
-	Vec3i GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const;
+	inline Vec3i GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const;
 
 	const std::vector<const Chunk*> GetFrustumVisibleChunks(const Camera& camera) const;
 
@@ -89,7 +90,14 @@ private:
 
 	bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
 
-	bool IsFaceVisible(Vec3i neighborPos);
+	inline bool IsFaceVisible(
+		Vec3i neighborPos,
+		const Chunk& chunk,
+		const Chunk* chunkPosX,
+		const Chunk* chunkNegX,
+		const Chunk* chunkPosZ,
+		const Chunk* chunkNegZ
+	) const;
 
 	inline static int FloorDiv(int a, int b);
 	inline static int FloorMod(int a, int b);
@@ -98,13 +106,13 @@ private:
 	std::unordered_map<Vec3i, Chunk, Vec3iHash> m_Chunks;
 	std::unordered_map<Vec3i, std::unordered_map<Vec3i, BlockType, Vec3i>, Vec3i> m_ModifiedChunks;
 	std::queue<Vec3i> m_ChunkMeshingQueue;
-	int m_MaxMeshedChunksPerFrame = 4;
+	int m_MaxMeshedChunksPerFrame = 8;
 
 	Texture m_TextureAtlas;
 
 	const uint64_t m_Seed;
 	
 	Vec3f m_LastChunkLoadPosition;
-	int m_ChunkLoadRadius = 8;
+	int m_ChunkLoadRadius = 32;
 	ChunkLoader m_ChunkLoader{ m_Seed };
 };
