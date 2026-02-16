@@ -83,28 +83,28 @@ void Window::PollEvents(bool& running, std::vector<Event>& outEvents)
 		{
 		case SDL_QUIT:
 			running = false;
-			event.type = Event::Type::QUIT;
+			event.type = Event::Type::Quit;
 			outEvents.push_back(event);
 			break;
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
-			event.type = (e.type == SDL_KEYDOWN) ? Event::Type::KEYDOWN : Event::Type::KEYUP;
+			event.type = (e.type == SDL_KEYDOWN) ? Event::Type::Keydown : Event::Type::Keyup;
 			switch (e.key.keysym.sym)
 			{
 			case SDLK_w: event.key = Key::W; break;
 			case SDLK_a: event.key = Key::A; break;
 			case SDLK_s: event.key = Key::S; break;
 			case SDLK_d: event.key = Key::D; break;
-			case SDLK_ESCAPE: event.key = Key::ESCAPE; break;
+			case SDLK_ESCAPE: event.key = Key::Escape; break;
 			case SDLK_LSHIFT:
-			case SDLK_RSHIFT: event.key = Key::SHIFT; break;
-			case SDLK_SPACE: event.key = Key::SPACE; break;
-			default: event.key = Key::UNKNOWN; break;
+			case SDLK_RSHIFT: event.key = Key::Shift; break;
+			case SDLK_SPACE: event.key = Key::Space; break;
+			default: event.key = Key::Unknown; break;
 			}
 			outEvents.push_back(event);
 			break;
 		case SDL_MOUSEMOTION:
-			event.type = Event::Type::MOUSEMOVE;
+			event.type = Event::Type::MouseMove;
 			event.mouseX = e.motion.x;
 			event.mouseY = e.motion.y;
 			event.mouseMotionX = e.motion.xrel;
@@ -113,20 +113,20 @@ void Window::PollEvents(bool& running, std::vector<Event>& outEvents)
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
-			event.type = (e.type == SDL_MOUSEBUTTONDOWN) ? Event::Type::MOUSEBUTTONDOWN : Event::Type::MOUSEBUTTONUP;
+			event.type = (e.type == SDL_MOUSEBUTTONDOWN) ? Event::Type::MouseButtonDown : Event::Type::MouseButtonUp;
 			switch (e.button.button)
 			{
 			case 1:
-				event.mouseButton = MouseButton::LEFT;
+				event.mouseButton = MouseButton::Left;
 				break;
 			case 2:
-				event.mouseButton = MouseButton::MIDDLE;
+				event.mouseButton = MouseButton::Middle;
 				break;
 			case 3:
-				event.mouseButton = MouseButton::RIGHT;
+				event.mouseButton = MouseButton::Right;
 				break;
 			default:
-				event.mouseButton = MouseButton::NONE;
+				event.mouseButton = MouseButton::None;
 				break;
 			}
 			outEvents.push_back(event);

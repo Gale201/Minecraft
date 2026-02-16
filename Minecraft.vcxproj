@@ -67,7 +67,11 @@
     <ClInclude Include="src\world\Chunk.h" />
     <ClInclude Include="src\world\ChunkLoader.h" />
     <ClInclude Include="src\world\ChunkMesh.h" />
+    <ClInclude Include="src\world\Raycast.h" />
     <ClInclude Include="src\world\World.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\textures\texture-atlas.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>

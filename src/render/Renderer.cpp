@@ -458,8 +458,6 @@ void Renderer::CreateTiles()
 
 void Renderer::RasterizeTile(const ScreenTile& tile)
 {
-	//if (tile.triangles.size() > 10000)
-	//	printf("triangle isze for %d %d: %zu\n", tile.x0, tile.y0, tile.triangles.size());
 	for (const ScreenTriangle& triangle : tile.triangles)
 	{
 		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);

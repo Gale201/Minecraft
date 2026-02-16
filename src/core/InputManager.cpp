@@ -10,7 +10,7 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 	m_MouseButtonsJustReleased.clear();
 	for (const Event& e : events)
 	{
-		if (e.type == Event::Type::KEYDOWN)
+		if (e.type == Event::Type::Keydown)
 		{
 			if (!m_KeysDown[e.key])
 			{
@@ -18,7 +18,7 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 			}
 			m_KeysDown[e.key] = true;
 		}
-		else if (e.type == Event::Type::KEYUP)
+		else if (e.type == Event::Type::Keyup)
 		{
 			if (m_KeysDown[e.key])
 			{
@@ -26,7 +26,7 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 			}
 			m_KeysDown[e.key] = false;
 		}
-		else if (e.type == Event::Type::MOUSEBUTTONDOWN)
+		else if (e.type == Event::Type::MouseButtonDown)
 		{
 			if (!m_MouseButtonsDown[e.mouseButton])
 			{
@@ -34,7 +34,7 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 			}
 			m_MouseButtonsDown[e.mouseButton] = true;
 		}
-		else if (e.type == Event::Type::MOUSEBUTTONUP)
+		else if (e.type == Event::Type::MouseButtonUp)
 		{
 			if (m_MouseButtonsDown[e.mouseButton])
 			{
@@ -42,7 +42,7 @@ void InputManager::ProcessEvents(const std::vector<Event>& events)
 			}
 			m_MouseButtonsDown[e.mouseButton] = false;
 		}
-		else if (e.type == Event::Type::MOUSEMOVE)
+		else if (e.type == Event::Type::MouseMove)
 		{
 			m_MouseX = e.mouseX;
 			m_MouseY = e.mouseY;
@@ -82,7 +82,7 @@ bool InputManager::IsKeyJustReleased(Key key) const
 	return false;
 }
 
-bool InputManager::isMouseButtonDown(MouseButton button) const
+bool InputManager::IsMouseButtonDown(MouseButton button) const
 {
 	auto it = m_MouseButtonsDown.find(button);
 	if (it != m_MouseButtonsDown.end())
@@ -92,7 +92,7 @@ bool InputManager::isMouseButtonDown(MouseButton button) const
 	return false;
 }
 
-bool InputManager::isMouseButtonJustPressed(MouseButton button) const
+bool InputManager::IsMouseButtonJustPressed(MouseButton button) const
 {
 	auto it = m_MouseButtonsJustPressed.find(button);
 	if (it != m_MouseButtonsJustPressed.end())
@@ -102,7 +102,7 @@ bool InputManager::isMouseButtonJustPressed(MouseButton button) const
 	return false;
 }
 
-bool InputManager::isMouseButtonJustReleased(MouseButton button) const
+bool InputManager::IsMouseButtonJustReleased(MouseButton button) const
 {
 	auto it = m_MouseButtonsJustReleased.find(button);
 	if (it != m_MouseButtonsJustReleased.end())

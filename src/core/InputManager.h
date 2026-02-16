@@ -19,9 +19,9 @@ public:
 	bool IsKeyJustPressed(Key key) const;
 	bool IsKeyJustReleased(Key key) const;
 
-	bool isMouseButtonDown(MouseButton button) const;
-	bool isMouseButtonJustPressed(MouseButton button) const;
-	bool isMouseButtonJustReleased(MouseButton button) const;
+	bool IsMouseButtonDown(MouseButton button) const;
+	bool IsMouseButtonJustPressed(MouseButton button) const;
+	bool IsMouseButtonJustReleased(MouseButton button) const;
 
 	int GetMouseX() const { return m_MouseX; }
 	int GetMouseY() const { return m_MouseY; }

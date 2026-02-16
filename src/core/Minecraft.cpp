@@ -32,8 +32,8 @@ void Minecraft::Run()
 	inputBindings.AddKeyBinding(InputAction::MoveLeft, Key::A);
 	inputBindings.AddKeyBinding(InputAction::MoveBackward, Key::S);
 	inputBindings.AddKeyBinding(InputAction::MoveRight, Key::D);
-	inputBindings.AddKeyBinding(InputAction::MoveUp, Key::SPACE);
-	inputBindings.AddKeyBinding(InputAction::MoveDown, Key::SHIFT);
+	inputBindings.AddKeyBinding(InputAction::MoveUp, Key::Space);
+	inputBindings.AddKeyBinding(InputAction::MoveDown, Key::Shift);
 
 	CameraController cameraController{ m_Camera, m_InputManager, inputBindings };
 
@@ -88,16 +88,24 @@ void Minecraft::Update(float deltaTime)
 		m_World.Update(m_ThreadSystem);
 	}
 
+	WorldRaycastResult raycast;
+	if (
+		m_InputManager.IsMouseButtonJustReleased(MouseButton::Left) &&
+		m_World.Raycast(m_Camera.position, m_Camera.GetForward(), 8.0f, raycast)
+		)
+	{
+		m_World.SetBlock(raycast.blockPosition, BlockType::Air);
+	}
+
 	{
 		Timer timer("Build Render List");
 		m_World.BuildRenderList(m_Camera, m_RenderList);
 	}
 }
 
-
 void Minecraft::Render()
 {
-	m_Renderer.Clear(0xFF000000);
+	m_Renderer.Clear(0xFF99BBFF);
 
 	{
 		Timer timer("Render");

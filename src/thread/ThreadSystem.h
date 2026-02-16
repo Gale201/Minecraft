@@ -23,4 +23,6 @@ private:
 	std::mutex m_Mutex;
 	std::condition_variable m_Condition;
 	bool m_Shutdown = false;
+
+	std::thread::id m_MainThreadId;
 };

@@ -6,32 +6,32 @@
 
 enum class Key
 {
-	UNKNOWN = 0,
+	Unknown = 0,
 	W, A, S, D,
-	ESCAPE,
-	SPACE,
-	SHIFT
+	Escape,
+	Space,
+	Shift
 };
 
 enum class MouseButton
 {
-	NONE = 0,
-	LEFT,
-	RIGHT,
-	MIDDLE
+	None = 0,
+	Left,
+	Right,
+	Middle
 };
 
 struct Event
 {
 	enum class Type
 	{
-		NONE = 0,
-		QUIT,
-		KEYDOWN,
-		KEYUP,
-		MOUSEMOVE,
-		MOUSEBUTTONDOWN,
-		MOUSEBUTTONUP
+		None = 0,
+		Quit,
+		Keydown,
+		Keyup,
+		MouseMove,
+		MouseButtonDown,
+		MouseButtonUp
 	} type;
 
 	Key key;

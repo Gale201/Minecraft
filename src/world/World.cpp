@@ -12,19 +12,19 @@ void World::Update(ThreadSystem& threadSystem)
 	{
 		Vec3i chunkPos = m_ChunkMeshingQueue.front();
 		auto it = m_Chunks.find(chunkPos);
-		if (it == m_Chunks.end() || it->second.state != ChunkState::NeedsMeshing)
+		if (it == m_Chunks.end() || it->second->state.load(std::memory_order_acquire) != ChunkState::NeedsMeshing)
 		{
 			m_ChunkMeshingQueue.pop();
 			continue;
 		}
-		{
-			Chunk* chunk = &it->second;
-			Timer timer("Build mesh");
-			threadSystem.Submit([this, chunk]() {
-				BuildChunkMesh(*chunk);
-			});
-			m_ChunkMeshingQueue.pop();
-		}
+
+		Chunk* chunk = it->second.get();
+		threadSystem.Submit([this, chunk]() {
+			BuildChunkMesh(*chunk);
+			chunk->mesh = std::move(chunk->buildMesh);
+			chunk->state.store(ChunkState::Generated, std::memory_order_release);
+		});
+		m_ChunkMeshingQueue.pop();
 		meshedChunks++;
 	}
 }
@@ -52,6 +52,98 @@ void World::BuildRenderList(const Camera& camera, std::vector<RenderCommand>& ou
 			});
 		}
 	}
+}
+
+bool World::Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result)
+{
+	direction = direction.normalized();
+
+	Vec3i originBlock = Vec3i(
+		static_cast<int>(std::floorf(origin.x)),
+		static_cast<int>(std::floorf(origin.y)),
+		static_cast<int>(std::floorf(origin.z))
+	);
+	int stepX = (direction.x > 0.0f) ? 1 : -1;
+	int stepY = (direction.y > 0.0f) ? 1 : -1;
+	int stepZ = (direction.z > 0.0f) ? 1 : -1;
+
+	float tDeltaX = std::abs(1.0f / direction.x);
+	float tDeltaY = std::abs(1.0f / direction.y);
+	float tDeltaZ = std::abs(1.0f / direction.z);
+
+	float tMaxX = (stepX > 0) ? (std::floor(origin.x) + 1 - origin.x) : (origin.x - std::floor(origin.x));
+	float tMaxY = (stepY > 0) ? (std::floor(origin.y) + 1 - origin.y) : (origin.y - std::floor(origin.y));
+	float tMaxZ = (stepZ > 0) ? (std::floor(origin.z) + 1 - origin.z) : (origin.z - std::floor(origin.z));
+	tMaxX *= tDeltaX;
+	tMaxY *= tDeltaY;
+	tMaxZ *= tDeltaZ;
+
+	float distance = 0.0f;
+	Vec3i pos = { originBlock.x, originBlock.y, originBlock.z };
+	while (distance <= maxDistance)
+	{
+		Block block = GetBlock(pos);
+		if (block.type != BlockType::Undefined && block.type != BlockType::Air)
+		{
+			result = { pos, {}, distance };
+			return true;
+		}
+
+		if (tMaxX < tMaxY)
+		{
+			if (tMaxX < tMaxZ)
+			{
+				pos.x += stepX;
+				tMaxX += tDeltaX;
+			}
+			else
+			{
+				pos.z += stepZ;
+				tMaxZ += tDeltaZ;
+			}
+		}
+		else
+		{
+			if (tMaxY < tMaxZ)
+			{
+				pos.y += stepY;
+				tMaxY += tDeltaY;
+			}
+			else
+			{
+				pos.z += stepZ;
+				tMaxZ += tDeltaZ;
+			}
+		}
+
+		distance = (pos - originBlock).length();
+	}
+
+	return false;
+/*
+	Vec3f rayPos = origin;
+	float distance = 0.0f;
+	while (true)
+	{
+		Vec3i blockPos = Vec3i(
+			static_cast<int>(std::floorf(rayPos.x)),
+			static_cast<int>(std::floorf(rayPos.y)),
+			static_cast<int>(std::floorf(rayPos.z))
+		);
+		Block block = GetBlock(blockPos);
+		if (block.type != BlockType::Undefined && block.type != BlockType::Air)
+		{
+			result = { blockPos, {}, distance };
+			return true;
+		}
+
+		rayPos += direction;
+
+		distance = (origin - rayPos).length();
+		if (distance > maxDistance) return false;
+	}
+
+	return false;*/
 }
 
 Vec3i World::GetChunkPosition(Vec3i pos) const
@@ -90,24 +182,28 @@ Vec3i World::GetChunkWorldPosition(Vec3i pos) const
 	);
 }
 
-const Chunk* World::TryGetChunk(Vec3i pos) const
+Chunk* World::TryGetChunk(Vec3i pos) const
 {
 	auto it = m_Chunks.find(pos);
 	if (it == m_Chunks.end())
 		return nullptr;
 
-	return &it->second;
+	return it->second.get();
 }
 
 Chunk& World::GetChunk(Vec3i pos)
 {
 	auto it = m_Chunks.find(pos);
-	if (it != m_Chunks.end()) return it->second;
+	if (it != m_Chunks.end()) return *it->second;
 
-	Chunk chunk = m_ChunkLoader.LoadChunk(pos);
+	std::unique_ptr<Chunk> chunk = std::make_unique<Chunk>();
+	chunk->position = pos;
+
+	m_ChunkLoader.LoadChunk(*chunk);
+	
 	m_Chunks.emplace(pos, std::move(chunk));
-	AddChunkToMeshingQueue(m_Chunks[pos]);
-	return m_Chunks[pos];
+	AddChunkToMeshingQueue(*m_Chunks[pos]);
+	return *m_Chunks[pos];
 }
 
 Block World::GetBlock(Vec3i pos) const
@@ -129,8 +225,29 @@ void World::SetBlock(Vec3i pos, BlockType type)
 	Block block(type);
 	Vec3i blockPos = GetBlockChunkPosition(pos);
 	chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = block;
-	
+
 	AddChunkToMeshingQueue(chunk);
+
+	if (blockPos.x == 0)
+	{
+		Chunk& neighbor = GetChunk({ chunkPos.x - 1, chunkPos.y, chunkPos.z });
+		AddChunkToMeshingQueue(neighbor);
+	}
+	else if (blockPos.x == CHUNK_SIZE - 1)
+	{
+		Chunk& neighbor = GetChunk({ chunkPos.x + 1, chunkPos.y, chunkPos.z });
+		AddChunkToMeshingQueue(neighbor);
+	}
+	if (blockPos.z == 0)
+	{
+		Chunk& neighbor = GetChunk({ chunkPos.x, chunkPos.y, chunkPos.z - 1 });
+		AddChunkToMeshingQueue(neighbor);
+	}
+	else if (blockPos.z == CHUNK_SIZE - 1)
+	{
+		Chunk& neighbor = GetChunk({ chunkPos.x, chunkPos.y, chunkPos.z + 1 });
+		AddChunkToMeshingQueue(neighbor);
+	}
 }
 
 const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& camera) const
@@ -144,7 +261,7 @@ const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& cam
 	{
 		if (FrustumTestChunk(chunkPos, frustum))
 		{
-			visible.push_back(&chunk);
+			visible.push_back(chunk.get());
 		}
 	}
 	return visible;
@@ -172,9 +289,13 @@ void World::LoadChunks(Vec3f playerPosition)
 				continue;
 
 			// Load the chunk and add it to the world
-			Chunk chunk = m_ChunkLoader.LoadChunk(chunkPos);
+			std::unique_ptr<Chunk> chunk = std::make_unique<Chunk>();
+			chunk->position = chunkPos;
+
+			m_ChunkLoader.LoadChunk(*chunk);
+
 			m_Chunks.emplace(chunkPos, std::move(chunk));
-			AddChunkToMeshingQueue(m_Chunks[chunkPos]);
+			AddChunkToMeshingQueue(*m_Chunks[chunkPos]);
 		}
 	}
 }
@@ -209,7 +330,7 @@ void World::BuildChunkMesh(Chunk& chunk)
 {
 	chunk.state = ChunkState::Meshing;
 
-	for (Mesh& meshPart : chunk.mesh.meshes)
+	for (Mesh& meshPart : chunk.buildMesh.meshes)
 	{
 		meshPart.vertices.clear();
 		meshPart.indices.clear();
@@ -220,30 +341,47 @@ void World::BuildChunkMesh(Chunk& chunk)
 	const Chunk* chunkPosZ = TryGetChunk({ chunk.position.x, chunk.position.y, chunk.position.z + 1 });
 	const Chunk* chunkNegZ = TryGetChunk({ chunk.position.x, chunk.position.y, chunk.position.z - 1 });
 
-	Chunk chunkPosXGen;
-	Chunk chunkNegXGen;
-	Chunk chunkPosZGen;
-	Chunk chunkNegZGen;
+	const Chunk* chunkPosXGen;
+	const Chunk* chunkNegXGen;
+	const Chunk* chunkPosZGen;
+	const Chunk* chunkNegZGen;
+
+	Chunk tempPosX{ { chunk.position.x + 1, chunk.position.y, chunk.position.z } };
+	Chunk tempNegX{ { chunk.position.x - 1, chunk.position.y, chunk.position.z } };
+	Chunk tempPosZ{ { chunk.position.x, chunk.position.y, chunk.position.z + 1 } };
+	Chunk tempNegZ{ { chunk.position.x, chunk.position.y, chunk.position.z - 1 } };
 
 	if (!chunkPosX)
-		chunkPosXGen = m_ChunkLoader.LoadChunk({ chunk.position.x + 1, chunk.position.y, chunk.position.z });
+	{
+		m_ChunkLoader.LoadChunk(tempPosX);
+		chunkPosXGen = &tempPosX;
+	}
 	else
-		chunkPosXGen = *chunkPosX;
+		chunkPosXGen = chunkPosX;
 	
 	if (!chunkNegX)
-		chunkNegXGen = m_ChunkLoader.LoadChunk({ chunk.position.x - 1, chunk.position.y, chunk.position.z });
+	{
+		m_ChunkLoader.LoadChunk(tempNegX);
+		chunkNegXGen = &tempNegX;
+	}
 	else
-		chunkNegXGen = *chunkNegX;
+		chunkNegXGen = chunkNegX;
 	
 	if (!chunkPosZ)
-		chunkPosZGen = m_ChunkLoader.LoadChunk({ chunk.position.x, chunk.position.y, chunk.position.z + 1 });
+	{
+		m_ChunkLoader.LoadChunk(tempPosZ);
+		chunkPosZGen = &tempPosZ;
+	}
 	else
-		chunkPosZGen = *chunkPosZ;
+		chunkPosZGen = chunkPosZ;
 	
 	if (!chunkNegZ)
-		chunkNegZGen = m_ChunkLoader.LoadChunk({ chunk.position.x, chunk.position.y, chunk.position.z - 1 });
+	{
+		m_ChunkLoader.LoadChunk(tempNegZ);
+		chunkNegZGen = &tempNegZ;
+	}
 	else
-		chunkNegZGen = *chunkNegZ;
+		chunkNegZGen = chunkNegZ;
 
 	Mat3D<Block> gridPosX = { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE };
 	Mat3D<Block> gridNegX = { CHUNK_SIZE, CHUNK_SIZE, CHUNK_HEIGHT };
@@ -264,7 +402,7 @@ void World::BuildChunkMesh(Chunk& chunk)
 				for (FaceDirection dir : FACE_DIRECTIONS)
 				{
 					Vec3i neighborPos = Vec3i(x, y, z) + CUBE_NEIGHBOR_OFFSET[static_cast<int>(dir)];
-					if (IsFaceVisible(neighborPos, chunk, &chunkPosXGen, &chunkNegXGen, &chunkPosZGen, &chunkNegZGen))
+					if (IsFaceVisible(neighborPos, chunk, chunkPosXGen, chunkNegXGen, chunkPosZGen, chunkNegZGen))
 					{
 						// AddFaceToMesh(chunk.mesh.mesh, CUBE_FACES[(int)dir], Vec3i(x, y, z), block.type, dir);
 
@@ -301,14 +439,14 @@ void World::BuildChunkMesh(Chunk& chunk)
 		}
 	}
 
-	MergePosX(gridPosX, chunk.mesh.meshes[0]);
-	MergeNegX(gridNegX, chunk.mesh.meshes[1]);
-	MergePosY(gridPosY, chunk.mesh.meshes[2]);
-	MergeNegY(gridNegY, chunk.mesh.meshes[3]);
-	MergePosZ(gridPosZ, chunk.mesh.meshes[4]);
-	MergeNegZ(gridNegZ, chunk.mesh.meshes[5]);
+	MergePosX(gridPosX, chunk.buildMesh.meshes[0]);
+	MergeNegX(gridNegX, chunk.buildMesh.meshes[1]);
+	MergePosY(gridPosY, chunk.buildMesh.meshes[2]);
+	MergeNegY(gridNegY, chunk.buildMesh.meshes[3]);
+	MergePosZ(gridPosZ, chunk.buildMesh.meshes[4]);
+	MergeNegZ(gridNegZ, chunk.buildMesh.meshes[5]);
 
-	chunk.state = ChunkState::Ready;
+	chunk.state.store(ChunkState::Ready, std::memory_order_release);
 }
 
 void World::MergePosX(Mat3D<Block>& grid, Mesh& mesh)

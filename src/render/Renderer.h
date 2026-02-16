@@ -125,7 +125,7 @@ private:
 	float* m_DepthBuffer = nullptr;
 
 	Vec3f m_DirectionalLight;
-	float m_AmbientLight = 0.2f;
+	float m_AmbientLight = 0.4f;
 
 	int m_PerPixelLighting = 0;
 

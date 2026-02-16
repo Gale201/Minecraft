@@ -10,7 +10,7 @@ public:
 	ChunkLoader(uint64_t seed) : m_Seed(seed) {}
 	~ChunkLoader() = default;
 
-	Chunk LoadChunk(Vec3i chunkPosition) const;
+	void LoadChunk(Chunk& chunk) const;
 private:
 	const uint64_t m_Seed;
 	PerlinNoise m_Perlin{ m_Seed };

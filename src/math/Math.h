@@ -111,7 +111,7 @@ struct Vec3f
 
 	float length() const
 	{
-		return std::sqrt(x * x + y * y + z * z);
+		return std::sqrtf(x * x + y * y + z * z);
 	}
 
 	Vec3f normalized() const
@@ -335,6 +335,11 @@ struct Vec3i
 
 	Vec3i() : x(0), y(0), z(0) {}
 	Vec3i(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {}
+
+	float length() const
+	{
+		return std::sqrtf(x * x + y * y + z * z);
+	}
 
 	Vec3f toVec3f() const
 	{

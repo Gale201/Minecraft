@@ -32,14 +32,14 @@ struct InputBindings
 	Key GetKeyForAction(InputAction ia) const
 	{
 		if (keyBindings.find(ia) == keyBindings.end())
-			return Key::UNKNOWN;
+			return Key::Unknown;
 		return keyBindings.at(ia);
 	}
 
 	MouseButton GetMouseButtonForAction(InputAction ia) const
 	{
 		if (mouseBindings.find(ia) == mouseBindings.end())
-			return MouseButton::NONE;
+			return MouseButton::None;
 		return mouseBindings.at(ia);
 	}
 };

@@ -13,6 +13,7 @@
 #include "ChunkLoader.h"
 #include <queue>
 #include "../thread/ThreadSystem.h"
+#include "Raycast.h"
 
 class World
 {
@@ -29,8 +30,10 @@ public:
 		std::vector<RenderCommand>& outCommands
 	);
 
+	bool Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result);
+
 	Block GetBlock(Vec3i pos) const;
-	const Chunk* TryGetChunk(Vec3i pos) const;
+	Chunk* TryGetChunk(Vec3i pos) const;
 	Chunk& GetChunk(Vec3i pos);
 	Vec3i GetBlockChunkPosition(Vec3i pos) const;
 	Vec3i GetChunkWorldPosition(Vec3i pos) const;
@@ -43,7 +46,7 @@ public:
 
 	const uint64_t GetSeed() const { return m_Seed; }
 
-	const std::unordered_map<Vec3i, Chunk, Vec3iHash>& GetChunks() const
+	const std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash>& GetChunks() const
 	{
 		return m_Chunks;
 	}
@@ -103,16 +106,16 @@ private:
 	inline static int FloorMod(int a, int b);
 
 private:
-	std::unordered_map<Vec3i, Chunk, Vec3iHash> m_Chunks;
+	std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
 	std::unordered_map<Vec3i, std::unordered_map<Vec3i, BlockType, Vec3i>, Vec3i> m_ModifiedChunks;
 	std::queue<Vec3i> m_ChunkMeshingQueue;
-	int m_MaxMeshedChunksPerFrame = 8;
+	int m_MaxMeshedChunksPerFrame = 4;
 
 	Texture m_TextureAtlas;
 
 	const uint64_t m_Seed;
 	
 	Vec3f m_LastChunkLoadPosition;
-	int m_ChunkLoadRadius = 32;
+	int m_ChunkLoadRadius = 8;
 	ChunkLoader m_ChunkLoader{ m_Seed };
 };

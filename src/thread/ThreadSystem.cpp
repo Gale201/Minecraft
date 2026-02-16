@@ -1,11 +1,14 @@
 #include "ThreadSystem.h"
+#include "../core/Log.h"
 
 void ThreadSystem::Initialize()
 {
-	int threadCount = std::thread::hardware_concurrency();
+	int threadCount = std::thread::hardware_concurrency() - 1;
 
 	for (int i = 0; i < threadCount; i++)
 		m_Workers.emplace_back(&ThreadSystem::WorkerLoop, this);
+
+	m_MainThreadId = std::this_thread::get_id();
 }
 
 void ThreadSystem::Shutdown()
@@ -27,6 +30,11 @@ void ThreadSystem::ParallelFor(int count, std::function<void(int)> function)
 {
 	if (count == 0) return;
 
+	if (std::this_thread::get_id() != m_MainThreadId)
+	{
+		LOG_ERROR("ParallelFor called from worker thread!");
+	}
+
 	std::atomic<int> index = 0;
 	std::atomic<int> remaining = count;
 
@@ -46,7 +54,6 @@ void ThreadSystem::ParallelFor(int count, std::function<void(int)> function)
 
 				if (remaining.fetch_sub(1) == 1)
 				{
-					std::lock_guard<std::mutex> lock(waitMutex);
 					waitCV.notify_one();
 				}
 			}
@@ -73,7 +80,14 @@ void ThreadSystem::WorkerLoop()
 			m_Jobs.pop();
 		}
 
-		job();
+		try {
+			job();
+		}
+		catch (const std::exception& e)
+		{
+			LOG_ERROR("Thread exception: %s\n", e.what());
+			__debugbreak();
+		}
 	}
 }
 
