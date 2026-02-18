@@ -17,6 +17,8 @@
 
 #define TARGET_FPS 60
 
+#define SKY_COLOR 0xFF99BBFF
+
 class Minecraft
 {
 public:

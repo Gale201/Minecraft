@@ -21,6 +21,11 @@ BlockTypeInfo GetBlockTypeInfo(BlockType type)
 			{ {3,0}, {3,0}, {3,0}, {3,0}, {3,0}, {3,0} },
 			{ 0.1f, 0.1f }
 		};
+	case BlockType::Glass:
+		return {
+			{ {4,0}, {4,0}, {4,0}, {4,0}, {4,0}, {4,0} },
+			{ 0.1f, 0.1f }
+		};
 	default:
 		return {};
 	}
@@ -49,6 +54,12 @@ AtlasTileInfo GetAtlasTileInfo(TileType type)
 		return {
 			0.3f, 0.0f,
 			0.1f, 0.1f
+		};
+	case TileType::Glass:
+		return {
+			0.4f, 0.0f,
+			0.1f, 0.1f,
+			true
 		};
 	default:
 		return {};

@@ -24,10 +24,16 @@ public:
 	void Clear(uint32_t color);
 	inline void DrawPixel(int x, int y, uint32_t color);
 	inline void DrawDepthPixel(int x, int y, float z, uint32_t color);
+	inline void DrawPixelAlphaBlend(int x, int y, uint32_t color);
+	inline void DrawDepthPixelAlphaBlend(int x, int y, float z, uint32_t color, bool writeDepth = true);
+
+	void DrawLine(Vec3f start, Vec3f end, uint32_t color, int width, bool alphaBlend = false);
 
 	void DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 	void DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 	void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
+
+	void DrawCubeWireframe(const Transform& transform, uint32_t color, const Camera& camera, int width, bool alphaBlend = false);
 
 	void DrawMesh(
 		const Mesh& mesh,
@@ -36,6 +42,8 @@ public:
 		const Camera& camera
 	);
 	void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
+
+	void DrawTexture(int x, int y, const Texture& texture, bool alphaBlend = false);
 
 	void Render(const std::vector<RenderCommand>& renderList, const Camera& camera, ThreadSystem& threadSystem);
 

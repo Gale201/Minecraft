@@ -59,7 +59,83 @@ inline void Renderer::DrawDepthPixel(int x, int y, float z, uint32_t color)
 	}
 }
 
-// Drawing triangles and objects
+inline void Renderer::DrawPixelAlphaBlend(int x, int y, uint32_t color)
+{
+	if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
+
+	int pixel = y * m_Width + x;
+	uint32_t dest = m_FrameBuffer[pixel];
+
+	uint8_t srcA = (color >> 24) & 0xFF;
+	uint8_t srcR = (color >> 16) & 0xFF;
+	uint8_t srcG = (color >> 8) & 0xFF;
+	uint8_t srcB = color & 0xFF;
+
+	float alpha = srcA / 255.0f;
+
+	uint8_t destR = (dest >> 16) & 0xFF;
+	uint8_t destG = (dest >> 8) & 0xFF;
+	uint8_t destB = dest & 0xFF;
+
+	uint8_t outR = static_cast<uint8_t>(srcR * alpha + destR * (1.0f - alpha));
+	uint8_t outG = static_cast<uint8_t>(srcG * alpha + destG * (1.0f - alpha));
+	uint8_t outB = static_cast<uint8_t>(srcB * alpha + destB * (1.0f - alpha));
+
+	uint32_t outColor = (0xFF << 24) | (outR << 16) | (outG << 8) | outB;
+
+	m_FrameBuffer[pixel] = outColor;
+}
+
+inline void Renderer::DrawDepthPixelAlphaBlend(int x, int y, float z, uint32_t color, bool writeDepth)
+{
+	if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
+
+	if (z < m_DepthBuffer[y * m_Width + x])
+	{
+		if (writeDepth) m_DepthBuffer[y * m_Width + x] = z;
+		DrawPixelAlphaBlend(x, y, color);
+	}
+}
+
+// Drawing lines, triangles and objects
+
+void Renderer::DrawLine(Vec3f start, Vec3f end, uint32_t color, int width, bool alphaBlend)
+{
+	float dx = end.x - start.x;
+	float dy = end.y - start.y;
+	float dz = end.z - start.z;
+
+	int steps = static_cast<int>(std::max(std::abs(dx), std::abs(dy)));
+	if (steps == 0)
+		return;
+
+	float xStep = dx / steps;
+	float yStep = dy / steps;
+	float zStep = dz / steps;
+
+	float x = start.x;
+	float y = start.y;
+	float z = start.z;
+
+	int widthNeg = -static_cast<int>(std::floorf((float)width / 2.0f));
+	int widthPos = static_cast<int>(std::ceilf((float)width / 2.0f));
+	for (int i = 0; i <= steps; i++)
+	{
+		for (int wy = widthNeg; wy <= widthPos; wy++)
+		{
+			for (int wx = widthNeg; wx <= widthPos; wx++)
+			{
+				if (alphaBlend)
+					DrawDepthPixelAlphaBlend(static_cast<int>(x + wx), static_cast<int>(y + wy), z, color);
+				else
+					DrawDepthPixel(static_cast<int>(x + wx), static_cast<int>(y + wy), z, color);
+			}
+		}
+		x += xStep;
+		y += yStep;
+		z += zStep;
+	}
+}
 
 void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo)
 {
@@ -240,6 +316,57 @@ void Renderer::DrawTriangleWireframe(const Triangle& triangle, uint32_t color)
 	}
 }
 
+void Renderer::DrawCubeWireframe(const Transform& transform, uint32_t color, const Camera& camera, int width, bool alphaBlend)
+{
+	Mat4 viewMatrix = camera.GetViewMatrix();
+	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
+
+	Vec3f vertices[8];
+	vertices[0] = Vec3f(-0.5f, -0.5f, -0.5f);
+	vertices[1] = Vec3f(0.5f, -0.5f, -0.5f);
+	vertices[2] = Vec3f(0.5f, -0.5f, 0.5f);
+	vertices[3] = Vec3f(-0.5f, -0.5f, 0.5f);
+	vertices[4] = Vec3f(-0.5f, 0.5f, -0.5f);
+	vertices[5] = Vec3f(0.5f, 0.5f, -0.5f);
+	vertices[6] = Vec3f(0.5f, 0.5f, 0.5f);
+	vertices[7] = Vec3f(-0.5f, 0.5f, 0.5f);
+
+	Vec3f projected[8];
+	for (int i = 0; i < 8; i++)
+	{
+		Vec3f vertex = vertices[i];
+		Vec4f worldVertex = Vec4f::Transform(Vec4f(vertex.x, vertex.y, vertex.z, 1.0f), transform.GetMatrix());
+		Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
+		Vec4f perspectiveVertex = Vec4f::Transform(cameraVertex, perspectiveMatrix);
+
+		perspectiveVertex.x /= perspectiveVertex.w;
+		perspectiveVertex.y /= perspectiveVertex.w;
+		perspectiveVertex.z /= perspectiveVertex.w;
+
+		Vec3f screenVertex;
+		screenVertex.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
+		screenVertex.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
+		screenVertex.z = perspectiveVertex.z;
+		
+		projected[i] = Vec3f(screenVertex.x, screenVertex.y, screenVertex.z);
+	}
+
+	DrawLine(projected[0], projected[1], color, width, alphaBlend);
+	DrawLine(projected[1], projected[2], color, width, alphaBlend);
+	DrawLine(projected[2], projected[3], color, width, alphaBlend);
+	DrawLine(projected[3], projected[0], color, width, alphaBlend);
+	
+	DrawLine(projected[4], projected[5], color, width, alphaBlend);
+	DrawLine(projected[5], projected[6], color, width, alphaBlend);
+	DrawLine(projected[6], projected[7], color, width, alphaBlend);
+	DrawLine(projected[7], projected[4], color, width, alphaBlend);
+	
+	DrawLine(projected[0], projected[4], color, width, alphaBlend);
+	DrawLine(projected[1], projected[5], color, width, alphaBlend);
+	DrawLine(projected[2], projected[6], color, width, alphaBlend);
+	DrawLine(projected[3], projected[7], color, width, alphaBlend);
+}
+
 void Renderer::DrawMesh(
 	const Mesh& mesh,
 	const Transform& transform,
@@ -407,6 +534,22 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 	}
 }
 
+void Renderer::DrawTexture(int x, int y, const Texture& texture, bool alphaBlend)
+{
+	for (int i = 0; i < texture.GetHeight(); i++)
+	{
+		for (int j = 0; j < texture.GetWidth(); j++)
+		{
+			uint32_t color = texture.GetPixels()[i * texture.GetWidth() + j];
+
+			if (alphaBlend)
+				DrawPixelAlphaBlend(x + j, y + i, color);
+			else
+				DrawPixel(x + j, y + i, color);
+		}
+	}
+}
+
 void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera, ThreadSystem& threadSystem)
 {
 	m_ActiveRenderList = &renderList;
@@ -458,9 +601,22 @@ void Renderer::CreateTiles()
 
 void Renderer::RasterizeTile(const ScreenTile& tile)
 {
+	std::vector<const ScreenTriangle*> transparent;
+	transparent.reserve(tile.triangles.size());
+
 	for (const ScreenTriangle& triangle : tile.triangles)
 	{
+		if (triangle.tileInfo.isTransparent)
+		{
+			transparent.push_back(&triangle);
+			continue;
+		}
 		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
+	}
+
+	for (const ScreenTriangle* triangle : transparent)
+	{
+		DrawTriangleBarycentricToTile(triangle->triangle, *(triangle->texture), triangle->tileInfo, tile);
 	}
 }
 
@@ -647,7 +803,13 @@ void Renderer::DrawTriangleBarycentricToTile(
 					float atlasU = tileInfo.u0 + inset + u * (tileInfo.uScale - 2.0f * inset);
 					float atlasV = tileInfo.v0 + inset + v * (tileInfo.vScale - 2.0f * inset);
 
-					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), triangle.lightIntensity));
+					uint32_t color = texture.GetPixelAtUV(atlasU, atlasV);
+					if (tileInfo.isTransparent && ((color >> 24) & 0xFF) != 0xFF)
+					{
+						DrawDepthPixelAlphaBlend(x, y, z, ShadeColor(color, triangle.lightIntensity), false);
+					}
+					else
+						DrawDepthPixel(x, y, z, ShadeColor(color, triangle.lightIntensity));
 				}
 			}
 		}
