@@ -34,13 +34,15 @@ enum class TileType : uint8_t
 	GrassSide,
 	Dirt,
 	GrassTop,
-	Stone
+	Stone,
+	Glass
 };
 
 struct AtlasTileInfo
 {
 	float u0, v0;
 	float uScale, vScale;
+	bool isTransparent = false;
 };
 
 void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset, int uWraps, int vWraps);

@@ -7,25 +7,37 @@
 
 void World::Update(ThreadSystem& threadSystem)
 {
+	// Fetching chunks that need meshing and submit their meshing to the thread system
 	int meshedChunks = 0;
 	while (!m_ChunkMeshingQueue.empty() && meshedChunks < m_MaxMeshedChunksPerFrame)
 	{
 		Vec3i chunkPos = m_ChunkMeshingQueue.front();
 		auto it = m_Chunks.find(chunkPos);
+		// Ignore if the chunk doesn't exist or doesn't need meshing
 		if (it == m_Chunks.end() || it->second->state.load(std::memory_order_acquire) != ChunkState::NeedsMeshing)
 		{
 			m_ChunkMeshingQueue.pop();
 			continue;
 		}
-
+		
+		// Submit the BuildChunkMesh job to the thread system
 		Chunk* chunk = it->second.get();
 		threadSystem.Submit([this, chunk]() {
 			BuildChunkMesh(*chunk);
-			chunk->mesh = std::move(chunk->buildMesh);
-			chunk->state.store(ChunkState::Generated, std::memory_order_release);
 		});
 		m_ChunkMeshingQueue.pop();
 		meshedChunks++;
+	}
+
+	// Check if there are any chunks that are meshed, and move their buildMesh buffer to the main mesh
+	// This needs to be on the main thread to avoid vector thread collisions
+	for (auto& [pos, chunk] : m_Chunks)
+	{
+		if (chunk->state.load(std::memory_order_acquire) == ChunkState::Ready)
+		{
+			chunk->mesh = std::move(chunk->buildMesh);
+			chunk->state.store(ChunkState::Generated, std::memory_order_release);
+		}
 	}
 }
 
@@ -80,12 +92,13 @@ bool World::Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRayca
 
 	float distance = 0.0f;
 	Vec3i pos = { originBlock.x, originBlock.y, originBlock.z };
+	Vec3f normal;
 	while (distance <= maxDistance)
 	{
 		Block block = GetBlock(pos);
 		if (block.type != BlockType::Undefined && block.type != BlockType::Air)
 		{
-			result = { pos, {}, distance };
+			result = { pos, normal, distance };
 			return true;
 		}
 
@@ -95,11 +108,13 @@ bool World::Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRayca
 			{
 				pos.x += stepX;
 				tMaxX += tDeltaX;
+				normal = Vec3f(static_cast<float>(-stepX), 0.0f, 0.0f);
 			}
 			else
 			{
 				pos.z += stepZ;
 				tMaxZ += tDeltaZ;
+				normal = Vec3f(0.0f, 0.0f, static_cast<float>(-stepZ));
 			}
 		}
 		else
@@ -108,11 +123,13 @@ bool World::Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRayca
 			{
 				pos.y += stepY;
 				tMaxY += tDeltaY;
+				normal = Vec3f(0.0f, static_cast<float>(-stepY), 0.0f);
 			}
 			else
 			{
 				pos.z += stepZ;
 				tMaxZ += tDeltaZ;
+				normal = Vec3f(0.0f, 0.0f, static_cast<float>(-stepZ));
 			}
 		}
 
@@ -120,30 +137,6 @@ bool World::Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRayca
 	}
 
 	return false;
-/*
-	Vec3f rayPos = origin;
-	float distance = 0.0f;
-	while (true)
-	{
-		Vec3i blockPos = Vec3i(
-			static_cast<int>(std::floorf(rayPos.x)),
-			static_cast<int>(std::floorf(rayPos.y)),
-			static_cast<int>(std::floorf(rayPos.z))
-		);
-		Block block = GetBlock(blockPos);
-		if (block.type != BlockType::Undefined && block.type != BlockType::Air)
-		{
-			result = { blockPos, {}, distance };
-			return true;
-		}
-
-		rayPos += direction;
-
-		distance = (origin - rayPos).length();
-		if (distance > maxDistance) return false;
-	}
-
-	return false;*/
 }
 
 Vec3i World::GetChunkPosition(Vec3i pos) const
@@ -284,6 +277,8 @@ void World::LoadChunks(Vec3f playerPosition)
 	{ 
 		for (int z = playerZ - m_ChunkLoadRadius; z <= playerZ + m_ChunkLoadRadius; z++)
 		{
+			//if ((x - playerX) * (x - playerX) + (z - playerZ) * (z - playerZ) > m_ChunkLoadRadius * m_ChunkLoadRadius) continue;
+
 			Vec3i chunkPos = Vec3i(x, 0, z);
 			if (m_Chunks.find(chunkPos) != m_Chunks.end())  // If the chunk is already loaded, skip it
 				continue;
@@ -314,7 +309,10 @@ void World::UnloadChunks(Vec3f playerPosition)
 			chunkPos.z < playerZ - m_ChunkLoadRadius || chunkPos.z > playerZ + m_ChunkLoadRadius) 
 		{
 			chunksToUnload.push_back(chunkPos); 
-		} 
+		}
+
+		/*if ((chunkPos.x - playerX) * (chunkPos.x - playerX) + (chunkPos.z - playerZ) * (chunkPos.z - playerZ) > m_ChunkLoadRadius * m_ChunkLoadRadius)
+			chunksToUnload.push_back(chunkPos);*/
 	}
 	for (const Vec3i& pos : chunksToUnload)
 	{ 
@@ -402,7 +400,7 @@ void World::BuildChunkMesh(Chunk& chunk)
 				for (FaceDirection dir : FACE_DIRECTIONS)
 				{
 					Vec3i neighborPos = Vec3i(x, y, z) + CUBE_NEIGHBOR_OFFSET[static_cast<int>(dir)];
-					if (IsFaceVisible(neighborPos, chunk, chunkPosXGen, chunkNegXGen, chunkPosZGen, chunkNegZGen))
+					if (IsFaceVisible(block, neighborPos, chunk, chunkPosXGen, chunkNegXGen, chunkPosZGen, chunkNegZGen))
 					{
 						// AddFaceToMesh(chunk.mesh.mesh, CUBE_FACES[(int)dir], Vec3i(x, y, z), block.type, dir);
 
@@ -880,6 +878,7 @@ void World::AddMergedFaceToMesh(
 		}
 		else if (type == BlockType::Dirt) tileType = TileType::Dirt;
 		else if (type == BlockType::Stone) tileType = TileType::Stone;
+		else if (type == BlockType::Glass) tileType = TileType::Glass;
 
 		v.tileInfo = GetAtlasTileInfo(tileType);
 
@@ -929,6 +928,7 @@ void World::AddFaceToMesh(
 		}
 		else if (type == BlockType::Dirt) tileType = TileType::Dirt;
 		else if (type == BlockType::Stone) tileType = TileType::Stone;
+		else if (type == BlockType::Glass) tileType = TileType::Glass;
 
 		v.tileInfo = GetAtlasTileInfo(tileType);
 
@@ -981,6 +981,7 @@ bool World::FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) cons
 }
 
 inline bool World::IsFaceVisible(
+	Block block,
 	Vec3i neighborPos, 
 	const Chunk& chunk,
 	const Chunk* chunkPosX,
@@ -989,36 +990,38 @@ inline bool World::IsFaceVisible(
 	const Chunk* chunkNegZ
 ) const
 {
-	Block block;
+	Block neighborBlock;
 	bool overflowed = false;
 
 	if (neighborPos.x < 0)
 	{
-		block = chunkNegX->blocks[CHUNK_SIZE - 1][neighborPos.y][neighborPos.z];
+		neighborBlock = chunkNegX->blocks[CHUNK_SIZE - 1][neighborPos.y][neighborPos.z];
 		overflowed = true;
 	}
 	if (neighborPos.x > CHUNK_SIZE - 1)
 	{
-		block = chunkPosX->blocks[0][neighborPos.y][neighborPos.z];
+		neighborBlock = chunkPosX->blocks[0][neighborPos.y][neighborPos.z];
 		overflowed = true;
 	}
 	if (neighborPos.z < 0)
 	{
-		block = chunkNegZ->blocks[neighborPos.x][neighborPos.y][CHUNK_SIZE - 1];
+		neighborBlock = chunkNegZ->blocks[neighborPos.x][neighborPos.y][CHUNK_SIZE - 1];
 		overflowed = true;
 	}
 	if (neighborPos.z > CHUNK_SIZE - 1)
 	{
-		block = chunkPosZ->blocks[neighborPos.x][neighborPos.y][0];
+		neighborBlock = chunkPosZ->blocks[neighborPos.x][neighborPos.y][0];
 		overflowed = true;
 	}
 	if (neighborPos.y < 0) return true;
 	if (neighborPos.y >= CHUNK_HEIGHT) return true;
 
 	if (!overflowed)
-		block = chunk.blocks[neighborPos.x][neighborPos.y][neighborPos.z];
+		neighborBlock = chunk.blocks[neighborPos.x][neighborPos.y][neighborPos.z];
 
-	return block.type == BlockType::Air || block.type == BlockType::Undefined;
+	if (block.IsTransparent())
+		return neighborBlock.type == BlockType::Undefined || neighborBlock.type == BlockType::Air;
+	return neighborBlock.IsTransparent();
 }
 
 inline int World::FloorDiv(int a, int b)

@@ -94,6 +94,7 @@ private:
 	bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
 
 	inline bool IsFaceVisible(
+		Block block,
 		Vec3i neighborPos,
 		const Chunk& chunk,
 		const Chunk* chunkPosX,
@@ -109,7 +110,7 @@ private:
 	std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
 	std::unordered_map<Vec3i, std::unordered_map<Vec3i, BlockType, Vec3i>, Vec3i> m_ModifiedChunks;
 	std::queue<Vec3i> m_ChunkMeshingQueue;
-	int m_MaxMeshedChunksPerFrame = 4;
+	int m_MaxMeshedChunksPerFrame = 8;
 
 	Texture m_TextureAtlas;
 

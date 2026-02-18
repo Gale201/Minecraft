@@ -41,6 +41,22 @@ void Minecraft::Run()
 	if (textureAtlas.has_value())
 		m_World.SetTextureAtlas(textureAtlas.value());
 
+	std::optional<Texture> crosshair = m_TextureLoader.LoadTexture("crosshair.png");
+	for (int i = 0; i < crosshair.value().GetWidth() * crosshair.value().GetHeight(); i++)
+	{
+		uint32_t color = crosshair.value().GetPixels()[i];
+		uint8_t a = (color >> 24) & 0xFF;
+		color &= 0x00FFFFFF;
+
+		float alpha = a / 255.0f;
+		alpha = std::fmaxf(alpha - 0.4f, 0.0f);
+
+		uint8_t newAlpha = (uint8_t)(alpha * 255.0f);
+		color |= newAlpha << 24;
+
+		crosshair.value().SetPixelByIndex(i, color);
+	}
+
 	// Main loop
 
 	std::vector<Event> events;
@@ -71,6 +87,7 @@ void Minecraft::Run()
 
 		// Render
 		Render();
+		m_Renderer.DrawTexture(WIDTH / 2 - crosshair.value().GetWidth() / 2, HEIGHT / 2 - crosshair.value().GetHeight() / 2, crosshair.value(), true);
 		
 		// Render the frame buffer to the window
 		m_Window.Render(m_Renderer.GetFrameBuffer());
@@ -89,12 +106,19 @@ void Minecraft::Update(float deltaTime)
 	}
 
 	WorldRaycastResult raycast;
-	if (
-		m_InputManager.IsMouseButtonJustReleased(MouseButton::Left) &&
-		m_World.Raycast(m_Camera.position, m_Camera.GetForward(), 8.0f, raycast)
-		)
+	if (m_World.Raycast(m_Camera.position, m_Camera.GetForward(), 8.0f, raycast))
 	{
-		m_World.SetBlock(raycast.blockPosition, BlockType::Air);
+		if (m_InputManager.IsMouseButtonJustReleased(MouseButton::Left))
+			m_World.SetBlock(raycast.blockPosition, BlockType::Air);
+		else if (m_InputManager.IsMouseButtonJustReleased(MouseButton::Right))
+		{
+			Vec3i normal = Vec3i(
+				static_cast<int>(raycast.normal.x),
+				static_cast<int>(raycast.normal.y),
+				static_cast<int>(raycast.normal.z)
+			);
+			m_World.SetBlock(raycast.blockPosition + normal, BlockType::Glass);
+		}
 	}
 
 	{
@@ -105,11 +129,21 @@ void Minecraft::Update(float deltaTime)
 
 void Minecraft::Render()
 {
-	m_Renderer.Clear(0xFF99BBFF);
+	m_Renderer.Clear(SKY_COLOR);
 
 	{
 		Timer timer("Render");
 		m_Renderer.Render(m_RenderList, m_Camera, m_ThreadSystem);
+	}
+
+	WorldRaycastResult raycast;
+	if (m_World.Raycast(m_Camera.position, m_Camera.GetForward(), 8.0f, raycast))
+	{
+		Transform t;
+
+		t.SetScale(Vec3f(1.0001f, 1.0001f, 1.0001f));
+		t.SetPosition(raycast.blockPosition.toVec3f() + Vec3f(0.5f, 0.5f, 0.5f));
+		m_Renderer.DrawCubeWireframe(t, 0x88222222, m_Camera, 2, true);
 	}
 
 	m_RenderList.clear();

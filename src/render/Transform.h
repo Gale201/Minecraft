@@ -8,6 +8,11 @@ public:
 		m_Position{0.0f, 0.0f, 0.0f}, m_Rotation{0.0f, 0.0f, 0.0f}, m_Scale{1.0f, 1.0f, 1.0f}
 	{
 	}
+
+	Transform(Vec3f position) :
+		m_Position(position), m_Rotation{ 0.0f, 0.0f, 0.0f }, m_Scale{ 1.0f, 1.0f, 1.0f }
+	{
+	}
 	
 	~Transform() = default;
 
@@ -67,7 +72,7 @@ private:
 		Mat4 translate = Mat4::Translate(m_Position);
 		Mat4 rotate = Mat4::RotateXYZ(m_Rotation);
 		Mat4 scale = Mat4::Scale(m_Scale);
-		m_Matrix = translate * rotate * scale;
+		m_Matrix = scale * rotate * translate;
 	}
 
 private:
