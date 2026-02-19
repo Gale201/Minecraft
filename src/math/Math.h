@@ -68,6 +68,7 @@ struct Vec3f
 
 	Vec3f() : x(0), y(0), z(0) {}
 	Vec3f(float xx, float yy, float zz) : x(xx), y(yy), z(zz) {}
+	Vec3f(int xx, int yy, int zz) : x(static_cast<float>(xx)), y(static_cast<float>(yy)), z(static_cast<float>(zz)) {}
 
 	inline static Vec3f zero() { return Vec3f(0.0f, 0.0f, 0.0f); }
 
@@ -311,7 +312,7 @@ struct Vec2i
 
 	Vec2i operator*(float scalar) const
 	{
-		return Vec2i(x * scalar, y * scalar);
+		return Vec2i(static_cast<int>(x * scalar), static_cast<int>(y * scalar));
 	}
 
 	Vec2i& operator+=(const Vec2i& other)
@@ -338,7 +339,7 @@ struct Vec3i
 
 	float length() const
 	{
-		return std::sqrtf(x * x + y * y + z * z);
+		return std::sqrtf(static_cast<float>(x * x + y * y + z * z));
 	}
 
 	Vec3f toVec3f() const

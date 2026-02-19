@@ -7,6 +7,7 @@
 #include "RenderCommand.h"
 #include "Camera.h"
 #include "../thread/ThreadSystem.h"
+#include "../world/BlockFace.h"
 #include <thread>
 #include <condition_variable>
 
@@ -59,7 +60,7 @@ private:
 	struct ScreenTriangle
 	{
 		Triangle triangle;
-		const Texture* texture;
+		const Texture& texture;
 		AtlasTileInfo tileInfo;
 	};
 
@@ -82,16 +83,23 @@ private:
 		AtlasTileInfo tileInfo,
 		const ScreenTile& tile
 	);
+	void DrawTriangleWireframeToTile(
+		const Triangle& triangle,
+		const ScreenTile& tile,
+		uint32_t color
+	);
 
-	static Triangle SortTriangleVerticesByY(const Triangle& triangle);
-	static void ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom);
-	static bool IsTriangleBackFacing(const Triangle& triangle);
-	static Vertex IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, float nearPlane);
+	inline static Triangle SortTriangleVerticesByY(const Triangle& triangle);
+	inline static void ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom);
+	inline static bool IsTriangleBackFacing(const Triangle& triangle);
+	inline static Vertex IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, float nearPlane);
 	static int ClipTriangleNearPlane(const Triangle& triangle, Triangle clipped[2], float nearPlane);
-	static uint32_t ShadeColor(uint32_t color, float intensity);
-	static uint32_t ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color);
-	static uint32_t ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight, uint32_t color);
-	static float ComputeLightIntensityForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight);
+	inline static float CalculateTriangleArea(const Triangle& triangle);
+	
+	inline static uint32_t ShadeColor(uint32_t color, float intensity);
+	inline static uint32_t ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color);
+	inline static uint32_t ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight, uint32_t color);
+	inline static float ComputeLightIntensityForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight);
 
 	void DrawFlatBottomTriangle(
 		float x0, float y0, float z0, float u0, float v0, float xn0, float yn0, float zn0, float invW0,

@@ -2,7 +2,7 @@
 #include <cmath>
 #include <random>
 
-PerlinNoise::PerlinNoise(uint64_t seed)
+PerlinNoise::PerlinNoise(unsigned int seed)
 {
 	for (int i = 0; i < 256; i++)
 	{

@@ -11,7 +11,9 @@ enum class InputAction
 	MoveUp,
 	MoveDown,
 	Look,
-	Jump
+	Jump,
+	BreakBlock,
+	PlaceBlock
 };
 
 struct InputBindings
@@ -24,7 +26,7 @@ struct InputBindings
 		keyBindings.insert({ ia, key });
 	}
 
-	void MouseButtonBinding(InputAction ia, MouseButton button)
+	void AddMouseButtonBinding(InputAction ia, MouseButton button)
 	{
 		mouseBindings.insert({ ia, button });
 	}

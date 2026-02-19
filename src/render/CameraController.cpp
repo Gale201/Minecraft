@@ -28,6 +28,6 @@ void CameraController::Update(float deltaTime)
 		m_Camera.position -= upVector * m_CameraSpeed * deltaTime;
 
 	m_Camera.yaw += m_InputManager.GetMouseMotionX() * m_Sensitivity; // * deltaTime;
-	m_Camera.pitch += m_InputManager.GetMouseMotionY() * m_Sensitivity; // *deltaTime;
+	m_Camera.pitch += m_InputManager.GetMouseMotionY() * m_Sensitivity; // * deltaTime;
 	m_Camera.pitch = std::clamp(m_Camera.pitch, -m_PitchLimit, m_PitchLimit);
 }

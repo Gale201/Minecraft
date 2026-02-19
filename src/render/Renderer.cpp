@@ -447,8 +447,10 @@ void Renderer::DrawMesh(
 				triangle.SetVertexByIndex(j, screenVertex);
 			}
 
+			// Screen space back face culling
+			if (CalculateTriangleArea(triangle) <= 0) continue;
+
 			DrawTriangleBarycentric(triangle, texture, tileInfo);
-			//DrawTriangleWireframe(triangle, 0xFF0000FF);
 		}
 	}
 }
@@ -489,7 +491,7 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 			// Near plane clipping (happening in camera space)
 			Triangle clipped[2];
 			int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
-			
+
 			// Compute light intensity for the triangle
 			triangle.lightIntensity = ComputeLightIntensityForTriangle(
 				triangle,
@@ -519,16 +521,18 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 					Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
 
 					// Convert to screen space
-					screenVertex.position.x = (int) ((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
-					screenVertex.position.y = (int) ((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
+					screenVertex.position.x = static_cast<float>((perspectiveVertex.x * 0.5f + 0.5f) * m_Width);
+					screenVertex.position.y = static_cast<float>((1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height);
 					screenVertex.position.z = perspectiveVertex.z;
 					screenVertex.invW = 1.0f / perspectiveVertex.w;
 
 					triangle.SetVertexByIndex(j, screenVertex);
 				}
 
+				// Screen space back face culling
+				if (CalculateTriangleArea(triangle) <= 0) continue;
+
 				DrawTriangleBarycentric(triangle, renderObject.texture, {});
-				//DrawTriangleWireframe(triangle, 0xFF0000FF);
 			}
 		}
 	}
@@ -565,7 +569,7 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 		BuildScreenTileTriangles(
 			*command.mesh,
 			command.transform,
-			*command.texture,
+			command.texture,
 			camera
 		);
 	}
@@ -611,12 +615,14 @@ void Renderer::RasterizeTile(const ScreenTile& tile)
 			transparent.push_back(&triangle);
 			continue;
 		}
-		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
+		DrawTriangleBarycentricToTile(triangle.triangle, triangle.texture, triangle.tileInfo, tile);
+		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
 	}
 
 	for (const ScreenTriangle* triangle : transparent)
 	{
-		DrawTriangleBarycentricToTile(triangle->triangle, *(triangle->texture), triangle->tileInfo, tile);
+		DrawTriangleBarycentricToTile(triangle->triangle, triangle->texture, triangle->tileInfo, tile);
+		//DrawTriangleWireframeToTile(triangle->triangle, tile, 0);
 	}
 }
 
@@ -700,6 +706,9 @@ void Renderer::BuildScreenTileTriangles(
 				triangle.SetVertexByIndex(j, screenVertex);
 			}
 
+			// Screen space back face culling
+			if (CalculateTriangleArea(triangle) <= 0) continue;
+
 			int left, right, top, bottom;
 			ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
 
@@ -719,7 +728,7 @@ void Renderer::BuildScreenTileTriangles(
 			for (int ty = tileTop; ty <= tileBottom; ty++)
 				for (int tx = tileLeft; tx <= tileRight; tx++)
 				{
-					m_ScreenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, &texture, tileInfo);
+					m_ScreenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, texture, tileInfo);
 				}
 		}
 	}
@@ -732,7 +741,7 @@ void Renderer::DrawTriangleBarycentricToTile(
 	const ScreenTile& tile
 )
 {
-	// Calculate the bound box
+	// Calculate the bounding box
 	int left, right, top, bottom;
 	ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
 
@@ -816,9 +825,33 @@ void Renderer::DrawTriangleBarycentricToTile(
 	}
 }
 
+void Renderer::DrawTriangleWireframeToTile(
+	const Triangle& triangle, 
+	const ScreenTile& tile,
+	uint32_t color
+)
+{
+	// Calculate the bound box
+	int left, right, top, bottom;
+	ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
+
+	// Clamp to screen bounds
+	left = std::max(std::max(left, tile.x0), 0);
+	right = std::min(std::min(right, tile.x1), m_Width - 1);
+	top = std::max(std::max(top, tile.y0), 0);
+	bottom = std::min(std::min(bottom, tile.y1), m_Height - 1);
+
+	if (left > right || top > bottom)
+		return;
+
+	DrawLine(triangle.v0.position, triangle.v1.position, color, 1);
+	DrawLine(triangle.v1.position, triangle.v2.position, color, 1);
+	DrawLine(triangle.v2.position, triangle.v0.position, color, 1);
+}
+
 // Triangle math
 
-Triangle Renderer::SortTriangleVerticesByY(const Triangle& triangle)
+inline Triangle Renderer::SortTriangleVerticesByY(const Triangle& triangle)
 {
 	Triangle sorted;
 	sorted.v0 = triangle.v0;
@@ -832,7 +865,7 @@ Triangle Renderer::SortTriangleVerticesByY(const Triangle& triangle)
 	return sorted;
 }
 
-void Renderer::ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom)
+inline void Renderer::ComputeTriangleBoundingBox(const Triangle& triangle, int& left, int& right, int& top, int& bottom)
 {
 	left = static_cast<int>(
 		std::floorf(std::min({ triangle.v0.position.x, triangle.v1.position.x, triangle.v2.position.x }))
@@ -848,7 +881,7 @@ void Renderer::ComputeTriangleBoundingBox(const Triangle& triangle, int& left, i
 	);
 }
 
-bool Renderer::IsTriangleBackFacing(const Triangle& triangle)
+inline bool Renderer::IsTriangleBackFacing(const Triangle& triangle)
 {
 	Vec3f e1 = triangle.v1.position - triangle.v0.position;
 	Vec3f e2 = triangle.v2.position - triangle.v0.position;
@@ -858,7 +891,7 @@ bool Renderer::IsTriangleBackFacing(const Triangle& triangle)
 	return normal.Dot(-triangle.v0.position) >= 0.0f && normal.z >= 0.0f;
 }
 
-Vertex Renderer::IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, float nearPlane)
+inline Vertex Renderer::IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, float nearPlane)
 {
 	// If the 2 points are very close on the z axis return the first point with z = -nearPlane
 	if (std::fabsf(v1.position.z - v0.position.z) <= 1e-6f)
@@ -880,59 +913,52 @@ Vertex Renderer::IntersectWithNearPlane(const Vertex& v0, const Vertex& v1, floa
 
 int Renderer::ClipTriangleNearPlane(const Triangle& triangle, Triangle clipped[2], float nearPlane)
 {
-	Vertex inside[3], outside[3];
-	size_t countInside = 0, countOutside = 0;
+	Vertex output[4];
+	int outCount = 0;
 
-	// Find which vertices are behind (inside) the near plane
-	for (size_t i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 	{
-		const Vertex& v = triangle.GetVertexByIndex(i);
-		if (v.position.z < -nearPlane)
-			inside[countInside++] = v;
-		else
-			outside[countOutside++] = v;
+		Vertex current = triangle.GetVertexByIndex(i);
+		Vertex next = triangle.GetVertexByIndex((i + 1) % 3);
+
+		bool currInside = current.position.z < -nearPlane;
+		bool nextInside = next.position.z < -nearPlane;
+
+		if (currInside && nextInside) output[outCount++] = next;
+		else if (currInside && !nextInside) output[outCount++] = IntersectWithNearPlane(current, next, nearPlane);
+		else if (!currInside && nextInside)
+		{
+			output[outCount++] = IntersectWithNearPlane(current, next, nearPlane);
+			output[outCount++] = next;
+		}
 	}
 
-	// If there are 0 vertices behind the near plane then don't render anything
-	if (countInside == 0)
-		return 0;
-	// If all vertices are behind then just render the triangle
-	else if (countInside == 3)
+	if (outCount == 3)
 	{
-		clipped[0] = triangle;
+		clipped[0] = { output[0], output[1], output[2] };
 		return 1;
 	}
-	// If there is 1 vertex inside, create 1 new triangle
-	else if (countInside == 1)
+	else if (outCount == 4)
 	{
-		Vertex vInside = inside[0], vOutside1 = outside[0], vOutside2 = outside[1];
-
-		Vertex intersection1 = IntersectWithNearPlane(vInside, vOutside1, nearPlane);
-		Vertex intersection2 = IntersectWithNearPlane(vInside, vOutside2, nearPlane);
-
-		clipped[0] = { vInside, intersection1, intersection2 };
-		return 1;
-	}
-	// If there are 2 vertices inside, create 2 new triangles
-	else if (countInside == 2)
-	{
-		Vertex vInside1 = inside[0], vInside2 = inside[1], vOutside = outside[0];
-
-		Vertex intersection1 = IntersectWithNearPlane(vInside1, vOutside, nearPlane);
-		Vertex intersection2 = IntersectWithNearPlane(vInside2, vOutside, nearPlane);
-
-		clipped[0] = { vInside1, vInside2, intersection1 };
-		clipped[1] = { vInside2, intersection2, intersection1 };
-
+		clipped[0] = { output[0], output[1], output[2] };
+		clipped[1] = { output[0], output[2], output[3] };
 		return 2;
 	}
 
 	return 0;
 }
 
+inline float Renderer::CalculateTriangleArea(const Triangle& triangle)
+{
+	return (triangle.v1.position.x - triangle.v0.position.x) * 
+		(triangle.v2.position.y - triangle.v0.position.y) -
+		(triangle.v1.position.y - triangle.v0.position.y) * 
+		(triangle.v2.position.x - triangle.v0.position.x);
+}
+
 // Color, light and shading
 
-uint32_t Renderer::ShadeColor(uint32_t color, float intensity)
+inline uint32_t Renderer::ShadeColor(uint32_t color, float intensity)
 {
 	intensity = std::fminf(std::fmaxf(intensity, 0.0f), 1.0f);
 
@@ -948,7 +974,7 @@ uint32_t Renderer::ShadeColor(uint32_t color, float intensity)
 	return (a << 24) | (r << 16) | (g << 8) | b;
 }
 
-uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color)
+inline uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, float ambientLight, uint32_t color)
 {
 	float intensity = normal.Dot(lightDir);
 	intensity = std::fminf(std::fmaxf(intensity, 0.0f) + ambientLight, 1.0f);
@@ -956,7 +982,7 @@ uint32_t Renderer::ComputeShadedColorForNormal(Vec3f normal, Vec3f lightDir, flo
 	return ShadeColor(color, intensity);
 }
 
-uint32_t Renderer::ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight, uint32_t color)
+inline uint32_t Renderer::ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight, uint32_t color)
 {
 	Vec3f normal = triangle.v0.position.Cross(triangle.v1.position).normalized();
 	float intensity = normal.Dot(lightDir);
@@ -965,7 +991,7 @@ uint32_t Renderer::ComputeShadedColorForTriangle(const Triangle& triangle, Vec3f
 	return ShadeColor(color, intensity);
 }
 
-float Renderer::ComputeLightIntensityForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight)
+inline float Renderer::ComputeLightIntensityForTriangle(const Triangle& triangle, Vec3f lightDir, float ambientLight)
 {
 	Vec3f e1 = triangle.v0.position - triangle.v1.position;
 	Vec3f e2 = triangle.v0.position - triangle.v2.position;
@@ -1008,8 +1034,8 @@ void Renderer::DrawFlatBottomTriangle(
 	float slope_invW1 = (invW1 - invW0) / (y1 - y0);
 	float slope_invW2 = (invW2 - invW0) / (y2 - y0);
 
-	int y_start = (int)std::ceilf(y0 - 0.5);
-	int y_end = (int)std::ceilf(y1 - 0.5);
+	int y_start = static_cast<int>(std::ceilf(y0 - 0.5f));
+	int y_end = static_cast<int>(std::ceilf(y1 - 0.5f));
 
 	for (int y = y_start; y < y_end; y++)
 	{
@@ -1085,8 +1111,8 @@ void Renderer::DrawFlatTopTriangle(
 	float slope_invW1 = (invW2 - invW0) / (y2 - y0);
 	float slope_invW2 = (invW2 - invW1) / (y2 - y1);
 
-	int y_start = (int)std::ceilf(y0 - 0.5);
-	int y_end = (int)std::ceilf(y2 - 0.5);
+	int y_start = static_cast<int>(std::ceilf(y0 - 0.5f));
+	int y_end = static_cast<int>(std::ceilf(y2 - 0.5f));
 
 	for (int y = y_start; y < y_end; y++)
 	{

@@ -4,7 +4,7 @@
 class PerlinNoise
 {
 public:
-	PerlinNoise(uint64_t seed);
+	PerlinNoise(unsigned int seed);
 
 	float noise(float x, float y) const;
 	float fbm(float x, float y, int octaves, float persistence) const;

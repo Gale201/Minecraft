@@ -7,5 +7,5 @@ struct RenderCommand
 {
 	const Mesh* mesh;
 	Transform transform;
-	const Texture* texture;
+	const Texture& texture;
 };

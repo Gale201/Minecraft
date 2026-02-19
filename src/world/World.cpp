@@ -60,7 +60,7 @@ void World::BuildRenderList(const Camera& camera, std::vector<RenderCommand>& ou
 			outCommands.push_back({
 				&chunk->mesh.meshes[dir],
 				t,
-				&m_TextureAtlas
+				m_TextureAtlas
 			});
 		}
 	}
@@ -326,7 +326,9 @@ void World::UnloadChunks(Vec3f playerPosition)
 
 void World::BuildChunkMesh(Chunk& chunk)
 {
-	chunk.state = ChunkState::Meshing;
+	if (chunk.state.load(std::memory_order_acquire) == ChunkState::Meshing) return;
+
+	chunk.state.store(ChunkState::Meshing, std::memory_order_release);
 
 	for (Mesh& meshPart : chunk.buildMesh.meshes)
 	{

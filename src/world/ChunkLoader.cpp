@@ -20,13 +20,13 @@ void ChunkLoader::LoadChunk(Chunk& chunk) const
 			float mountains = mountainHeight * mountainMask;
 
 			float h = base * 50.0f * continent + continent * 70.0f + mountains * 80.0f;
-			int height = std::fmaxf(std::fminf(h, CHUNK_HEIGHT), 0);
+			int height = static_cast<int>(std::fmaxf(std::fminf(h, CHUNK_HEIGHT), 0));
 
 			for (int y = 0; y < height; y++)
 			{
 				if (height < seaLevel && y == height - 1) chunk.blocks[x][y][z] = { BlockType::Dirt };
 				else if (y == height - 1) chunk.blocks[x][y][z] = { BlockType::Grass };
-				else if (y > height * 7/8) chunk.blocks[x][y][z] = { BlockType::Dirt };
+				else if (y > height - 6) chunk.blocks[x][y][z] = { BlockType::Dirt };
 				else chunk.blocks[x][y][z] = { BlockType::Stone };
 			}
 		}

@@ -18,7 +18,7 @@
 class World
 {
 public:
-	World(uint64_t seed) : m_Seed(seed) {}
+	World(unsigned int seed) : m_Seed(seed) {}
 	~World() = default;
 
 	void Update(ThreadSystem& threadSystem);
@@ -114,7 +114,7 @@ private:
 
 	Texture m_TextureAtlas;
 
-	const uint64_t m_Seed;
+	const unsigned int m_Seed;
 	
 	Vec3f m_LastChunkLoadPosition;
 	int m_ChunkLoadRadius = 8;

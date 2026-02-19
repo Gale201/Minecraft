@@ -24,3 +24,11 @@ struct Camera
 
 	Frustum GetFrustum() const;
 };
+
+struct CameraConfig
+{
+	float aspectRatio;  // fovY
+	float fov;  // aspect
+	float nearPlane;
+	float farPlane;
+};

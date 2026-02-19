@@ -10,6 +10,8 @@
 #include "../world/World.h"
 #include "../render/Camera.h"
 #include "../thread/ThreadSystem.h"
+#include "../player/Player.h"
+#include "../world/BlockInteractionSystem.h"
 
 #define TITLE "Minecraft"
 #define WIDTH 1280
@@ -40,7 +42,8 @@ private:
 	ModelLoader m_ModelLoader{ "res/objs/" };
 	TextureLoader m_TextureLoader{ "res/textures/" };
 
-	Camera m_Camera{ {0,60,0}, 0.0f, 0.0f, 0.0f, 1.0f, (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f };
+	std::unique_ptr<Player> m_Player;
+	BlockInteractionSystem m_BlockInteractionSystem{ m_World };
 
 	std::vector<RenderCommand> m_RenderList;
 };
