@@ -1,9 +1,12 @@
 #pragma once
 #include "../math/Math.h"
 
-struct WorldRaycastResult
+namespace Minecraft
 {
-	Vec3i blockPosition;
-	Vec3f normal;
-	float distance;
-};
+	struct WorldRaycastResult
+	{
+		Vec3i blockPosition;
+		Vec3f normal;
+		float distance;
+	};
+}

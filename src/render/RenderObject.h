@@ -4,9 +4,12 @@
 #include "Transform.h"
 #include "Texture.h"
 
-struct RenderObject
+namespace Minecraft
 {
-	Model& model;
-	Transform transform;
-	Texture& texture;
-};
+	struct RenderObject
+	{
+		Model& model;
+		Transform transform;
+		Texture& texture;
+	};
+}

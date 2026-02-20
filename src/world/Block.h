@@ -2,32 +2,35 @@
 
 #include <cinttypes>
 
-enum class BlockType : uint8_t
+namespace Minecraft
 {
-	Undefined = 0,
-	Air,
-	Grass,
-	Dirt,
-	Stone,
-	Glass
-};
-
-inline const int BLOCK_TYPE_COUNT = 6;
-
-struct Block
-{
-	BlockType type = BlockType::Air;
-
-	bool IsTransparent()
+	enum class BlockType : uint8_t
 	{
-		switch (type)
+		Undefined = 0,
+		Air,
+		Grass,
+		Dirt,
+		Stone,
+		Glass
+	};
+
+	inline const int BLOCK_TYPE_COUNT = 6;
+
+	struct Block
+	{
+		BlockType type = BlockType::Air;
+
+		bool IsTransparent()
 		{
-		case BlockType::Undefined:
-		case BlockType::Air:
-		case BlockType::Glass:
-			return true;
-		default:
-			return false;
+			switch (type)
+			{
+			case BlockType::Undefined:
+			case BlockType::Air:
+			case BlockType::Glass:
+				return true;
+			default:
+				return false;
+			}
 		}
-	}
-};
+	};
+}

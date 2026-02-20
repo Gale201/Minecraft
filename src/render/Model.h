@@ -2,7 +2,10 @@
 #include <vector>
 #include "Mesh.h"
 
-struct Model
+namespace Minecraft
 {
-	std::vector<Mesh> meshes;
-};
+	struct Model
+	{
+		std::vector<Mesh> meshes;
+	};
+}

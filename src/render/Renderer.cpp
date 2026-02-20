@@ -1,14 +1,16 @@
-#pragma once
+#include "Renderer.h"
 
 #include <limits>
 #include <algorithm>
 
-#include "Renderer.h"
+#include "RenderCommand.h"
 #include "../core/Log.h"
 #include "../timer/Timer.h"
 #include "../timer/AccumTimer.h"
 #include "../world/BlockFace.h"
-#include "RenderCommand.h"
+
+namespace Minecraft
+{
 
 // Destructor & init
 
@@ -554,7 +556,7 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, bool alphaBlend
 	}
 }
 
-void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera, ThreadSystem& threadSystem)
+void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera, Core::ThreadSystem& threadSystem)
 {
 	m_ActiveRenderList = &renderList;
 	m_ActiveCamera = &camera;
@@ -1307,4 +1309,5 @@ void Renderer::DrawHorizontalDepthTextureLine(
 
 		invW += dinvW;
 	}
+}
 }

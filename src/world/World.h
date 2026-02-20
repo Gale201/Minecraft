@@ -1,122 +1,133 @@
 #pragma once
 
 #include <unordered_map>
+#include <queue>
+#include <memory>
 
 #include "Chunk.h"
 #include "Block.h"
-#include "ChunkMesh.h"
 #include "BlockFace.h"
+#include "ChunkLoader.h"
+#include "Raycast.h"
 #include "../math/Math.h"
 #include "../render/Frustum.h"
 #include "../render/Camera.h"
 #include "../render/RenderCommand.h"
-#include "ChunkLoader.h"
-#include <queue>
 #include "../thread/ThreadSystem.h"
-#include "Raycast.h"
 
-class World
+namespace Minecraft
 {
-public:
-	World(unsigned int seed) : m_Seed(seed) {}
-	~World() = default;
-
-	void Update(ThreadSystem& threadSystem);
-
-	void LoadAndUnloadChunks(Vec3f playerPosition);
-
-	void BuildRenderList(
-		const Camera& camera,
-		std::vector<RenderCommand>& outCommands
-	);
-
-	bool Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result);
-
-	Block GetBlock(Vec3i pos) const;
-	Chunk* TryGetChunk(Vec3i pos) const;
-	Chunk& GetChunk(Vec3i pos);
-	Vec3i GetBlockChunkPosition(Vec3i pos) const;
-	Vec3i GetChunkWorldPosition(Vec3i pos) const;
-	Vec3i GetChunkPosition(Vec3i pos) const;
-	inline Vec3i GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const;
-
-	const std::vector<const Chunk*> GetFrustumVisibleChunks(const Camera& camera) const;
-
-	/* Getters & setters */
-
-	const uint64_t GetSeed() const { return m_Seed; }
-
-	const std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash>& GetChunks() const
+	class World
 	{
-		return m_Chunks;
-	}
+	public:
+		World(const std::string& name, unsigned int seed) : m_Name(name), m_Seed(seed) {}
+		World(const World&) = delete;
+		~World() = default;
 
-	void SetBlock(Vec3i pos, BlockType type);
-	void SetTextureAtlas(const Texture& texture)
-	{
-		m_TextureAtlas = texture;
-	}
+		void Update(Core::ThreadSystem& threadSystem);
 
-private:
-	/* Chunk loading functions */
-	void LoadChunks(Vec3f playerPosition);
-	void UnloadChunks(Vec3f playerPosition);
+		void LoadAndUnloadChunks(Vec3f playerPosition);
 
-	/* Mesh building functions */
-	void BuildChunkMesh(Chunk& chunk);
+		void BuildRenderList(
+			const Camera& camera,
+			std::vector<RenderCommand>& outCommands
+		);
 
-	void MergePosX(Mat3D<Block>& grid, Mesh& mesh);
-	void MergePosY(Mat3D<Block>& grid, Mesh& mesh);
-	void MergePosZ(Mat3D<Block>& grid, Mesh& mesh);
-	void MergeNegX(Mat3D<Block>& grid, Mesh& mesh);
-	void MergeNegY(Mat3D<Block>& grid, Mesh& mesh);
-	void MergeNegZ(Mat3D<Block>& grid, Mesh& mesh);
+		bool Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result);
 
-	void AddMergedFaceToMesh(
-		Mesh& mesh,
-		const BlockFace& face,
-		BlockType type,
-		FaceDirection dir,
-		int uWraps,
-		int vWraps
-	);
+		Block GetBlock(Vec3i pos) const;
+		Chunk* TryGetChunk(Vec3i pos) const;
+		Chunk& GetChunk(Vec3i pos);
+		Vec3i GetBlockChunkPosition(Vec3i pos) const;
+		Vec3i GetChunkWorldPosition(Vec3i pos) const;
+		Vec3i GetChunkPosition(Vec3i pos) const;
+		inline Vec3i GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const;
 
-	void AddFaceToMesh(
-		Mesh& mesh, 
-		const BlockFace& face,
-		Vec3i blockPos, 
-		BlockType type,
-		FaceDirection dir
-	);
+		const std::vector<const Chunk*> GetFrustumVisibleChunks(const Camera& camera) const;
 
-	void AddChunkToMeshingQueue(Chunk& chunk);
+		/* Getters & setters */
 
-	bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
+		const std::string& GetName() const { return m_Name; }
+		const unsigned int GetSeed() const { return m_Seed; }
 
-	inline bool IsFaceVisible(
-		Block block,
-		Vec3i neighborPos,
-		const Chunk& chunk,
-		const Chunk* chunkPosX,
-		const Chunk* chunkNegX,
-		const Chunk* chunkPosZ,
-		const Chunk* chunkNegZ
-	) const;
+		const std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash>& GetChunks() const
+		{
+			return m_Chunks;
+		}
 
-	inline static int FloorDiv(int a, int b);
-	inline static int FloorMod(int a, int b);
+		const std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash>& GetModifiedChunks() const
+		{
+			return m_ModifiedChunks;
+		}
 
-private:
-	std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
-	std::unordered_map<Vec3i, std::unordered_map<Vec3i, BlockType, Vec3i>, Vec3i> m_ModifiedChunks;
-	std::queue<Vec3i> m_ChunkMeshingQueue;
-	int m_MaxMeshedChunksPerFrame = 8;
+		void SetBlock(Vec3i pos, BlockType type);
+		void SetTextureAtlas(const Texture& texture)
+		{
+			m_TextureAtlas = texture;
+		}
 
-	Texture m_TextureAtlas;
+	private:
+		/* Chunk loading functions */
+		void LoadChunks(Vec3f playerPosition);
+		void UnloadChunks(Vec3f playerPosition);
 
-	const unsigned int m_Seed;
-	
-	Vec3f m_LastChunkLoadPosition;
-	int m_ChunkLoadRadius = 8;
-	ChunkLoader m_ChunkLoader{ m_Seed };
-};
+		/* Mesh building functions */
+		void BuildChunkMesh(Chunk& chunk);
+
+		void MergePosX(Mat3D<Block>& grid, Mesh& mesh);
+		void MergePosY(Mat3D<Block>& grid, Mesh& mesh);
+		void MergePosZ(Mat3D<Block>& grid, Mesh& mesh);
+		void MergeNegX(Mat3D<Block>& grid, Mesh& mesh);
+		void MergeNegY(Mat3D<Block>& grid, Mesh& mesh);
+		void MergeNegZ(Mat3D<Block>& grid, Mesh& mesh);
+
+		void AddMergedFaceToMesh(
+			Mesh& mesh,
+			const BlockFace& face,
+			BlockType type,
+			FaceDirection dir,
+			int uWraps,
+			int vWraps
+		);
+
+		void AddFaceToMesh(
+			Mesh& mesh,
+			const BlockFace& face,
+			Vec3i blockPos,
+			BlockType type,
+			FaceDirection dir
+		);
+
+		void AddChunkToMeshingQueue(Chunk& chunk);
+
+		bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
+
+		inline bool IsFaceVisible(
+			Block block,
+			Vec3i neighborPos,
+			const Chunk& chunk,
+			const Chunk* chunkPosX,
+			const Chunk* chunkNegX,
+			const Chunk* chunkPosZ,
+			const Chunk* chunkNegZ
+		) const;
+
+		inline static int FloorDiv(int a, int b);
+		inline static int FloorMod(int a, int b);
+
+	private:
+		std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
+		std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> m_ModifiedChunks;
+		std::queue<Vec3i> m_ChunkMeshingQueue;
+		int m_MaxMeshedChunksPerFrame = 8;
+
+		Texture m_TextureAtlas;
+
+		const std::string& m_Name;
+		const unsigned int m_Seed;
+
+		Vec3f m_LastChunkLoadPosition;
+		int m_ChunkLoadRadius = 8;
+		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
+	};
+}

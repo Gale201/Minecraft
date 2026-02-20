@@ -1,113 +1,116 @@
 #include "InputManager.h"
 
-void InputManager::ProcessEvents(const std::vector<Event>& events)
+namespace Core
 {
-	m_MouseMotionX = 0;
-	m_MouseMotionY = 0;
-	m_KeysJustPressed.clear();
-	m_KeysJustReleased.clear();
-	m_MouseButtonsJustPressed.clear();
-	m_MouseButtonsJustReleased.clear();
-	for (const Event& e : events)
+	void InputManager::ProcessEvents(const std::vector<Event>& events)
 	{
-		if (e.type == Event::Type::Keydown)
+		m_MouseMotionX = 0;
+		m_MouseMotionY = 0;
+		m_KeysJustPressed.clear();
+		m_KeysJustReleased.clear();
+		m_MouseButtonsJustPressed.clear();
+		m_MouseButtonsJustReleased.clear();
+		for (const Event& e : events)
 		{
-			if (!m_KeysDown[e.key])
+			if (e.type == Event::Type::Keydown)
 			{
-				m_KeysJustPressed[e.key] = true;
+				if (!m_KeysDown[e.key])
+				{
+					m_KeysJustPressed[e.key] = true;
+				}
+				m_KeysDown[e.key] = true;
 			}
-			m_KeysDown[e.key] = true;
-		}
-		else if (e.type == Event::Type::Keyup)
-		{
-			if (m_KeysDown[e.key])
+			else if (e.type == Event::Type::Keyup)
 			{
-				m_KeysJustReleased[e.key] = true;
+				if (m_KeysDown[e.key])
+				{
+					m_KeysJustReleased[e.key] = true;
+				}
+				m_KeysDown[e.key] = false;
 			}
-			m_KeysDown[e.key] = false;
-		}
-		else if (e.type == Event::Type::MouseButtonDown)
-		{
-			if (!m_MouseButtonsDown[e.mouseButton])
+			else if (e.type == Event::Type::MouseButtonDown)
 			{
-				m_MouseButtonsJustPressed[e.mouseButton] = true;
+				if (!m_MouseButtonsDown[e.mouseButton])
+				{
+					m_MouseButtonsJustPressed[e.mouseButton] = true;
+				}
+				m_MouseButtonsDown[e.mouseButton] = true;
 			}
-			m_MouseButtonsDown[e.mouseButton] = true;
-		}
-		else if (e.type == Event::Type::MouseButtonUp)
-		{
-			if (m_MouseButtonsDown[e.mouseButton])
+			else if (e.type == Event::Type::MouseButtonUp)
 			{
-				m_MouseButtonsJustReleased[e.mouseButton] = true;
+				if (m_MouseButtonsDown[e.mouseButton])
+				{
+					m_MouseButtonsJustReleased[e.mouseButton] = true;
+				}
+				m_MouseButtonsDown[e.mouseButton] = false;
 			}
-			m_MouseButtonsDown[e.mouseButton] = false;
+			else if (e.type == Event::Type::MouseMove)
+			{
+				m_MouseX = e.mouseX;
+				m_MouseY = e.mouseY;
+				m_MouseMotionX += e.mouseMotionX;
+				m_MouseMotionY += e.mouseMotionY;
+			}
 		}
-		else if (e.type == Event::Type::MouseMove)
+	}
+
+	bool InputManager::IsKeyDown(Key key) const
+	{
+		auto it = m_KeysDown.find(key);
+		if (it != m_KeysDown.end())
 		{
-			m_MouseX = e.mouseX;
-			m_MouseY = e.mouseY;
-			m_MouseMotionX += e.mouseMotionX;
-			m_MouseMotionY += e.mouseMotionY;
+			return it->second;
 		}
+		return false;
 	}
-}
 
-bool InputManager::IsKeyDown(Key key) const
-{
-	auto it = m_KeysDown.find(key);
-	if (it != m_KeysDown.end())
+	bool InputManager::IsKeyJustPressed(Key key) const
 	{
-		return it->second;
+		auto it = m_KeysJustPressed.find(key);
+		if (it != m_KeysJustPressed.end())
+		{
+			return it->second;
+		}
+		return false;
 	}
-	return false;
-}
 
-bool InputManager::IsKeyJustPressed(Key key) const
-{
-	auto it = m_KeysJustPressed.find(key);
-	if (it != m_KeysJustPressed.end())
+	bool InputManager::IsKeyJustReleased(Key key) const
 	{
-		return it->second;
+		auto it = m_KeysJustReleased.find(key);
+		if (it != m_KeysJustReleased.end())
+		{
+			return it->second;
+		}
+		return false;
 	}
-	return false;
-}
 
-bool InputManager::IsKeyJustReleased(Key key) const
-{
-	auto it = m_KeysJustReleased.find(key);
-	if (it != m_KeysJustReleased.end())
+	bool InputManager::IsMouseButtonDown(MouseButton button) const
 	{
-		return it->second;
+		auto it = m_MouseButtonsDown.find(button);
+		if (it != m_MouseButtonsDown.end())
+		{
+			return it->second;
+		}
+		return false;
 	}
-	return false;
-}
 
-bool InputManager::IsMouseButtonDown(MouseButton button) const
-{
-	auto it = m_MouseButtonsDown.find(button);
-	if (it != m_MouseButtonsDown.end())
+	bool InputManager::IsMouseButtonJustPressed(MouseButton button) const
 	{
-		return it->second;
+		auto it = m_MouseButtonsJustPressed.find(button);
+		if (it != m_MouseButtonsJustPressed.end())
+		{
+			return it->second;
+		}
+		return false;
 	}
-	return false;
-}
 
-bool InputManager::IsMouseButtonJustPressed(MouseButton button) const
-{
-	auto it = m_MouseButtonsJustPressed.find(button);
-	if (it != m_MouseButtonsJustPressed.end())
+	bool InputManager::IsMouseButtonJustReleased(MouseButton button) const
 	{
-		return it->second;
+		auto it = m_MouseButtonsJustReleased.find(button);
+		if (it != m_MouseButtonsJustReleased.end())
+		{
+			return it->second;
+		}
+		return false;
 	}
-	return false;
-}
-
-bool InputManager::IsMouseButtonJustReleased(MouseButton button) const
-{
-	auto it = m_MouseButtonsJustReleased.find(button);
-	if (it != m_MouseButtonsJustReleased.end())
-	{
-		return it->second;
-	}
-	return false;
 }

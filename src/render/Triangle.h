@@ -4,43 +4,46 @@
 
 #include "Vertex.h"
 
-struct Triangle
+namespace Minecraft
 {
-	Vertex v0;
-	Vertex v1;
-	Vertex v2;
-	float lightIntensity = 0.0f;
-
-	void SetVertexByIndex(size_t index, const Vertex& v)
+	struct Triangle
 	{
-		switch (index)
-		{
-		case 0:
-			v0 = v;
-			break;
-		case 1:
-			v1 = v;
-			break;
-		case 2:
-			v2 = v;
-			break;
-		default:
-			throw std::out_of_range("Triangle vertex index out of range!");
-		}
-	}
+		Vertex v0;
+		Vertex v1;
+		Vertex v2;
+		float lightIntensity = 0.0f;
 
-	Vertex GetVertexByIndex(size_t index) const
-	{
-		switch (index)
+		void SetVertexByIndex(size_t index, const Vertex& v)
 		{
-		case 0:
-			return v0;
-		case 1:
-			return v1;
-		case 2:
-			return v2;
-		default:
-			throw std::out_of_range("Triangle vertex index out of range!");
+			switch (index)
+			{
+			case 0:
+				v0 = v;
+				break;
+			case 1:
+				v1 = v;
+				break;
+			case 2:
+				v2 = v;
+				break;
+			default:
+				throw std::out_of_range("Triangle vertex index out of range!");
+			}
 		}
-	}
-};
+
+		Vertex GetVertexByIndex(size_t index) const
+		{
+			switch (index)
+			{
+			case 0:
+				return v0;
+			case 1:
+				return v1;
+			case 2:
+				return v2;
+			default:
+				throw std::out_of_range("Triangle vertex index out of range!");
+			}
+		}
+	};
+}

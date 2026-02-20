@@ -5,30 +5,33 @@
 #include "Frustum.h"
 #include "../math/Math.h"
 
-struct Camera
+namespace Minecraft
 {
-	Vec3f position;
-	float pitch;
-	float yaw;
-	float roll;
-	float fovY;
-	float aspect;
-	float nearPlane;
-	float farPlane;
+	struct Camera
+	{
+		Vec3f position;
+		float pitch;
+		float yaw;
+		float roll;
+		float fovY;
+		float aspect;
+		float nearPlane;
+		float farPlane;
 
-	Mat4 GetViewMatrix() const;
-	Mat4 GetPerspectiveMatrix() const;
-	
-	Vec3f GetForward() const;
-	Vec3f GetRight() const;
+		Mat4 GetViewMatrix() const;
+		Mat4 GetPerspectiveMatrix() const;
 
-	Frustum GetFrustum() const;
-};
+		Vec3f GetForward() const;
+		Vec3f GetRight() const;
 
-struct CameraConfig
-{
-	float aspectRatio;  // fovY
-	float fov;  // aspect
-	float nearPlane;
-	float farPlane;
-};
+		Frustum GetFrustum() const;
+	};
+
+	struct CameraConfig
+	{
+		float aspectRatio;  // fovY
+		float fov;  // aspect
+		float nearPlane;
+		float farPlane;
+	};
+}

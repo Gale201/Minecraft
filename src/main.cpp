@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include "core/Minecraft.h"
+#include "core/Application.h"
 
 int main(int argc, char* argv[])
 {
-	Minecraft minecraft;
+	Core::Application minecraft;
 	minecraft.Run();
 
 	return 0;

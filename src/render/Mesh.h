@@ -4,8 +4,11 @@
 
 #include "Vertex.h"
 
-struct Mesh
+namespace Minecraft
 {
-	std::vector<Vertex> vertices;
-	std::vector<int> indices;
-};
+	struct Mesh
+	{
+		std::vector<Vertex> vertices;
+		std::vector<int> indices;
+	};
+}
