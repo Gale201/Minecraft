@@ -21,6 +21,11 @@ namespace Minecraft
 	{
 	public:
 		World(const std::string& name, unsigned int seed) : m_Name(name), m_Seed(seed) {}
+		World(
+			const std::string& name,
+			unsigned int seed, 
+			std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> modifiedChunks
+		) : m_Name(name), m_Seed(seed), m_ModifiedChunks(modifiedChunks) {}
 		World(const World&) = delete;
 		~World() = default;
 

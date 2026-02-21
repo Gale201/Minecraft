@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -37,7 +37,7 @@
     <ClCompile Include="src\world\BlockInteractionSystem.cpp" />
     <ClCompile Include="src\world\ChunkLoader.cpp" />
     <ClCompile Include="src\world\World.cpp" />
-    <ClCompile Include="src\world\WorldLoader.cpp" />
+    <ClCompile Include="src\world\GameSaveManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\Clock.h" />
@@ -75,7 +75,7 @@
     <ClInclude Include="src\world\ChunkLoader.h" />
     <ClInclude Include="src\world\Raycast.h" />
     <ClInclude Include="src\world\World.h" />
-    <ClInclude Include="src\world\WorldLoader.h" />
+    <ClInclude Include="src\world\GameSaveManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\textures\texture-atlas.png" />

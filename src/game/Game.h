@@ -1,9 +1,9 @@
 #pragma once
 #include "../render/Renderer.h"
-#include "../world/WorldLoader.h"
 #include "../loaders/TextureLoader.h"
 #include "../player/Player.h"
 #include "../world/BlockInteractionSystem.h"
+#include "../world/GameSaveManager.h"
 
 #define SKY_COLOR 0xFF99BBFF
 
@@ -12,13 +12,16 @@ namespace Minecraft
 	class Game
 	{
 	public:
-		Game(int width, int height, std::string& name, Core::ThreadSystem&, Core::InputManager&);
+		Game(int width, int height, const std::string& name, Core::ThreadSystem&, Core::InputManager&);
 		~Game() = default;
 
+		void Load(unsigned int seed = 0);
 		void Setup();
 
 		void Update(float deltaTime);
 		void Render();
+
+		void Save();
 
 		uint32_t* GetFrameBuffer() { return m_Renderer.GetFrameBuffer(); }
 
@@ -33,7 +36,7 @@ namespace Minecraft
 
 		Minecraft::TextureLoader m_TextureLoader{ "res/textures/" };
 
-		Minecraft::WorldLoader m_WorldLoader{ "saves/worlds/" };
+		Minecraft::GameSaveManager m_GameSaveManager;
 
 		std::unique_ptr<World> m_World;
 		std::unique_ptr<BlockInteractionSystem> m_BlockInteractionSystem;

@@ -4,12 +4,13 @@
 
 namespace Minecraft
 {
-	Game::Game(int width, int height, std::string& name, Core::ThreadSystem& threadSystem, Core::InputManager& inputManager) :
+	Game::Game(int width, int height, const std::string& name, Core::ThreadSystem& threadSystem, Core::InputManager& inputManager) :
 		m_Width(width),
 		m_Height(height),
 		m_ThreadSystem(threadSystem), 
 		m_InputManager(inputManager),
-		m_Player(inputManager)
+		m_Player(inputManager),
+		m_GameSaveManager("saves/worlds/", name)
 	{
 		m_ThreadSystem.Initialize();
 
@@ -24,8 +25,22 @@ namespace Minecraft
 			LOG_ERROR("Error loading textures. Exiting...");
 			exit(1);
 		}
+	}
 
-		m_World = m_WorldLoader.CreateWorld(name, 0);
+	void Game::Load(unsigned int seed)
+	{
+		if (m_GameSaveManager.WorldExists())
+		{
+			m_World = m_GameSaveManager.LoadWorld();
+			PlayerSaveData playerData = m_GameSaveManager.LoadPlayerData();
+			m_Player.SetPosition(playerData.position);
+			m_Player.SetHeadRotation(playerData.headRotation);
+		}
+		else
+		{
+			m_World = m_GameSaveManager.CreateWorld(seed);
+		}
+
 		m_BlockInteractionSystem = std::make_unique<BlockInteractionSystem>(*m_World);
 	}
 
@@ -49,7 +64,6 @@ namespace Minecraft
 
 		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 100.0f };
 		m_Player.SetCameraConfig(cameraConfig);
-		m_Player.SetPosition(Vec3f(0.0f, 50.0f, 0.0f)); 
 
 		m_Crosshair = m_TextureLoader.Get("crosshair");
 	}
@@ -89,5 +103,11 @@ namespace Minecraft
 		);
 
 		m_RenderList.clear();
+	}
+
+	void Game::Save()
+	{
+		m_GameSaveManager.SaveWorld(*m_World);
+		m_GameSaveManager.SavePlayer(m_Player);
 	}
 }

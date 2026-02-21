@@ -17,6 +17,7 @@ namespace Core
 	{
 		std::string name = "Test";
 		m_Game = std::make_unique<Minecraft::Game>(WIDTH, HEIGHT, name, m_ThreadSystem, m_InputManager);
+		m_Game->Load(123456);
 		m_Game->Setup();
 
 		// Main loop
@@ -50,6 +51,8 @@ namespace Core
 			// Render the frame buffer to the window
 			m_Window.Render(m_Game->GetFrameBuffer());
 		}
+
+		m_Game->Save();
 
 		m_ThreadSystem.Shutdown();
 		m_Window.Destroy();
