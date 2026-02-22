@@ -13,7 +13,9 @@ namespace Core
 		W, A, S, D,
 		Escape,
 		Space,
-		Shift
+		Shift,
+		RightCtrl,
+		LeftCtrl
 	};
 
 	enum class MouseButton

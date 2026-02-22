@@ -37,7 +37,7 @@ namespace Minecraft
 		void DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 		void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
 
-		void DrawCubeWireframe(const Transform& transform, uint32_t color, const Camera& camera, int width, bool alphaBlend = false);
+		void DrawCubeWireframe(const Transform& transform, uint32_t color, const Camera& camera, int width, bool alphaBlend = false, bool centered = true);
 
 		void DrawMesh(
 			const Mesh& mesh,

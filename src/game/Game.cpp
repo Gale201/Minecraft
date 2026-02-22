@@ -41,7 +41,8 @@ namespace Minecraft
 			m_World = m_GameSaveManager.CreateWorld(seed);
 		}
 
-		m_BlockInteractionSystem = std::make_unique<BlockInteractionSystem>(*m_World);
+		m_BlockInteractionSystem.Initialize(*m_World);
+		m_PhysicsSystem.Initialize(*m_World);
 	}
 
 	void Game::Setup()
@@ -58,31 +59,41 @@ namespace Minecraft
 		inputBindings.AddKeyBinding(InputAction::MoveRight, Key::D);
 		inputBindings.AddKeyBinding(InputAction::MoveUp, Key::Space);
 		inputBindings.AddKeyBinding(InputAction::MoveDown, Key::Shift);
+		inputBindings.AddKeyBinding(InputAction::Jump, Key::Space);
+		inputBindings.AddKeyBinding(InputAction::Sprint, Key::LeftCtrl);
 		inputBindings.AddMouseButtonBinding(InputAction::BreakBlock, MouseButton::Left);
 		inputBindings.AddMouseButtonBinding(InputAction::PlaceBlock, MouseButton::Right);
 		m_Player.SetInputBindings(inputBindings);
 
-		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 100.0f };
+		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.0001f, 100.0f };
 		m_Player.SetCameraConfig(cameraConfig);
 
 		m_Crosshair = m_TextureLoader.Get("crosshair");
+
+		m_PhysicsSystem.AddBody(m_Player.GetBody());
 	}
 
 	void Game::Update(float deltaTime)
 	{
-		m_Player.Update(deltaTime);
-
 		// Updating world
 		m_World->LoadAndUnloadChunks(m_Player.GetCamera().position);
 		m_World->Update(m_ThreadSystem);
 
 		if (m_Player.RequestedBlockBreakAction())
-			m_BlockInteractionSystem->BreakBlock(m_Player);
+			m_BlockInteractionSystem.BreakBlock(m_Player);
 
 		if (m_Player.RequestedBlockPlaceAction())
-			m_BlockInteractionSystem->PlaceBlock(m_Player, m_Player.GetRequestedBlockToPlace());
+			m_BlockInteractionSystem.PlaceBlock(m_Player, m_Player.GetRequestedBlockToPlace());
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
+
+		// Updating entities
+		m_Player.Update(deltaTime);
+
+		// Physics update
+		m_PhysicsSystem.Update(deltaTime);
+
+		m_Player.SyncCamera();
 	}
 
 	void Game::Render()
@@ -94,13 +105,18 @@ namespace Minecraft
 			m_Renderer.Render(m_RenderList, m_Player.GetCamera(), m_ThreadSystem);
 		}
 
-		m_BlockInteractionSystem->Render(m_Player, m_Renderer);
+		m_BlockInteractionSystem.Render(m_Player, m_Renderer);
 
 		m_Renderer.DrawTexture(
 			m_Width / 2 - m_Crosshair.GetWidth() / 2,
 			m_Height / 2 - m_Crosshair.GetHeight() / 2,
 			m_Crosshair, true
 		);
+
+		Transform t1;
+		t1.SetPosition(m_Player.GetPosition());
+		t1.SetScale(m_Player.GetBody().size);
+		//m_Renderer.DrawCubeWireframe(t1, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
 
 		m_RenderList.clear();
 	}

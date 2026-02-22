@@ -28,6 +28,8 @@
     <ClCompile Include="src\loaders\TextureLoader.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\math\PerlinNoise.cpp" />
+    <ClCompile Include="src\physics\AABB.cpp" />
+    <ClCompile Include="src\physics\PhysicsSystem.cpp" />
     <ClCompile Include="src\player\Player.cpp" />
     <ClCompile Include="src\render\Camera.cpp" />
     <ClCompile Include="src\render\CameraController.cpp" />
@@ -51,6 +53,9 @@
     <ClInclude Include="src\loaders\TextureLoader.h" />
     <ClInclude Include="src\math\Math.h" />
     <ClInclude Include="src\math\PerlinNoise.h" />
+    <ClInclude Include="src\physics\AABB.h" />
+    <ClInclude Include="src\physics\PhysicsBody.h" />
+    <ClInclude Include="src\physics\PhysicsSystem.h" />
     <ClInclude Include="src\player\InputBinding.h" />
     <ClInclude Include="src\player\Player.h" />
     <ClInclude Include="src\render\Camera.h" />

@@ -18,6 +18,7 @@ namespace Minecraft
 		MoveDown,
 		Look,
 		Jump,
+		Sprint,
 		BreakBlock,
 		PlaceBlock
 	};

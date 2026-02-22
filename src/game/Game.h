@@ -4,6 +4,7 @@
 #include "../player/Player.h"
 #include "../world/BlockInteractionSystem.h"
 #include "../world/GameSaveManager.h"
+#include "../physics/PhysicsSystem.h"
 
 #define SKY_COLOR 0xFF99BBFF
 
@@ -39,7 +40,8 @@ namespace Minecraft
 		Minecraft::GameSaveManager m_GameSaveManager;
 
 		std::unique_ptr<World> m_World;
-		std::unique_ptr<BlockInteractionSystem> m_BlockInteractionSystem;
+		BlockInteractionSystem m_BlockInteractionSystem;
+		PhysicsSystem m_PhysicsSystem;
 		Player m_Player;
 
 		Texture m_Crosshair;

@@ -318,22 +318,37 @@ void Renderer::DrawTriangleWireframe(const Triangle& triangle, uint32_t color)
 	}
 }
 
-void Renderer::DrawCubeWireframe(const Transform& transform, uint32_t color, const Camera& camera, int width, bool alphaBlend)
+void Renderer::DrawCubeWireframe(const Transform& transform, uint32_t color, const Camera& camera, int width, bool alphaBlend, bool centered)
 {
 	Mat4 viewMatrix = camera.GetViewMatrix();
 	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
 
 	Vec3f vertices[8];
-	vertices[0] = Vec3f(-0.5f, -0.5f, -0.5f);
-	vertices[1] = Vec3f(0.5f, -0.5f, -0.5f);
-	vertices[2] = Vec3f(0.5f, -0.5f, 0.5f);
-	vertices[3] = Vec3f(-0.5f, -0.5f, 0.5f);
-	vertices[4] = Vec3f(-0.5f, 0.5f, -0.5f);
-	vertices[5] = Vec3f(0.5f, 0.5f, -0.5f);
-	vertices[6] = Vec3f(0.5f, 0.5f, 0.5f);
-	vertices[7] = Vec3f(-0.5f, 0.5f, 0.5f);
+	if (centered)
+	{
+		vertices[0] = Vec3f(-0.5f, -0.5f, -0.5f);
+		vertices[1] = Vec3f(0.5f, -0.5f, -0.5f);
+		vertices[2] = Vec3f(0.5f, -0.5f, 0.5f);
+		vertices[3] = Vec3f(-0.5f, -0.5f, 0.5f);
+		vertices[4] = Vec3f(-0.5f, 0.5f, -0.5f);
+		vertices[5] = Vec3f(0.5f, 0.5f, -0.5f);
+		vertices[6] = Vec3f(0.5f, 0.5f, 0.5f);
+		vertices[7] = Vec3f(-0.5f, 0.5f, 0.5f);
+	}
+	else
+	{
+		vertices[0] = Vec3f(0.0f, 0.0f, 0.0f);
+		vertices[1] = Vec3f(1.0f, 0.0f, 0.0f);
+		vertices[2] = Vec3f(1.0f, 0.0f, 1.0f);
+		vertices[3] = Vec3f(0.f, 0.f, 1.f);
+		vertices[4] = Vec3f(0.f, 1.f, 0.f);
+		vertices[5] = Vec3f(1.f, 1.f, 0.f);
+		vertices[6] = Vec3f(1.f, 1.f, 1.f);
+		vertices[7] = Vec3f(0.f, 1.f, 1.f);
+	}
 
 	Vec3f projected[8];
+	bool clipped[8]{};
 	for (int i = 0; i < 8; i++)
 	{
 		Vec3f vertex = vertices[i];
@@ -349,24 +364,30 @@ void Renderer::DrawCubeWireframe(const Transform& transform, uint32_t color, con
 		screenVertex.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
 		screenVertex.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
 		screenVertex.z = perspectiveVertex.z;
+
+		if (perspectiveVertex.w <= 0.0f)
+			clipped[i] = true;
 		
 		projected[i] = Vec3f(screenVertex.x, screenVertex.y, screenVertex.z);
 	}
 
-	DrawLine(projected[0], projected[1], color, width, alphaBlend);
-	DrawLine(projected[1], projected[2], color, width, alphaBlend);
-	DrawLine(projected[2], projected[3], color, width, alphaBlend);
-	DrawLine(projected[3], projected[0], color, width, alphaBlend);
-	
-	DrawLine(projected[4], projected[5], color, width, alphaBlend);
-	DrawLine(projected[5], projected[6], color, width, alphaBlend);
-	DrawLine(projected[6], projected[7], color, width, alphaBlend);
-	DrawLine(projected[7], projected[4], color, width, alphaBlend);
-	
-	DrawLine(projected[0], projected[4], color, width, alphaBlend);
-	DrawLine(projected[1], projected[5], color, width, alphaBlend);
-	DrawLine(projected[2], projected[6], color, width, alphaBlend);
-	DrawLine(projected[3], projected[7], color, width, alphaBlend);
+	for (int i = 0; i < 4; i++)
+	{
+		if (!clipped[i] && !clipped[(i + 1) % 4]) 
+			DrawLine(projected[i], projected[(i + 1) % 4], color, width, alphaBlend);
+	}
+
+	for (int i = 4; i < 8; i++)
+	{
+		if (!clipped[i] && !clipped[4 + (i + 1) % 4])
+			DrawLine(projected[i], projected[4 + (i + 1) % 4], color, width, alphaBlend);
+	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (!clipped[i] && !clipped[i + 4])
+			DrawLine(projected[i], projected[i + 4], color, width, alphaBlend);
+	}
 }
 
 void Renderer::DrawMesh(

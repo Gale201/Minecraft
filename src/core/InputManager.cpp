@@ -1,5 +1,7 @@
 #include "InputManager.h"
 
+#include <chrono>
+
 namespace Core
 {
 	void InputManager::ProcessEvents(const std::vector<Event>& events)
@@ -10,6 +12,8 @@ namespace Core
 		m_KeysJustReleased.clear();
 		m_MouseButtonsJustPressed.clear();
 		m_MouseButtonsJustReleased.clear();
+		m_KeysJustDoublePressed.clear();
+
 		for (const Event& e : events)
 		{
 			if (e.type == Event::Type::Keydown)
@@ -17,6 +21,13 @@ namespace Core
 				if (!m_KeysDown[e.key])
 				{
 					m_KeysJustPressed[e.key] = true;
+					auto now = std::chrono::high_resolution_clock::now().time_since_epoch();
+					auto miliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+					if (miliseconds - m_KeyPressTimeTable[e.key] < m_DoublePressMaxDelay)
+					{
+						m_KeysJustDoublePressed[e.key] = true;
+					}
+					m_KeyPressTimeTable[e.key] = miliseconds;
 				}
 				m_KeysDown[e.key] = true;
 			}
@@ -81,6 +92,14 @@ namespace Core
 		{
 			return it->second;
 		}
+		return false;
+	}
+
+	bool InputManager::IsKeyJustDoublePressed(Key key) const
+	{
+		auto it = m_KeysJustDoublePressed.find(key);
+		if (it != m_KeysJustDoublePressed.end())
+			return it->second;
 		return false;
 	}
 

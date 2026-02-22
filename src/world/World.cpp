@@ -270,6 +270,27 @@ namespace Minecraft
 		return visible;
 	}
 
+	const std::vector<Vec3i> World::GetSurroundingCollidableBlocks(Vec3i pos) const
+	{
+		std::vector<Vec3i> blocks;
+		blocks.reserve(64);
+
+		for (int x = pos.x - 1; x <= pos.x + 1; x++)
+		{
+			for (int y = pos.y - 2; y <= pos.y + 2; y++)
+			{
+				for (int z = pos.z - 1; z <= pos.z + 1; z++)
+				{
+					Vec3i blockPos = Vec3i(x, y, z);
+					if (GetBlock(blockPos).IsCollidable())
+						blocks.emplace_back(x, y, z);
+				}
+			}
+		}
+
+		return blocks;
+	}
+
 	/* 
 	 Private functions 
 	*/

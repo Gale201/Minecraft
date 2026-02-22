@@ -50,6 +50,8 @@ namespace Minecraft
 
 		const std::vector<const Chunk*> GetFrustumVisibleChunks(const Camera& camera) const;
 
+		const std::vector<Vec3i> GetSurroundingCollidableBlocks(Vec3i pos) const;
+
 		/* Getters & setters */
 
 		const std::string& GetName() const { return m_Name; }

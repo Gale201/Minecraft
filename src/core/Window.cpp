@@ -100,6 +100,8 @@ namespace Core
 				case SDLK_ESCAPE: event.key = Key::Escape; break;
 				case SDLK_LSHIFT:
 				case SDLK_RSHIFT: event.key = Key::Shift; break;
+				case SDLK_RCTRL: event.key = Key::RightCtrl; break;
+				case SDLK_LCTRL: event.key = Key::LeftCtrl; break;
 				case SDLK_SPACE: event.key = Key::Space; break;
 				default: event.key = Key::Unknown; break;
 				}

@@ -32,5 +32,17 @@ namespace Minecraft
 				return false;
 			}
 		}
+
+		bool IsCollidable()
+		{
+			switch (type)
+			{
+			case BlockType::Undefined:
+			case BlockType::Air:
+				return false;
+			default:
+				return true;
+			}
+		}
 	};
 }

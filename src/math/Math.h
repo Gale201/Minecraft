@@ -109,6 +109,14 @@ namespace Minecraft
 			return *this;
 		}
 
+		Vec3f& operator*=(float scalar)
+		{
+			x *= scalar;
+			y *= scalar;
+			z *= scalar;
+			return *this;
+		}
+
 		bool operator==(const Vec3f& other) const { return x == other.x && y == other.y && z == other.z; }
 
 		float length() const
