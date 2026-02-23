@@ -11,6 +11,7 @@ namespace Minecraft
 		Vec3f velocity;
 		Vec3f size;
 		bool applyGravity = true;
+		bool collidable = true;
 		bool isGrounded = false;
 
 		AABB GetAABB() const

@@ -6,11 +6,15 @@ namespace Minecraft
 {
 	Mat4 Camera::GetViewMatrix() const
 	{
-		Vec3f forward = -GetForward().normalized();
+		Vec3f worldUp{ 0.0f, 1.0f, 0.0f };
+		Vec3f forward;
+		forward.x = std::cosf(pitch) * std::sinf(yaw);
+		forward.y = std::sinf(pitch);
+		forward.z = std::cosf(pitch) * std::cosf(yaw);
+		forward = forward.normalized();
 
-		Vec3f worldUp = { 0, 1, 0 };
 		Vec3f right = -worldUp.Cross(forward).normalized();
-		Vec3f up = -forward.Cross(right);
+		Vec3f up = -forward.Cross(right).normalized();
 
 		Mat4 v;
 
@@ -33,9 +37,10 @@ namespace Minecraft
 		Mat4 r;
 		r.m[0][0] = f / aspect;
 		r.m[1][1] = f;
-		r.m[2][2] = farPlane / (nearPlane - farPlane);
+		r.m[2][2] = (nearPlane + farPlane) / (nearPlane - farPlane);
 		r.m[2][3] = -1.0f;
-		r.m[3][2] = (nearPlane * farPlane) / (nearPlane - farPlane);
+		r.m[3][2] = (2.0f * nearPlane * farPlane) / (nearPlane - farPlane);
+		r.m[3][3] = 0.0f;
 
 		return r;
 	}

@@ -62,7 +62,7 @@ namespace Minecraft
 		Vec3f m_RelativeCameraPos{ 0.3f, 1.6f, 0.3f };
 		Vec3f m_Size{ 0.6f, 1.6f, 0.6f };
 		float m_Speed = DEFAULT_PLAYER_SPEED;
-		float m_SprintSpeed = DEFAULT_PLAYER_SPEED * 2.0f;
+		float m_SprintSpeed = DEFAULT_PLAYER_SPEED * 1.5f;
 		float m_Sensitivity = DEFAULT_PLAYER_SENSITIVITY;
 		float m_PitchLimit = DEFAULT_PITCH_LIMIT;
 

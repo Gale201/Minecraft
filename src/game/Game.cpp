@@ -65,7 +65,7 @@ namespace Minecraft
 		inputBindings.AddMouseButtonBinding(InputAction::PlaceBlock, MouseButton::Right);
 		m_Player.SetInputBindings(inputBindings);
 
-		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.0001f, 100.0f };
+		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 1000.0f };
 		m_Player.SetCameraConfig(cameraConfig);
 
 		m_Crosshair = m_TextureLoader.Get("crosshair");

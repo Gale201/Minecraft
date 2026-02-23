@@ -352,9 +352,9 @@ void Renderer::DrawCubeWireframe(const Transform& transform, uint32_t color, con
 	for (int i = 0; i < 8; i++)
 	{
 		Vec3f vertex = vertices[i];
-		Vec4f worldVertex = Vec4f::Transform(Vec4f(vertex.x, vertex.y, vertex.z, 1.0f), transform.GetMatrix());
-		Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
-		Vec4f perspectiveVertex = Vec4f::Transform(cameraVertex, perspectiveMatrix);
+		Vec4f worldVertex = transform.GetMatrix() * Vec4f(vertex.x, vertex.y, vertex.z, 1.0f);
+		Vec4f cameraVertex = viewMatrix * worldVertex;
+		Vec4f perspectiveVertex = perspectiveMatrix * cameraVertex;
 
 		perspectiveVertex.x /= perspectiveVertex.w;
 		perspectiveVertex.y /= perspectiveVertex.w;
@@ -402,7 +402,7 @@ void Renderer::DrawMesh(
 	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
 
 	Vec3f transformedDirectionalLight = (
-		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
+		viewMatrix * Vec4f::FromVec3f(m_DirectionalLight, 0.0f)
 		).ToVec3f(); // Add .normalized() for a classic directional light
 	
 	Triangle triangle;
@@ -417,10 +417,10 @@ void Renderer::DrawMesh(
 			tileInfo = v.tileInfo;
 
 			// Transform vertex from model space to world space
-			Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
+			Vec4f worldVertex = modelMatrix * Vec4f(v.position.x, v.position.y, v.position.z, 1.0f);
 
 			// Transform world vertex to camera space
-			Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
+			Vec4f cameraVertex = viewMatrix * worldVertex;
 
 			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });	
 		}
@@ -449,7 +449,7 @@ void Renderer::DrawMesh(
 				Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
 
 				// Transform the clipped vertex to clip space
-				Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+				Vec4f perspectiveVertex = perspectiveMatrix * Vec4f::FromVec3f(clippedVertex.position, 1.0f);
 
 				// Perspective divide
 				perspectiveVertex.x /= perspectiveVertex.w;
@@ -485,7 +485,7 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
 
 	Vec3f transformedDirectionalLight = (
-		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
+		viewMatrix * Vec4f::FromVec3f(m_DirectionalLight, 0.0f)
 	).ToVec3f(); // Add .normalized() for a classic directional light
 
 	for (const Mesh& mesh : renderObject.model.meshes)
@@ -499,10 +499,10 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 				const Vertex& v = mesh.vertices[mesh.indices[i + j]];
 
 				// Transform vertex from model space to world space
-				Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
+				Vec4f worldVertex = modelMatrix * Vec4f(v.position.x, v.position.y, v.position.z, 1.0f);
 
 				// Transform world vertex to camera space
-				Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
+				Vec4f cameraVertex = viewMatrix * worldVertex;
 
 				triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v });
 			}
@@ -531,7 +531,7 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 					Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
 
 					// Transform the clipped vertex to clip space
-					Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+					Vec4f perspectiveVertex = perspectiveMatrix * Vec4f::FromVec3f(clippedVertex.position, 1.0f);
 
 					// Perspective divide
 					perspectiveVertex.x /= perspectiveVertex.w;
@@ -660,9 +660,7 @@ void Renderer::BuildScreenTileTriangles(
 	Mat4 viewMatrix = camera.GetViewMatrix();
 	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
 
-	Vec3f transformedDirectionalLight = (
-		Vec4f::Transform(Vec4f::FromVec3f(m_DirectionalLight, 0.0f), viewMatrix)
-		).ToVec3f(); // Add .normalized() for a classic directional light
+	Vec3f transformedDirectionalLight = (viewMatrix * Vec4f::FromVec3f(m_DirectionalLight, 0.0f)).ToVec3f(); // Add .normalized() for a classic directional light
 
 	Triangle triangle;
 	AtlasTileInfo tileInfo;
@@ -676,10 +674,10 @@ void Renderer::BuildScreenTileTriangles(
 			tileInfo = v.tileInfo;
 
 			// Transform vertex from model space to world space
-			Vec4f worldVertex = Vec4f::Transform(Vec4f(v.position.x, v.position.y, v.position.z, 1.0f), modelMatrix);
+			Vec4f worldVertex = modelMatrix * Vec4f(v.position.x, v.position.y, v.position.z, 1.0f);
 
 			// Transform world vertex to camera space
-			Vec4f cameraVertex = Vec4f::Transform(worldVertex, viewMatrix);
+			Vec4f cameraVertex = viewMatrix * worldVertex;
 
 			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });
 		}
@@ -708,15 +706,16 @@ void Renderer::BuildScreenTileTriangles(
 				Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
 
 				// Transform the clipped vertex to clip space
-				Vec4f perspectiveVertex = Vec4f::Transform(Vec4f::FromVec3f(clippedVertex.position, 1.0f), perspectiveMatrix);
+				Vec4f perspectiveVertex = perspectiveMatrix * Vec4f::FromVec3f(clippedVertex.position, 1.0f);
+				float invW = 1.0f / perspectiveVertex.w;
 
 				// Perspective divide
-				perspectiveVertex.x /= perspectiveVertex.w;
-				perspectiveVertex.y /= perspectiveVertex.w;
-				perspectiveVertex.z /= perspectiveVertex.w;
+				perspectiveVertex.x *= invW;
+				perspectiveVertex.y *= invW;
+				perspectiveVertex.z *= invW;
 
-				clippedVertex.u /= perspectiveVertex.w;
-				clippedVertex.v /= perspectiveVertex.w;
+				clippedVertex.u *= invW;
+				clippedVertex.v *= invW;
 
 				Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
 
@@ -724,13 +723,14 @@ void Renderer::BuildScreenTileTriangles(
 				screenVertex.position.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
 				screenVertex.position.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
 				screenVertex.position.z = perspectiveVertex.z;
-				screenVertex.invW = 1.0f / perspectiveVertex.w;
+				screenVertex.invW = invW;
 
 				triangle.SetVertexByIndex(j, screenVertex);
 			}
 
 			// Screen space back face culling
-			if (CalculateTriangleArea(triangle) <= 0) continue;
+			if (CalculateTriangleArea(triangle) <= 0) 
+				continue;
 
 			int left, right, top, bottom;
 			ComputeTriangleBoundingBox(triangle, left, right, top, bottom);

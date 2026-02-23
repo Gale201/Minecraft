@@ -101,6 +101,8 @@ namespace Minecraft
 
 		// Look
 		m_HeadRotation.y += m_InputManager.GetMouseMotionX() * m_Sensitivity;
+		if (m_HeadRotation.y < -2.0f * PI) m_HeadRotation.y += 2.0f * PI;
+		if (m_HeadRotation.y > 2.0f * PI) m_HeadRotation.y -= 2.0f * PI;
 		m_HeadRotation.x += m_InputManager.GetMouseMotionY() * m_Sensitivity;
 		m_HeadRotation.x = std::clamp(m_HeadRotation.x, -m_PitchLimit, m_PitchLimit);
 
@@ -118,7 +120,6 @@ namespace Minecraft
 	void Player::SyncCamera()
 	{
 		m_Camera.position = m_PhysicsBody.position + m_RelativeCameraPos;
-		m_Camera.position = Vec3f(0, 46, 0);
 		m_Camera.pitch = m_HeadRotation.x;
 		m_Camera.yaw = m_HeadRotation.y;
 		m_Camera.roll = m_HeadRotation.z;

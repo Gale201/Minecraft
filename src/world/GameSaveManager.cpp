@@ -11,18 +11,17 @@ namespace Minecraft
 			m_WorldFolderPath += '/';
 		}
 		m_WorldFolderPath += worldName + "\\";
-
-		std::filesystem::create_directories(m_WorldFolderPath);
 	}
 
 	/* World saving and loading */
 
 	std::unique_ptr<World> GameSaveManager::CreateWorld(unsigned int seed) const
 	{
-		for (const auto& entry : std::filesystem::directory_iterator(m_WorldFolderPath))
+		for (const auto& entry : std::filesystem::directory_iterator(m_BaseFolderPath))
 		{
 			if (entry.is_directory() && entry.path().filename() == m_WorldName) return nullptr;
 		}
+		std::filesystem::create_directories(m_WorldFolderPath);
 		return std::make_unique<World>(m_WorldName, seed);
 	}
 
@@ -111,7 +110,7 @@ namespace Minecraft
 	{
 		for (const auto& entry : std::filesystem::directory_iterator(m_BaseFolderPath))
 		{
-			if (entry.is_directory() && entry.path().filename() == m_WorldName) return true;
+			if (entry.is_directory() && entry.path().filename().string() == m_WorldName) return true;
 		}
 		return false;
 	}

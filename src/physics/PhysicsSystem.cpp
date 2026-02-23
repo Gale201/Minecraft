@@ -25,6 +25,13 @@ namespace Minecraft
 
 	void PhysicsSystem::MoveBody(PhysicsBody& body, float deltaTime)
 	{
+		if (!body.collidable)
+		{
+			body.position += body.velocity * deltaTime;
+			body.velocity = Vec3f();
+			return;
+		}
+
 		Vec3f velocity = body.velocity;
 		Vec3f displacement = velocity * deltaTime;
 		AABB bodyCollider = body.GetAABB();
