@@ -10,6 +10,7 @@ namespace Minecraft
 		m_Camera()
 	{
 		SetCameraConfig(cameraConfig);
+		m_PhysicsBody.size = m_Size;
 	}
 
 	void Player::Update(float deltaTime)
@@ -48,39 +49,40 @@ namespace Minecraft
 
 	void Player::HandleInput()
 	{
-		Vec3f velocity;
-		m_PhysicsBody.velocity.x = 0.0f;
-		m_PhysicsBody.velocity.z = 0.0f;
-		if (m_Flying) m_PhysicsBody.velocity.y = 0.0f;
+		Vec3f force;
 
 		// Movement
 		Vec3f upVector{ 0.0f, 1.0f, 0.0f };
 		Vec3f forwardVector = -upVector.Cross(m_Camera.GetRight()).normalized();
 
 		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveForward)))
-			velocity += forwardVector;
+			force += forwardVector;
 
 		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveBackward)))
-			velocity -= forwardVector;
+			force -= forwardVector;
 
 		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveRight)))
-			velocity += m_Camera.GetRight();
+			force += m_Camera.GetRight();
 
 		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveLeft)))
-			velocity -= m_Camera.GetRight();
+			force -= m_Camera.GetRight();
 
 		if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
-			velocity -= upVector;
+			force -= upVector;
+		else if (m_PhysicsBody.inWater && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
+			m_PhysicsBody.AddForce({ 0.0f, -40.0f, 0.0f });
 
 		if (m_FlyingAllowed && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{
 			m_Flying = !m_Flying;
 			m_PhysicsBody.applyGravity = !m_PhysicsBody.applyGravity;
 		}
-		else if (!m_Flying && m_PhysicsBody.isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
-			m_PhysicsBody.velocity += m_JumpVelocity;
+		else if (!m_PhysicsBody.inWater && !m_Flying && m_PhysicsBody.isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
+			m_PhysicsBody.AddForce(m_JumpVelocity);
+		else if (m_PhysicsBody.inWater && !m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
+			m_PhysicsBody.AddForce({ 0.0f, 40.0f, 0.0f });
 		else if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
-			velocity += upVector;
+			force += upVector;
 
 		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
 		{
@@ -93,11 +95,21 @@ namespace Minecraft
 			m_StartSprint = false;
 		}
 	
-		if (m_Sprinting)
-			velocity = velocity.normalized() * m_SprintSpeed;
+		if (m_Sprinting && !m_PhysicsBody.inWater)
+			force = force.normalized() * m_SprintSpeed;
 		else
-			velocity = velocity.normalized() * m_Speed;
-		m_PhysicsBody.velocity += velocity;
+			force = force.normalized() * m_Speed;
+
+		if (m_Flying)
+			m_PhysicsBody.flyingFriction = 10.0f;
+		else
+			m_PhysicsBody.flyingFriction = 0.0f;
+
+		float forceMultiplier = m_PhysicsBody.isGrounded ? 10.0f : 2.f;
+		if (m_Flying)
+			force = { force.x, force.y * 12.0f, force.z };
+		if (m_PhysicsBody.inWater) forceMultiplier = 3.0f;
+		m_PhysicsBody.AddForce(force * forceMultiplier);
 
 		// Look
 		m_HeadRotation.y += m_InputManager.GetMouseMotionX() * m_Sensitivity;

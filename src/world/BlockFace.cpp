@@ -5,6 +5,7 @@
 
 namespace Minecraft
 {
+	// Not needed anymore
 	BlockTypeInfo GetBlockTypeInfo(BlockType type)
 	{
 		switch (type)
@@ -34,41 +35,104 @@ namespace Minecraft
 		}
 	}
 
+	AtlasTileInfo CreateAtlasTileInfo(int x, int y, bool transparent)
+	{
+		return {
+			x * ATLAS_TILE_SIZE / ATLAS_WIDTH,
+			y * ATLAS_TILE_SIZE / ATLAS_HEIGHT,
+			ATLAS_TILE_SIZE / ATLAS_WIDTH,
+			ATLAS_TILE_SIZE / ATLAS_HEIGHT,
+			static_cast<int>(ATLAS_WIDTH),
+			static_cast<int>(ATLAS_HEIGHT),
+			transparent
+		};
+	}
+
 	AtlasTileInfo GetAtlasTileInfo(TileType type)
 	{
 		switch (type)
 		{
-		case TileType::GrassSide:
-			return {
-				0.0f, 0.0f,
-				0.1f, 0.1f
-			};
-		case TileType::Dirt:
-			return {
-				0.1f, 0.0f,
-				0.1f, 0.1f
-			};
 		case TileType::GrassTop:
-			return {
-				0.2f, 0.0f,
-				0.1f, 0.1f
-			};
+			return CreateAtlasTileInfo(0, 0);
 		case TileType::Stone:
-			return {
-				0.3f, 0.0f,
-				0.1f, 0.1f
-			};
+			return CreateAtlasTileInfo(1, 0);
+		case TileType::Dirt:
+			return CreateAtlasTileInfo(2, 0);
+		case TileType::GrassSide:
+			return CreateAtlasTileInfo(3, 0);
 		case TileType::Glass:
-			return {
-				0.4f, 0.0f,
-				0.1f, 0.1f,
-				true
-			};
+			return CreateAtlasTileInfo(1, 3, true);
+		case TileType::Water:
+			return CreateAtlasTileInfo(14, 0, true);
 		default:
 			return {};
 		}
 	}
 
+	TileType GetTileTypeFromDirection(BlockType type, FaceDirection dir)
+	{
+		TileType tileType = TileType::Undefined;
+		if (type == BlockType::Grass)
+		{
+			if (dir == FaceDirection::PosY) tileType = TileType::GrassTop;
+			else if (dir == FaceDirection::NegY) tileType = TileType::Dirt;
+			else tileType = TileType::GrassSide;
+		}
+		else if (type == BlockType::Dirt) tileType = TileType::Dirt;
+		else if (type == BlockType::Stone) tileType = TileType::Stone;
+		else if (type == BlockType::Glass) tileType = TileType::Glass;
+		else if (type == BlockType::Water) tileType = TileType::Water;
+		return tileType;
+	}
+
+	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop)
+	{
+		if (type == BlockType::Water && isTop)
+		{
+			switch (dir)
+			{
+			case FaceDirection::PosX:
+				return {
+					{ {1,0,0}, {1.0f,0.9f,1.0f}, {1.0f,0.9f,1.0f}, {1,0,0} },
+					{1,0,0},
+					{ {1.0f, 0.9f}, {1, 0}, {0, 0}, {0.0f, 1.0f} }
+				};
+			case FaceDirection::NegX:
+				return {
+					{ {0,0,1}, {0.0f,0.9f,1.0f}, {0.0f,0.9f,0.0f}, {0,0,0} },
+					{-1,0,0},
+					{ {1.0f,0.9f},{1,0},{0,0},{0.0f,0.9f} }
+				};
+			case FaceDirection::PosY:
+				return {
+					{ {0.f,0.9f,0.f}, {0.f,0.9f,1.f}, {1.f,0.9f,1.f}, {1.f,0.9f,0.f} }, 
+					{0,1,0},
+					{ {1,1},{1,0},{0,0},{0,1} } 
+				};
+			case FaceDirection::NegY:
+				return { 
+					{ {0,0,1}, {0,0,0}, {1,0,0}, {1,0,1} }, 
+					{0,-1,0}, 
+					{ {1,1},{1,0},{0,0},{0,1} }
+				};
+			case FaceDirection::PosZ:
+				return { 
+					{ {1,0,1}, {1.f,0.9f,1.f}, {0.f,0.9f,1.f}, {0,0,1} }, 
+					{0,0,1}, 
+					{ {1.f,0.9f},{1,0},{0,0},{0.f,0.9f} }
+				};
+			case FaceDirection::NegZ:
+				return {
+					{ {0,0,0}, {0.f,0.9f,0.f}, {1.f,0.9f,0.f}, {1,0,0} },
+					{0,0,-1},
+					{ {1.f,0.9f},{1,0},{0,0},{0.f,0.9f} }
+				};
+			}
+		}
+		return CUBE_FACES[static_cast<int>(dir)];
+	}
+
+	// This function is broken currently
 	void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvMin, Vec2f& uvMax, int uWraps, int vWraps)
 	{
 		BlockTypeInfo info = GetBlockTypeInfo(type);

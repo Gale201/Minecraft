@@ -365,6 +365,24 @@ namespace Minecraft
 			return { (float)x, (float)y, (float)z };
 		}
 
+		static inline Vec3i from(Vec3f v)
+		{
+			return {
+				static_cast<int>(v.x),
+				static_cast<int>(v.y),
+				static_cast<int>(v.z)
+			};
+		}
+
+		static inline Vec3i floor(Vec3f v)
+		{
+			return {
+				static_cast<int>(std::floorf(v.x)),
+				static_cast<int>(std::floorf(v.y)),
+				static_cast<int>(std::floorf(v.z))
+			};
+		}
+
 		Vec3i operator+(const Vec3i& other) const
 		{
 			return Vec3i(x + other.x, y + other.y, z + other.z);

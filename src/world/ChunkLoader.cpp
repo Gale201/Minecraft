@@ -36,6 +36,7 @@ namespace Minecraft
 						chunk.blocks[x][y][z] = Block(m_ModifiedChunks.at(chunk.position).blocks.at(blockPos));
 						continue;
 					}
+					if (y >= height && y < seaLevel) chunk.blocks[x][y][z] = { BlockType::Water };
 					if (y >= height) continue;
 
 					if (height < seaLevel && y == height - 1) chunk.blocks[x][y][z] = { BlockType::Dirt };

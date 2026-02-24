@@ -13,6 +13,8 @@ namespace Minecraft
 		void Initialize(World& world);
 
 		void Update(float deltaTime);
+		void ApplyGravity(PhysicsBody& body, float deltaTime);
+		void CalculateVelocity(PhysicsBody& body, float deltaTime);
 		void MoveBody(PhysicsBody& body, float deltaTime);
 
 		void AddBody(PhysicsBody& body);

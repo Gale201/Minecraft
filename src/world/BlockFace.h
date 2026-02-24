@@ -5,6 +5,10 @@
 #include "Block.h"
 #include "../math/Math.h"
 
+#define ATLAS_WIDTH 256.0f
+#define ATLAS_HEIGHT 256.0f
+#define ATLAS_TILE_SIZE 16.0f
+
 namespace Minecraft
 {
 	enum class FaceDirection : int
@@ -24,6 +28,7 @@ namespace Minecraft
 		Vec2f uvs[4];
 	};
 
+	// Not needed anymore
 	struct BlockTypeInfo
 	{
 		Vec2f uvOffset[6];
@@ -37,19 +42,28 @@ namespace Minecraft
 		Dirt,
 		GrassTop,
 		Stone,
-		Glass
+		Glass,
+		Water
 	};
 
 	struct AtlasTileInfo
 	{
 		float u0, v0;
 		float uScale, vScale;
+		int atlasWidth;
+		int atlasHeight;
 		bool isTransparent = false;
 	};
+
+	AtlasTileInfo CreateAtlasTileInfo(int x, int y, bool transparent = false);
 
 	void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset, int uWraps, int vWraps);
 
 	AtlasTileInfo GetAtlasTileInfo(TileType type);
+
+	TileType GetTileTypeFromDirection(BlockType type, FaceDirection dir);
+
+	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop = false);
 
 	extern const FaceDirection FACE_DIRECTIONS[6];
 

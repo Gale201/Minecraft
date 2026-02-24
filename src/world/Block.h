@@ -2,6 +2,8 @@
 
 #include <cinttypes>
 
+#include "..\math\Math.h"
+
 namespace Minecraft
 {
 	enum class BlockType : uint8_t
@@ -11,10 +13,11 @@ namespace Minecraft
 		Grass,
 		Dirt,
 		Stone,
-		Glass
+		Glass,
+		Water
 	};
 
-	inline const int BLOCK_TYPE_COUNT = 6;
+	inline const int BLOCK_TYPE_COUNT = 7;
 
 	struct Block
 	{
@@ -27,6 +30,7 @@ namespace Minecraft
 			case BlockType::Undefined:
 			case BlockType::Air:
 			case BlockType::Glass:
+			case BlockType::Water:
 				return true;
 			default:
 				return false;
@@ -39,6 +43,20 @@ namespace Minecraft
 			{
 			case BlockType::Undefined:
 			case BlockType::Air:
+			case BlockType::Water:
+				return false;
+			default:
+				return true;
+			}
+		}
+
+		bool isCollidableWithRaycasts()
+		{
+			switch (type)
+			{
+			case BlockType::Undefined:
+			case BlockType::Air:
+			case BlockType::Water:
 				return false;
 			default:
 				return true;

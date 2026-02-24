@@ -10,13 +10,37 @@ namespace Minecraft
 		Vec3f position;
 		Vec3f velocity;
 		Vec3f size;
+		float mass = 1.0f;
+		float groundFriction = 8.0f;
+		float airFriction = 1.0f;
+		float flyingFriction = 0.0f;
+		float waterDrag = 4.0f;
 		bool applyGravity = true;
 		bool collidable = true;
 		bool isGrounded = false;
+		bool inWater = false;
+
+		void ClearTotalForce()
+		{
+			m_AccumulatedForce = Vec3f();
+		}
+
+		void AddForce(const Vec3f& force)
+		{
+			m_AccumulatedForce += force;
+		}
+
+		Vec3f GetTotalForce() const
+		{
+			return m_AccumulatedForce;
+		}
 
 		AABB GetAABB() const
 		{
 			return AABB(position, size);
 		}
+
+	private:
+		Vec3f m_AccumulatedForce;
 	};
 }

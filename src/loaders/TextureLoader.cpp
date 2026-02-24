@@ -28,6 +28,15 @@ namespace Minecraft
 			return false;
 		}
 
+		auto oldAtlasTexture = LoadTexture("texture-atlas-old.png");
+		if (oldAtlasTexture.has_value())
+			m_Textures["atlas-old"] = std::make_unique<Texture>(oldAtlasTexture.value());
+		else
+		{
+			LOG_ERROR("Old atlas texture failed to load!");
+			return false;
+		}
+
 		auto crosshairTexture = LoadTexture("crosshair.png");
 		if (crosshairTexture.has_value())
 		{

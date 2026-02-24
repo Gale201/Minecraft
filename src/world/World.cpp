@@ -73,11 +73,7 @@ namespace Minecraft
 	{
 		direction = direction.normalized();
 
-		Vec3i originBlock = Vec3i(
-			static_cast<int>(std::floorf(origin.x)),
-			static_cast<int>(std::floorf(origin.y)),
-			static_cast<int>(std::floorf(origin.z))
-		);
+		Vec3i originBlock = Vec3i::floor(origin);
 		int stepX = (direction.x > 0.0f) ? 1 : -1;
 		int stepY = (direction.y > 0.0f) ? 1 : -1;
 		int stepZ = (direction.z > 0.0f) ? 1 : -1;
@@ -99,7 +95,7 @@ namespace Minecraft
 		while (distance <= maxDistance)
 		{
 			Block block = GetBlock(pos);
-			if (block.type != BlockType::Undefined && block.type != BlockType::Air)
+			if (block.isCollidableWithRaycasts())
 			{
 				result = { pos, normal, distance };
 				return true;
@@ -435,8 +431,6 @@ namespace Minecraft
 						Vec3i neighborPos = Vec3i(x, y, z) + CUBE_NEIGHBOR_OFFSET[static_cast<int>(dir)];
 						if (IsFaceVisible(block, neighborPos, chunk, chunkPosX, chunkNegX, chunkPosZ, chunkNegZ))
 						{
-							// AddFaceToMesh(chunk.mesh.mesh, CUBE_FACES[(int)dir], Vec3i(x, y, z), block.type, dir);
-
 							if (dir == FaceDirection::PosY)
 								gridPosY(y, x, z).type = block.type;
 							else if (dir == FaceDirection::PosX)
@@ -489,8 +483,10 @@ namespace Minecraft
 			{
 				for (z = 0; z < CHUNK_SIZE; z++)
 				{
-					BlockFace face = CUBE_FACES[(int)FaceDirection::PosX];
 					BlockType type = grid(x, y, z).type;
+					bool isTop = false;
+					if (y < CHUNK_HEIGHT - 1 && grid(x, y + 1, z).type != type) isTop = true;
+					BlockFace face = GetBlockFace(type, FaceDirection::PosX, isTop);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -556,8 +552,10 @@ namespace Minecraft
 			{
 				for (z = 0; z < CHUNK_SIZE; z++)
 				{
-					BlockFace face = CUBE_FACES[(int)FaceDirection::PosY];
 					BlockType type = grid(y, x, z).type;
+					bool isTop = false;
+					if (y < CHUNK_HEIGHT - 1 && grid(y + 1, x, z).type != type) isTop = true;
+					BlockFace face = GetBlockFace(type, FaceDirection::PosY, isTop);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -623,8 +621,10 @@ namespace Minecraft
 			{
 				for (x = 0; x < CHUNK_SIZE; x++)
 				{
-					BlockFace face = CUBE_FACES[(int)FaceDirection::PosZ];
 					BlockType type = grid(z, y, x).type;
+					bool isTop = false;
+					if (y < CHUNK_HEIGHT - 1 && grid(z, y + 1, x).type != type) isTop = true;
+					BlockFace face = GetBlockFace(type, FaceDirection::PosZ, isTop);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -690,8 +690,10 @@ namespace Minecraft
 			{
 				for (y = 0; y < CHUNK_HEIGHT; y++)
 				{
-					BlockFace face = CUBE_FACES[(int)FaceDirection::NegX];
 					BlockType type = grid(x, z, y).type;
+					bool isTop = false;
+					if (y < CHUNK_HEIGHT - 1 && grid(x, z, y + 1).type != type) isTop = true;
+					BlockFace face = GetBlockFace(type, FaceDirection::NegX, isTop);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -757,8 +759,10 @@ namespace Minecraft
 			{
 				for (x = 0; x < CHUNK_SIZE; x++)
 				{
-					BlockFace face = CUBE_FACES[(int)FaceDirection::NegY];
 					BlockType type = grid(y, z, x).type;
+					bool isTop = false;
+					if (y < CHUNK_HEIGHT - 1 && grid(y + 1, z, x).type != type) isTop = true;
+					BlockFace face = GetBlockFace(type, FaceDirection::NegY, isTop);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -824,8 +828,10 @@ namespace Minecraft
 			{
 				for (y = 0; y < CHUNK_HEIGHT; y++)
 				{
-					BlockFace face = CUBE_FACES[(int)FaceDirection::NegZ];
 					BlockType type = grid(z, x, y).type;
+					bool isTop = false;
+					if (y < CHUNK_HEIGHT - 1 && grid(z, x, y + 1).type != type) isTop = true;
+					BlockFace face = GetBlockFace(type, FaceDirection::NegZ, isTop);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -902,17 +908,7 @@ namespace Minecraft
 			v.u = face.uvs[i].x * uWraps;
 			v.v = face.uvs[i].y * vWraps;
 
-			TileType tileType = TileType::Undefined;
-			if (type == BlockType::Grass)
-			{
-				if (dir == FaceDirection::PosY) tileType = TileType::GrassTop;
-				else if (dir == FaceDirection::NegY) tileType = TileType::Dirt;
-				else tileType = TileType::GrassSide;
-			}
-			else if (type == BlockType::Dirt) tileType = TileType::Dirt;
-			else if (type == BlockType::Stone) tileType = TileType::Stone;
-			else if (type == BlockType::Glass) tileType = TileType::Glass;
-
+			TileType tileType = GetTileTypeFromDirection(type, dir);
 			v.tileInfo = GetAtlasTileInfo(tileType);
 
 			mesh.vertices.push_back(v);
@@ -933,7 +929,7 @@ namespace Minecraft
 		Vec3i blockPos, 
 		BlockType type,
 		FaceDirection dir
-	)
+	)  // UV is broken for this function
 	{
 		int startIndex = mesh.vertices.size();
 
@@ -949,19 +945,10 @@ namespace Minecraft
 
 			Vec2f uvMin, uvMax;
 			GetFaceUV(type, dir, uvMin, uvMax, 0, 0);
-			v.u = face.uvs[i].x; // uvMin.x + face.uvs[i].x * (uvMax.x - uvMin.x);
-			v.v = face.uvs[i].y; // uvMin.y + face.uvs[i].y * (uvMax.y - uvMin.y);
+			v.u = face.uvs[i].x;
+			v.v = face.uvs[i].y;
 
-			TileType tileType = TileType::Undefined;
-			if (type == BlockType::Grass)
-			{
-				if (dir == FaceDirection::PosY) tileType = TileType::GrassTop;
-				else if (dir == FaceDirection::NegY) tileType = TileType::Dirt;
-				else tileType = TileType::GrassSide;
-			}
-			else if (type == BlockType::Dirt) tileType = TileType::Dirt;
-			else if (type == BlockType::Stone) tileType = TileType::Stone;
-			else if (type == BlockType::Glass) tileType = TileType::Glass;
+			TileType tileType = GetTileTypeFromDirection(type, dir);
 
 			v.tileInfo = GetAtlasTileInfo(tileType);
 
@@ -1052,8 +1039,7 @@ namespace Minecraft
 		if (!overflowed)
 			neighborBlock = chunk.blocks[neighborPos.x][neighborPos.y][neighborPos.z];
 
-		if (block.IsTransparent())
-			return neighborBlock.type == BlockType::Undefined || neighborBlock.type == BlockType::Air;
+		if (block.IsTransparent() && neighborBlock.type == block.type) return false;
 		return neighborBlock.IsTransparent();
 	}
 

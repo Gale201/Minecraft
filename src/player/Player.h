@@ -14,7 +14,10 @@ namespace Minecraft
 	class Player
 	{
 	public:
-		Player(const Core::InputManager& inputManager) : m_InputManager(inputManager) {}
+		Player(const Core::InputManager& inputManager) : m_InputManager(inputManager)
+		{
+			m_PhysicsBody.size = m_Size;
+		}
 		Player(const Core::InputManager& inputManager, InputBindings inputBindings, CameraConfig cameraConfig);
 
 		~Player() = default;
@@ -62,21 +65,21 @@ namespace Minecraft
 		Vec3f m_RelativeCameraPos{ 0.3f, 1.6f, 0.3f };
 		Vec3f m_Size{ 0.6f, 1.6f, 0.6f };
 		float m_Speed = DEFAULT_PLAYER_SPEED;
-		float m_SprintSpeed = DEFAULT_PLAYER_SPEED * 1.5f;
+		float m_SprintSpeed = DEFAULT_PLAYER_SPEED * 1.4f;
 		float m_Sensitivity = DEFAULT_PLAYER_SENSITIVITY;
 		float m_PitchLimit = DEFAULT_PITCH_LIMIT;
 
 		Camera m_Camera;
 		InputBindings m_InputBindings;
 
-		PhysicsBody m_PhysicsBody{ Vec3f(), Vec3f(), m_Size };
+		PhysicsBody m_PhysicsBody;
 
 		const Core::InputManager& m_InputManager;
 
 		bool m_FlyingAllowed = true;
 		bool m_Flying = false;
 
-		Vec3f m_JumpVelocity{ 0.0f, 10.0f, 0.0f };
+		Vec3f m_JumpVelocity{ 0.0f, 520.0f, 0.0f };
 		bool m_Sprinting = false;
 		bool m_CancelSprint = false;
 		bool m_StartSprint = false;

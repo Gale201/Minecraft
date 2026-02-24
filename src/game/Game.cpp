@@ -49,7 +49,7 @@ namespace Minecraft
 	{
 		m_Renderer.SetDirectionalLight({ -0.4f, -0.6f, -1.0f });
 
-		m_World->SetTextureAtlas(m_TextureLoader.Get("atlas"));
+		m_World->SetTextureAtlas(m_TextureLoader.Get("atlas-old"));
 
 		// Player setup
 		InputBindings inputBindings;

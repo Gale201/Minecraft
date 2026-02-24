@@ -830,10 +830,11 @@ void Renderer::DrawTriangleBarycentricToTile(
 					u -= static_cast<int>(u);
 					v -= static_cast<int>(v);
 
-					constexpr float inset = 0.01f / 160.f;
+					float insetU = 0.01f / static_cast<float>(tileInfo.atlasWidth);
+					float insetV = 0.01f / static_cast<float>(tileInfo.atlasHeight);
 
-					float atlasU = tileInfo.u0 + inset + u * (tileInfo.uScale - 2.0f * inset);
-					float atlasV = tileInfo.v0 + inset + v * (tileInfo.vScale - 2.0f * inset);
+					float atlasU = tileInfo.u0 + insetU + u * (tileInfo.uScale - 2.0f * insetU);
+					float atlasV = tileInfo.v0 + insetV + v * (tileInfo.vScale - 2.0f * insetV);
 
 					uint32_t color = texture.GetPixelAtUV(atlasU, atlasV);
 					if (tileInfo.isTransparent && ((color >> 24) & 0xFF) != 0xFF)
@@ -866,6 +867,13 @@ void Renderer::DrawTriangleWireframeToTile(
 
 	if (left > right || top > bottom)
 		return;
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (triangle.GetVertexByIndex(i).position.x < 0 || triangle.GetVertexByIndex(i).position.x >= m_Width ||
+			triangle.GetVertexByIndex(i).position.y < 0 || triangle.GetVertexByIndex(i).position.y >= m_Height)
+			return;
+	}
 
 	DrawLine(triangle.v0.position, triangle.v1.position, color, 1);
 	DrawLine(triangle.v1.position, triangle.v2.position, color, 1);
