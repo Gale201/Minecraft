@@ -38,33 +38,39 @@ namespace Core
 			LOG_ERROR("ParallelFor called from worker thread!");
 		}
 
-		std::atomic<int> index = 0;
-		std::atomic<int> remaining = count;
-
-		std::mutex waitMutex;
-		std::condition_variable waitCV;
+		auto state = std::make_shared<ParallelForState>();
+		state->remaining = count;
 
 		for (int i = 0; i < m_Workers.size(); i++)
 		{
-			Submit([&, function, count]() {
+			Submit([state, function, count]() {
 				while (true)
 				{
-					int i = index.fetch_add(1);
+					int i = state->index.fetch_add(1);
 					if (i >= count)
 						break;
 
-					function(i);
-
-					if (remaining.fetch_sub(1) == 1)
+					try
 					{
-						waitCV.notify_one();
+						function(i);
+					}
+					catch (const std::exception& e)
+					{
+						LOG_ERROR("Thread exception: %s\n", e.what());
+						__debugbreak();
+					}
+
+					{
+						std::lock_guard<std::mutex> lock(state->waitMutex);
+						state->remaining--;
+						if (state->remaining == 0) state->waitCV.notify_one();
 					}
 				}
 				});
 		}
 
-		std::unique_lock lock(waitMutex);
-		waitCV.wait(lock, [&]() { return remaining == 0;  });
+		std::unique_lock lock(state->waitMutex);
+		state->waitCV.wait(lock, [&]() { return state->remaining == 0; });
 	}
 
 	void ThreadSystem::WorkerLoop()

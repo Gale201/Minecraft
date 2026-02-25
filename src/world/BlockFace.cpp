@@ -75,11 +75,11 @@ namespace Minecraft
 		case TileType::TNTBottom:
 			return CreateAtlasTileInfo(10, 0);
 		case TileType::Cobweb:
-			return CreateAtlasTileInfo(11, 0);
+			return CreateAtlasTileInfo(11, 0, true);
 		case TileType::Rose:
-			return CreateAtlasTileInfo(12, 0);
+			return CreateAtlasTileInfo(12, 0, true);
 		case TileType::YellowFlower:
-			return CreateAtlasTileInfo(13, 0);
+			return CreateAtlasTileInfo(13, 0, true);
 		case TileType::Water:
 			return CreateAtlasTileInfo(14, 0, true);
 		case TileType::OakSapling:
@@ -97,7 +97,7 @@ namespace Minecraft
 		case TileType::OakLogTop:
 			return CreateAtlasTileInfo(5, 1);
 		case TileType::OakLeaves:
-			return CreateAtlasTileInfo(6, 1);
+			return CreateAtlasTileInfo(6, 1, true);
 		case TileType::IronBlock:
 			return CreateAtlasTileInfo(7, 1);
 		case TileType::GoldBlock:

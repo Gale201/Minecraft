@@ -75,6 +75,8 @@ namespace Minecraft
 
 	void Game::Update(float deltaTime)
 	{
+		Core::Timer timer("Update");
+
 		// Updating world
 		m_World->LoadAndUnloadChunks(m_Player.GetCamera().position);
 		m_World->Update(m_ThreadSystem);
@@ -103,12 +105,11 @@ namespace Minecraft
 
 	void Game::Render()
 	{
+		Core::Timer timer("Render");
+
 		m_Renderer.Clear(SKY_COLOR);
 
-		{
-			Core::Timer timer("Render");
-			m_Renderer.Render(m_RenderList, m_Player.GetCamera(), m_ThreadSystem);
-		}
+		m_Renderer.Render(m_RenderList, m_Player.GetCamera(), m_ThreadSystem);
 
 		m_BlockInteractionSystem.Render(m_Player, m_Renderer);
 

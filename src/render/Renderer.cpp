@@ -8,6 +8,7 @@
 #include "../timer/Timer.h"
 #include "../timer/AccumTimer.h"
 #include "../world/BlockFace.h"
+#include <assert.h>
 
 namespace Minecraft
 {
@@ -587,19 +588,73 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 		tile.triangles.clear();
 	}
 
-	for (const RenderCommand& command : renderList)
+/*	{
+		Core::Timer timer("Build screen triangles");
+		for (const RenderCommand& cmd : renderList)
+		{
+			BuildScreenTileTriangles(
+				*cmd.mesh,
+				cmd.transform,
+				cmd.texture,
+				camera,
+				m_ScreenTiles
+			);
+		}
+	}*/
+
 	{
-		BuildScreenTileTriangles(
-			*command.mesh,
-			command.transform,
-			command.texture,
-			camera
+		Core::Timer timer("Build screen triangles");
+		std::vector<std::vector<ScreenTile>> threadResults(m_ActiveRenderList->size());
+		std::vector<std::atomic<int>> triangleCounts(m_ScreenTiles.size());
+		threadSystem.ParallelFor(
+			(int)m_ActiveRenderList->size(),
+			[&](int index)
+			{
+				 std::vector<ScreenTile> screenTiles(m_ScreenTiles.size());
+
+				const RenderCommand& command = m_ActiveRenderList->at(index);
+				BuildScreenTileTriangles(
+					*command.mesh,
+					command.transform,
+					command.texture,
+					*m_ActiveCamera,
+					screenTiles
+				);
+
+				threadResults[index] = std::move(screenTiles);
+				
+				for (int i = 0; i < m_ScreenTiles.size(); i++)
+				{
+					triangleCounts[i].fetch_add(
+						threadResults[index][i].triangles.size(),
+						std::memory_order_relaxed	
+					);
+				}
+			}
 		);
+
+		for (int i = 0; i < m_ScreenTiles.size(); i++)
+		{
+			m_ScreenTiles[i].triangles.reserve(triangleCounts[i]);
+		}
+
+		for (auto& tiles : threadResults)
+		{
+			for (int i = 0; i < m_ScreenTiles.size(); i++)
+			{
+				m_ScreenTiles[i].triangles.insert(
+					m_ScreenTiles[i].triangles.end(),
+					tiles[i].triangles.begin(),
+					tiles[i].triangles.end()
+				);
+			}
+		}
 	}
 
+	Core::Timer timer("Rasterize tiles");
 	threadSystem.ParallelFor(
 		(int)m_ScreenTiles.size(),
-		[&](int tileIndex)
+		[this](int tileIndex)
 		{
 			RasterizeTile(m_ScreenTiles[tileIndex]);
 		}
@@ -628,7 +683,6 @@ void Renderer::CreateTiles()
 
 void Renderer::RasterizeTile(const ScreenTile& tile)
 {
-	Core::Timer timer("Rasterize tile");
 	std::vector<const ScreenTriangle*> transparent;
 	transparent.reserve(tile.triangles.size());
 
@@ -639,13 +693,13 @@ void Renderer::RasterizeTile(const ScreenTile& tile)
 			transparent.push_back(&triangle);
 			continue;
 		}
-		DrawTriangleBarycentricToTile(triangle.triangle, triangle.texture, triangle.tileInfo, tile);
+		DrawTriangleBarycentricToTile(triangle.triangle, *triangle.texture, triangle.tileInfo, tile);
 		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
 	}
 
 	for (const ScreenTriangle* triangle : transparent)
 	{
-		DrawTriangleBarycentricToTile(triangle->triangle, triangle->texture, triangle->tileInfo, tile);
+		DrawTriangleBarycentricToTile(triangle->triangle, *(triangle->texture), triangle->tileInfo, tile);
 		//DrawTriangleWireframeToTile(triangle->triangle, tile, 0);
 	}
 }
@@ -654,7 +708,8 @@ void Renderer::BuildScreenTileTriangles(
 	const Mesh& mesh,
 	const Transform& transform,
 	const Texture& texture,
-	const Camera& camera
+	const Camera& camera,
+	std::vector<ScreenTile>& screenTiles
 )
 {
 	Mat4 modelMatrix = transform.GetMatrix();
@@ -752,7 +807,7 @@ void Renderer::BuildScreenTileTriangles(
 			for (int ty = tileTop; ty <= tileBottom; ty++)
 				for (int tx = tileLeft; tx <= tileRight; tx++)
 				{
-					m_ScreenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, texture, tileInfo);
+					screenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, &texture, tileInfo);
 				}
 		}
 	}

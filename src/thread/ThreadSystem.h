@@ -15,6 +15,15 @@ namespace Core
 		void Submit(std::function<void()> job);
 
 		void ParallelFor(int count, std::function<void(int)> function);
+		
+	private:
+		struct ParallelForState
+		{
+			std::atomic<int> index{ 0 };
+			int remaining;
+			std::mutex waitMutex;
+			std::condition_variable waitCV;
+		};
 
 	private:
 		void WorkerLoop();

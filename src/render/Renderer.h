@@ -63,7 +63,7 @@ namespace Minecraft
 		struct ScreenTriangle
 		{
 			Triangle triangle;
-			const Texture& texture;
+			const Texture* texture;
 			AtlasTileInfo tileInfo;
 		};
 
@@ -78,7 +78,8 @@ namespace Minecraft
 			const Mesh& mesh,
 			const Transform& transform,
 			const Texture& texture,
-			const Camera& camera
+			const Camera& camera,
+			std::vector<ScreenTile>& screenTiles
 		);
 		void DrawTriangleBarycentricToTile(
 			const Triangle& triangle,

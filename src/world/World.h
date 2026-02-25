@@ -134,7 +134,7 @@ namespace Minecraft
 		const unsigned int m_Seed;
 
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 32;
+		int m_ChunkLoadRadius = 8;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 	};
 }
