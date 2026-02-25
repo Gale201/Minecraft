@@ -29,11 +29,15 @@ namespace Minecraft
 		bool RequestedBlockPlaceAction();
 		Block GetRequestedBlockToPlace();
 
+		bool IsInBlock(Vec3i block) const;
+
 		/* Getters & Setters */
 		const Camera& GetCamera() const { return m_Camera; }
 		Vec3f GetPosition() const { return m_PhysicsBody.position; }
 		Vec3f GetHeadRotation() const { return m_HeadRotation; }
 		PhysicsBody& GetBody() { return m_PhysicsBody; }
+		Vec3f GetFeetPosition() const { return m_PhysicsBody.position + Vec3f(m_Size.x / 2.0f, 0.0f, m_Size.z / 2.0f); }
+		Vec3f GetHeadPosition() const { return m_PhysicsBody.position + m_RelativeCameraPos; }
 		float GetMaxBreakBlockDistance() const { return m_MaxBreakBlockDistance; }
 		float GetMaxPlaceBlockDistance() const { return m_MaxPlaceBlockDistance; }
 

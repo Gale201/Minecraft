@@ -138,7 +138,7 @@ namespace Minecraft
 		int m_Width = 0;
 		int m_Height = 0;
 
-		const int TILE_SIZE = 200;
+		const int TILE_SIZE = 256;
 
 		uint32_t* m_FrameBuffer = nullptr;
 		float* m_DepthBuffer = nullptr;

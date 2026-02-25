@@ -87,11 +87,16 @@ namespace Minecraft
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
 
-		// Updating entities
-		m_Player.Update(deltaTime);
-
 		// Physics update
-		m_PhysicsSystem.Update(deltaTime);
+		m_PhysicsAccumulator += deltaTime;
+
+		while (m_PhysicsAccumulator >= m_PhysicsFixedDelta)
+		{
+			m_Player.Update(deltaTime);
+
+			m_PhysicsSystem.Update(m_PhysicsFixedDelta);
+			m_PhysicsAccumulator -= m_PhysicsFixedDelta;
+		}
 
 		m_Player.SyncCamera();
 	}

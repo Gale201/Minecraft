@@ -44,6 +44,18 @@ namespace Minecraft
 					else if (y > height - 6) chunk.blocks[x][y][z] = { BlockType::Dirt };
 					else chunk.blocks[x][y][z] = Block(BlockType::Stone);
 				}
+
+				// Bedrock
+				int bedrockBase = rand() % 3;
+				for (int y = 0; y < 4; y++)
+				{
+					if (y == 0) chunk.blocks[x][y][z] = { BlockType::Bedrock };
+					else if (y < bedrockBase + 1)
+						chunk.blocks[x][y][z] = { BlockType::Bedrock };
+				}
+
+				// Flowers
+				//if (height > seaLevel && rand() % 64 == 0 && height < CHUNK_HEIGHT) chunk.blocks[x][height][z] = { BlockType::Rose };
 			}
 		}
 	}

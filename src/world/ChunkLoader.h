@@ -14,7 +14,9 @@ namespace Minecraft
 		ChunkLoader(
 			unsigned int seed,
 			const std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash>& modifiedChunks
-		) : m_Seed(seed), m_ModifiedChunks(modifiedChunks) {
+		) : m_Seed(seed), m_ModifiedChunks(modifiedChunks) 
+		{
+			srand(m_Seed);
 		}
 		~ChunkLoader() = default;
 

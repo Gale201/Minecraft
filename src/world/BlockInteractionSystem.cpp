@@ -42,12 +42,12 @@ namespace Minecraft
 		WorldRaycastResult raycast;
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxPlaceBlockDistance(), raycast))
 		{
-			Vec3i normal = Vec3i(
-				static_cast<int>(raycast.normal.x),
-				static_cast<int>(raycast.normal.y),
-				static_cast<int>(raycast.normal.z)
-			);
-			m_World->SetBlock(raycast.blockPosition + normal, BlockType::Glass);
+			Vec3i normal = Vec3i::from(raycast.normal);
+			if (player.IsInBlock(raycast.blockPosition + normal))
+			{
+				return false;
+			}
+			m_World->SetBlock(raycast.blockPosition + normal, BlockType::Bookshelf);
 			return true;
 		}
 		return false;

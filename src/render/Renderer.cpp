@@ -628,6 +628,7 @@ void Renderer::CreateTiles()
 
 void Renderer::RasterizeTile(const ScreenTile& tile)
 {
+	Core::Timer timer("Rasterize tile");
 	std::vector<const ScreenTriangle*> transparent;
 	transparent.reserve(tile.triangles.size());
 

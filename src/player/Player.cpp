@@ -32,21 +32,6 @@ namespace Minecraft
 			m_PhysicsBody.position.y = 60.0f;
 	}
 
-	bool Player::RequestedBlockBreakAction()
-	{
-		return m_RequestedBlockBreakAction;
-	}
-
-	bool Player::RequestedBlockPlaceAction()
-	{
-		return m_RequestedBlockPlaceAction;
-	}
-
-	Block Player::GetRequestedBlockToPlace()
-	{
-		return { BlockType::Glass };
-	}
-
 	void Player::HandleInput()
 	{
 		Vec3f force;
@@ -136,4 +121,32 @@ namespace Minecraft
 		m_Camera.yaw = m_HeadRotation.y;
 		m_Camera.roll = m_HeadRotation.z;
 	}
+
+	bool Player::IsInBlock(Vec3i blockPos) const
+	{
+		for (int i = -1; i <= 1; i++)
+			for (int j = -1; j <= 1; j++)
+			{
+				Vec3f feetPos = GetFeetPosition() + Vec3f(i * m_Size.x / 2.0f, 0.0f, j * m_Size.z / 2.0f);
+				Vec3f headPos = GetHeadPosition() + Vec3f(i * m_Size.x / 2.0f, 0.0f, j * m_Size.z / 2.0f);
+				if (Vec3i::floor(feetPos) == blockPos || Vec3i::floor(headPos) == blockPos) return true;
+			}
+		return false;
+	}
+
+	bool Player::RequestedBlockBreakAction()
+	{
+		return m_RequestedBlockBreakAction;
+	}
+
+	bool Player::RequestedBlockPlaceAction()
+	{
+		return m_RequestedBlockPlaceAction;
+	}
+
+	Block Player::GetRequestedBlockToPlace()
+	{
+		return { BlockType::Glass };
+	}
+
 }

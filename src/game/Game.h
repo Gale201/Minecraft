@@ -44,6 +44,9 @@ namespace Minecraft
 		PhysicsSystem m_PhysicsSystem;
 		Player m_Player;
 
+		float m_PhysicsAccumulator = 0.0f;
+		const float m_PhysicsFixedDelta = 1.0f / 60.0f;
+
 		Texture m_Crosshair;
 	};
 }

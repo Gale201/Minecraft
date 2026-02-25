@@ -13,8 +13,29 @@ namespace Minecraft
 		Grass,
 		Dirt,
 		Stone,
-		Glass,
-		Water
+		OakPlank,
+		DoubleStoneSlab,
+		PolishedStone,
+		Brick,
+		TNT,
+		Cobweb,
+		Rose,
+		YellowFlower,
+		Water,
+		OakSapling,
+		Cobblestone,
+		Bedrock,
+		Sand,
+		Gravel,
+		OakLog,
+		OakLeaves,
+		IronBlock,
+		GoldBlock,
+		GoldOre,
+		IronOre,
+		CoalOre,
+		Bookshelf,
+		Glass
 	};
 
 	inline const int BLOCK_TYPE_COUNT = 7;
@@ -31,6 +52,11 @@ namespace Minecraft
 			case BlockType::Air:
 			case BlockType::Glass:
 			case BlockType::Water:
+			case BlockType::Cobweb:
+			case BlockType::Rose:
+			case BlockType::YellowFlower:
+			case BlockType::OakSapling:
+			case BlockType::OakLeaves:
 				return true;
 			default:
 				return false;
@@ -44,6 +70,10 @@ namespace Minecraft
 			case BlockType::Undefined:
 			case BlockType::Air:
 			case BlockType::Water:
+			case BlockType::Cobweb:
+			case BlockType::Rose:
+			case BlockType::YellowFlower:
+			case BlockType::OakSapling:
 				return false;
 			default:
 				return true;
