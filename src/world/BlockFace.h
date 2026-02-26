@@ -18,7 +18,12 @@ namespace Minecraft
 		PosY,
 		NegY,
 		PosZ,
-		NegZ
+		NegZ,
+
+		PosXPosZ,
+		PosXNegZ,
+		NegXPosZ,
+		NegXNegZ
 	};
 
 	struct BlockFace
@@ -26,6 +31,12 @@ namespace Minecraft
 		Vec3f vertices[4];
 		Vec3f normal;
 		Vec2f uvs[4];
+	};
+
+	struct BlockBoundingBox
+	{
+		Vec3f offset;
+		Vec3f size;
 	};
 
 	// Not needed anymore
@@ -89,9 +100,10 @@ namespace Minecraft
 
 	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop = false);
 
+	BlockBoundingBox GetBlockBoundingBox(BlockType type);
+
+	Vec3i GetCubeNeighborOffset(FaceDirection dir);
+
 	extern const FaceDirection FACE_DIRECTIONS[6];
-
-	extern const BlockFace CUBE_FACES[6];
-
-	extern const Vec3i CUBE_NEIGHBOR_OFFSET[6];
+	extern const FaceDirection X_FACE_DIRECTIONS[4];
 }

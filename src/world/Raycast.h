@@ -7,6 +7,7 @@ namespace Minecraft
 	{
 		Vec3i blockPosition;
 		Vec3f normal;
+		BlockType type;
 		float distance;
 	};
 }

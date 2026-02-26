@@ -44,7 +44,7 @@ namespace Minecraft
 	{
 		BlockType type = BlockType::Air;
 
-		bool IsTransparent()
+		bool IsTransparent() const
 		{
 			switch (type)
 			{
@@ -63,7 +63,7 @@ namespace Minecraft
 			}
 		}
 
-		bool IsCollidable()
+		bool IsCollidable() const
 		{
 			switch (type)
 			{
@@ -80,13 +80,26 @@ namespace Minecraft
 			}
 		}
 
-		bool isCollidableWithRaycasts()
+		bool isCollidableWithRaycasts() const
 		{
 			switch (type)
 			{
 			case BlockType::Undefined:
 			case BlockType::Air:
 			case BlockType::Water:
+				return false;
+			default:
+				return true;
+			}
+		}
+
+		bool IsCube() const
+		{
+			switch (type)
+			{
+			case BlockType::Rose:
+			case BlockType::YellowFlower:
+			case BlockType::OakSapling:
 				return false;
 			default:
 				return true;

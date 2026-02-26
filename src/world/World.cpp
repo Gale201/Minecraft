@@ -60,11 +60,14 @@ namespace Minecraft
 
 			for (int dir = 0; dir < 6; dir++)
 			{
-				outCommands.push_back({
-					&chunk->mesh.meshes[dir],
-					t,
-					m_TextureAtlas
-				});
+				if (chunk->mesh.meshes[dir].indices.size() > 0)
+				{
+					outCommands.push_back({
+						&chunk->mesh.meshes[dir],
+						t,
+						m_TextureAtlas
+						});
+				}
 			}
 		}
 	}
@@ -97,7 +100,7 @@ namespace Minecraft
 			Block block = GetBlock(pos);
 			if (block.isCollidableWithRaycasts())
 			{
-				result = { pos, normal, distance };
+				result = { pos, normal, GetBlockSize() distance };
 				return true;
 			}
 
@@ -426,9 +429,22 @@ namespace Minecraft
 					Block& block = chunk.blocks[x][y][z];
 					if (block.type == BlockType::Undefined || block.type == BlockType::Air) continue;
 
+					if (!block.IsCube())
+					{
+						int i = 0;
+						for (FaceDirection dir : X_FACE_DIRECTIONS)
+						{
+							BlockFace face = GetBlockFace(block.type, dir, false);
+							AddFaceToMesh(chunk.buildMesh.meshes[i++], face, Vec3i(x, y, z), block.type, dir);
+						}
+						chunk.buildMesh.meshes[4] = Mesh();
+						chunk.buildMesh.meshes[5] = Mesh();
+						continue;
+					}
+
 					for (FaceDirection dir : FACE_DIRECTIONS)
 					{
-						Vec3i neighborPos = Vec3i(x, y, z) + CUBE_NEIGHBOR_OFFSET[static_cast<int>(dir)];
+						Vec3i neighborPos = Vec3i(x, y, z) + GetCubeNeighborOffset(dir);
 						if (IsFaceVisible(block, neighborPos, chunk, chunkPosX, chunkNegX, chunkPosZ, chunkNegZ))
 						{
 							if (dir == FaceDirection::PosY)
@@ -929,7 +945,7 @@ namespace Minecraft
 		Vec3i blockPos, 
 		BlockType type,
 		FaceDirection dir
-	)  // UV is broken for this function
+	)
 	{
 		int startIndex = mesh.vertices.size();
 
@@ -943,13 +959,10 @@ namespace Minecraft
 			);
 			v.normal = face.normal;
 
-			Vec2f uvMin, uvMax;
-			GetFaceUV(type, dir, uvMin, uvMax, 0, 0);
 			v.u = face.uvs[i].x;
 			v.v = face.uvs[i].y;
 
 			TileType tileType = GetTileTypeFromDirection(type, dir);
-
 			v.tileInfo = GetAtlasTileInfo(tileType);
 
 			mesh.vertices.push_back(v);

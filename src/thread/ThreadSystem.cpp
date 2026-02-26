@@ -4,12 +4,18 @@
 
 namespace Core
 {
+	thread_local int g_ThreadIndex = -1;
+
 	void ThreadSystem::Initialize()
 	{
 		int threadCount = std::thread::hardware_concurrency() - 1;
 
 		for (int i = 0; i < threadCount; i++)
-			m_Workers.emplace_back(&ThreadSystem::WorkerLoop, this);
+			m_Workers.emplace_back([this, i]()
+				{
+					g_ThreadIndex = i;
+					WorkerLoop();
+				});
 
 		m_MainThreadId = std::this_thread::get_id();
 	}
@@ -109,4 +115,6 @@ namespace Core
 
 		m_Condition.notify_one();
 	}
+
+	int ThreadSystem::GetCurrentThreadIndex() const { return g_ThreadIndex; }
 }

@@ -126,7 +126,7 @@ namespace Minecraft
 		std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
 		std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> m_ModifiedChunks;
 		std::queue<Vec3i> m_ChunkMeshingQueue;
-		int m_MaxMeshedChunksPerFrame = 16;
+		int m_MaxMeshedChunksPerFrame = 8;
 
 		Texture m_TextureAtlas;
 

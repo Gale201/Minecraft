@@ -73,14 +73,28 @@ namespace Minecraft
 			std::vector<ScreenTriangle> triangles;
 		};
 
+		struct BoxedScreenTriangle
+		{
+			ScreenTriangle triangle;
+			int tileLeft, tileRight, tileTop, tileBottom;
+		};
+
 		void RasterizeTile(const ScreenTile& tile);
-		void BuildScreenTileTriangles(
+
+		void BuildScreenTriangles(
 			const Mesh& mesh,
 			const Transform& transform,
 			const Texture& texture,
 			const Camera& camera,
-			std::vector<ScreenTile>& screenTiles
+			std::vector<BoxedScreenTriangle>& out
 		);
+		void BuildScreenTileTriangles(
+			const Mesh& mesh,
+			const Transform& transform,
+			const Texture& texture,
+			const Camera& camera
+		);
+
 		void DrawTriangleBarycentricToTile(
 			const Triangle& triangle,
 			const Texture& texture,

@@ -15,7 +15,10 @@ namespace Core
 		void Submit(std::function<void()> job);
 
 		void ParallelFor(int count, std::function<void(int)> function);
-		
+
+		size_t GetThreadCount() const { return m_Workers.size(); }
+		int GetCurrentThreadIndex() const;
+
 	private:
 		struct ParallelForState
 		{

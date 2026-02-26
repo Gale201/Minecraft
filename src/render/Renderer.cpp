@@ -583,72 +583,54 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 	m_ActiveRenderList = &renderList;
 	m_ActiveCamera = &camera;
 
-	for (ScreenTile& tile : m_ScreenTiles)
-	{
-		tile.triangles.clear();
-	}
-
-/*	{
-		Core::Timer timer("Build screen triangles");
-		for (const RenderCommand& cmd : renderList)
-		{
-			BuildScreenTileTriangles(
-				*cmd.mesh,
-				cmd.transform,
-				cmd.texture,
-				camera,
-				m_ScreenTiles
-			);
-		}
-	}*/
-
 	{
 		Core::Timer timer("Build screen triangles");
-		std::vector<std::vector<ScreenTile>> threadResults(m_ActiveRenderList->size());
-		std::vector<std::atomic<int>> triangleCounts(m_ScreenTiles.size());
+
+		int threadCount = (int)threadSystem.GetThreadCount();
+		std::vector<std::vector<BoxedScreenTriangle>> threadBuffers(threadCount);
+
 		threadSystem.ParallelFor(
 			(int)m_ActiveRenderList->size(),
 			[&](int index)
 			{
-				 std::vector<ScreenTile> screenTiles(m_ScreenTiles.size());
+				int threadIndex = (int)threadSystem.GetCurrentThreadIndex();
+				auto& threadBuffer = threadBuffers[threadIndex];
 
 				const RenderCommand& command = m_ActiveRenderList->at(index);
-				BuildScreenTileTriangles(
+				
+				BuildScreenTriangles(
 					*command.mesh,
 					command.transform,
 					command.texture,
 					*m_ActiveCamera,
-					screenTiles
+					threadBuffer
 				);
-
-				threadResults[index] = std::move(screenTiles);
-				
-				for (int i = 0; i < m_ScreenTiles.size(); i++)
-				{
-					triangleCounts[i].fetch_add(
-						threadResults[index][i].triangles.size(),
-						std::memory_order_relaxed	
-					);
-				}
 			}
 		);
 
-		for (int i = 0; i < m_ScreenTiles.size(); i++)
-		{
-			m_ScreenTiles[i].triangles.reserve(triangleCounts[i]);
-		}
-
-		for (auto& tiles : threadResults)
-		{
-			for (int i = 0; i < m_ScreenTiles.size(); i++)
+		threadSystem.ParallelFor(
+			(int)m_ScreenTiles.size(),
+			[&](int tileIndex)
 			{
-				m_ScreenTiles[i].triangles.insert(
-					m_ScreenTiles[i].triangles.end(),
-					tiles[i].triangles.begin(),
-					tiles[i].triangles.end()
-				);
+				ScreenTile& tile = m_ScreenTiles[tileIndex];
+				tile.triangles.clear();
+
+				int tilesPerRow = (m_Width + TILE_SIZE - 1) / TILE_SIZE;
+				int tilesPerCol = (m_Height + TILE_SIZE - 1) / TILE_SIZE;
+
+				int tx = tileIndex % tilesPerRow;
+				int ty = tileIndex / tilesPerRow;
+
+				for (auto& threadBuffer : threadBuffers)
+				{
+					for (auto& b : threadBuffer)
+					{
+						if (tx >= b.tileLeft && tx <= b.tileRight && ty >= b.tileTop && ty <= b.tileBottom)
+							tile.triangles.emplace_back(b.triangle);
+					}
+				}
 			}
-		}
+		);
 	}
 
 	Core::Timer timer("Rasterize tiles");
@@ -704,12 +686,124 @@ void Renderer::RasterizeTile(const ScreenTile& tile)
 	}
 }
 
-void Renderer::BuildScreenTileTriangles(
+void Renderer::BuildScreenTriangles(
 	const Mesh& mesh,
 	const Transform& transform,
 	const Texture& texture,
 	const Camera& camera,
-	std::vector<ScreenTile>& screenTiles
+	std::vector<BoxedScreenTriangle>& out
+)
+{
+	Mat4 modelMatrix = transform.GetMatrix();
+	Mat4 viewMatrix = camera.GetViewMatrix();
+	Mat4 perspectiveMatrix = camera.GetPerspectiveMatrix();
+
+	Vec3f transformedDirectionalLight = (viewMatrix * Vec4f::FromVec3f(m_DirectionalLight, 0.0f)).ToVec3f(); // Add .normalized() for a classic directional light
+
+	Triangle triangle;
+	AtlasTileInfo tileInfo;
+	for (size_t i = 0; i < mesh.indices.size(); i += 3)
+	{
+		for (size_t j = 0; j < 3; j++)
+		{
+			// Get the model vertex from the mesh
+			const Vertex& v = mesh.vertices[mesh.indices[i + j]];
+
+			tileInfo = v.tileInfo;
+
+			// Transform vertex from model space to world space
+			Vec4f worldVertex = modelMatrix * Vec4f(v.position.x, v.position.y, v.position.z, 1.0f);
+
+			// Transform world vertex to camera space
+			Vec4f cameraVertex = viewMatrix * worldVertex;
+
+			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });
+		}
+
+		// Back face culling (happening in camera space)
+		if (IsTriangleBackFacing(triangle))
+			continue;
+
+		// Near plane clipping (happening in camera space)
+		Triangle clipped[2];
+		int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
+
+		// Compute light intensity for the triangle
+		triangle.lightIntensity = ComputeLightIntensityForTriangle(
+			triangle,
+			transformedDirectionalLight,
+			m_AmbientLight
+		);
+
+		for (size_t c = 0; c < nClipped; c++)
+		{
+			// Loop over vertices and project them
+			for (int j = 0; j < 3; j++)
+			{
+				// Clipped vertex
+				Vertex clippedVertex = clipped[c].GetVertexByIndex(j);
+
+				// Transform the clipped vertex to clip space
+				Vec4f perspectiveVertex = perspectiveMatrix * Vec4f::FromVec3f(clippedVertex.position, 1.0f);
+				float invW = 1.0f / perspectiveVertex.w;
+
+				// Perspective divide
+				perspectiveVertex.x *= invW;
+				perspectiveVertex.y *= invW;
+				perspectiveVertex.z *= invW;
+
+				clippedVertex.u *= invW;
+				clippedVertex.v *= invW;
+
+				Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
+
+				// Convert to screen space
+				screenVertex.position.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
+				screenVertex.position.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
+				screenVertex.position.z = perspectiveVertex.z;
+				screenVertex.invW = invW;
+
+				triangle.SetVertexByIndex(j, screenVertex);
+			}
+
+			// Screen space back face culling
+			if (CalculateTriangleArea(triangle) <= 0)
+				continue;
+
+			int left, right, top, bottom;
+			ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
+
+			int tileLeft = left / TILE_SIZE;
+			int tileRight = right / TILE_SIZE;
+			int tileTop = top / TILE_SIZE;
+			int tileBottom = bottom / TILE_SIZE;
+
+			int tilesPerRow = (m_Width + TILE_SIZE - 1) / TILE_SIZE;
+			int tilesPerCol = (m_Height + TILE_SIZE - 1) / TILE_SIZE;
+
+			tileLeft = std::clamp(tileLeft, 0, tilesPerRow - 1);
+			tileRight = std::clamp(tileRight, 0, tilesPerRow - 1);
+			tileTop = std::clamp(tileTop, 0, tilesPerCol - 1);
+			tileBottom = std::clamp(tileBottom, 0, tilesPerCol - 1);
+
+			ScreenTriangle screenTriangle{ triangle, &texture, tileInfo };
+			BoxedScreenTriangle boxedTriangle;
+			boxedTriangle.triangle = std::move(screenTriangle);
+			boxedTriangle.tileLeft = tileLeft;
+			boxedTriangle.tileBottom = tileBottom;
+			boxedTriangle.tileRight = tileRight;
+			boxedTriangle.tileTop = tileTop;
+
+			out.emplace_back(std::move(boxedTriangle));
+		}
+	}
+}
+
+void Renderer::BuildScreenTileTriangles(
+	const Mesh& mesh,
+	const Transform& transform,
+	const Texture& texture,
+	const Camera& camera
 )
 {
 	Mat4 modelMatrix = transform.GetMatrix();
@@ -807,7 +901,7 @@ void Renderer::BuildScreenTileTriangles(
 			for (int ty = tileTop; ty <= tileBottom; ty++)
 				for (int tx = tileLeft; tx <= tileRight; tx++)
 				{
-					screenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, &texture, tileInfo);
+					m_ScreenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, &texture, tileInfo);
 				}
 		}
 	}

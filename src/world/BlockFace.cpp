@@ -5,6 +5,57 @@
 
 namespace Minecraft
 {
+	const FaceDirection FACE_DIRECTIONS[6] = {
+		FaceDirection::PosX,
+		FaceDirection::NegX,
+		FaceDirection::PosY,
+		FaceDirection::NegY,
+		FaceDirection::PosZ,
+		FaceDirection::NegZ
+	};
+
+	const FaceDirection X_FACE_DIRECTIONS[4] = {
+		FaceDirection::PosXPosZ,
+		FaceDirection::PosXNegZ,
+		FaceDirection::NegXPosZ,
+		FaceDirection::NegXNegZ
+	};
+
+	const BlockFace CUBE_FACES[6] = {
+		// PosX
+		{ { {1,0,0}, {1,1,0}, {1,1,1}, {1,0,1} }, {1,0,0}, { {1,1},{1,0},{0,0},{0,1} } },
+		// NegX
+		{ { {0,0,1}, {0,1,1}, {0,1,0}, {0,0,0} }, {-1,0,0}, { {1,1},{1,0},{0,0},{0,1} } },
+		// PosY
+		{ { {0,1,0}, {0,1,1}, {1,1,1}, {1,1,0} }, {0,1,0}, { {1,1},{1,0},{0,0},{0,1} } },
+		// NegY
+		{ { {0,0,1}, {0,0,0}, {1,0,0}, {1,0,1} }, {0,-1,0}, { {1,1},{1,0},{0,0},{0,1} } },
+		// PosZ
+		{ { {1,0,1}, {1,1,1}, {0,1,1}, {0,0,1} }, {0,0,1}, { {1,1},{1,0},{0,0},{0,1} } },
+		// NegZ
+		{ { {0,0,0}, {0,1,0}, {1,1,0}, {1,0,0} }, {0,0,-1}, { {1,1},{1,0},{0,0},{0,1} } }
+	};
+
+	const BlockFace X_FACES[4] = {
+		// PosXPosZ
+		{ { {0,0,0}, {0,1,0}, {1,1,1}, {1,0,1} }, {1, 0, 1}, { {1,1}, {1,0}, {0,0}, {0,1}}},
+		// PosXNegZ
+		{ { {0,0,1}, {0,1,1}, {1,1,0}, {1,0,0} }, {1, 0, -1}, { {1,1}, {1,0}, {0,0}, {0,1}}},
+		// NegXPosZ
+		{ { {1,0,0}, {1,1,0}, {0,1,1}, {0,0,1} }, {-1, 0, 1}, { {1,1}, {1,0}, {0,0}, {0,1}}},
+		// NegXNegZ
+		{ { {1,0,1}, {1,1,1}, {0,1,0}, {0,0,0} }, {-1, 0, -1}, { {1,1}, {1,0}, {0,0}, {0,1}}},
+	};
+
+	const Vec3i CUBE_NEIGHBOR_OFFSET[6] = {
+		{  1, 0, 0 },
+		{ -1, 0, 0 },
+		{ 0,  1, 0 },
+		{ 0, -1, 0 },
+		{ 0, 0,  1 },
+		{ 0, 0, -1 }
+	};
+
 	// Not needed anymore
 	BlockTypeInfo GetBlockTypeInfo(BlockType type)
 	{
@@ -164,6 +215,8 @@ namespace Minecraft
 
 	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop)
 	{
+		size_t direction = static_cast<size_t>(dir);
+
 		if (type == BlockType::Water && isTop)
 		{
 			switch (dir)
@@ -206,7 +259,32 @@ namespace Minecraft
 				};
 			}
 		}
-		return CUBE_FACES[static_cast<int>(dir)];
+		if (direction < 6)
+			return CUBE_FACES[direction];
+		else if (direction < 10)
+			return X_FACES[direction - 6];
+
+		return {};
+	}
+
+	BlockBoundingBox GetBlockBoundingBox(BlockType type)
+	{
+		switch (type)
+		{
+		case BlockType::YellowFlower:
+		case BlockType::Rose:
+		case BlockType::OakSapling:
+			return {};
+		default:
+			return { { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } };
+		}
+	}
+
+	Vec3i GetCubeNeighborOffset(FaceDirection dir)
+	{
+		if (static_cast<size_t>(dir) < 6)
+			return CUBE_NEIGHBOR_OFFSET[static_cast<size_t>(dir)];
+		return Vec3i();
 	}
 
 	// This function is broken currently
@@ -222,37 +300,4 @@ namespace Minecraft
 		uvMin = { uvOffset.x + insetU, uvOffset.y + insetV };
 		uvMax = { uvOffset.x + uvScale.x + uWraps - insetU, uvOffset.y + uvScale.y + vWraps - insetV };
 	}
-
-	const FaceDirection FACE_DIRECTIONS[6] = {
-		FaceDirection::PosX,
-		FaceDirection::NegX,
-		FaceDirection::PosY,
-		FaceDirection::NegY,
-		FaceDirection::PosZ,
-		FaceDirection::NegZ
-	};
-
-	const BlockFace CUBE_FACES[6] = {
-		// PosX
-		{ { {1,0,0}, {1,1,0}, {1,1,1}, {1,0,1} }, {1,0,0}, { {1,1},{1,0},{0,0},{0,1} } },
-		// NegX
-		{ { {0,0,1}, {0,1,1}, {0,1,0}, {0,0,0} }, {-1,0,0}, { {1,1},{1,0},{0,0},{0,1} } },
-		// PosY
-		{ { {0,1,0}, {0,1,1}, {1,1,1}, {1,1,0} }, {0,1,0}, { {1,1},{1,0},{0,0},{0,1} } },
-		// NegY
-		{ { {0,0,1}, {0,0,0}, {1,0,0}, {1,0,1} }, {0,-1,0}, { {1,1},{1,0},{0,0},{0,1} } },
-		// PosZ
-		{ { {1,0,1}, {1,1,1}, {0,1,1}, {0,0,1} }, {0,0,1}, { {1,1},{1,0},{0,0},{0,1} } },
-		// NegZ
-		{ { {0,0,0}, {0,1,0}, {1,1,0}, {1,0,0} }, {0,0,-1}, { {1,1},{1,0},{0,0},{0,1} } }
-	};
-
-	const Vec3i CUBE_NEIGHBOR_OFFSET[6] = {
-		{  1, 0, 0 },
-		{ -1, 0, 0 },
-		{ 0,  1, 0 },
-		{ 0, -1, 0 },
-		{ 0, 0,  1 },
-		{ 0, 0, -1 }
-	};
 }

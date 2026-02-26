@@ -19,7 +19,8 @@ namespace Minecraft
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxBreakBlockDistance(), raycast))
 		{
 			Transform t;
-			t.SetScale(Vec3f(1.0001f, 1.0001f, 1.0001f));
+			t.SetScale(raycast.blockSize);
+			t.Scale(Vec3f(1.001f, 1.001f, 1.001f));
 			t.SetPosition(raycast.blockPosition.toVec3f() + Vec3f(0.5f, 0.5f, 0.5f));
 			renderer.DrawCubeWireframe(t, m_SelectedBlockHighlightColor, player.GetCamera(), 2, true);
 		}
@@ -47,7 +48,7 @@ namespace Minecraft
 			{
 				return false;
 			}
-			m_World->SetBlock(raycast.blockPosition + normal, BlockType::Bookshelf);
+			m_World->SetBlock(raycast.blockPosition + normal, BlockType::OakLeaves);
 			return true;
 		}
 		return false;

@@ -55,7 +55,7 @@ namespace Minecraft
 				}
 
 				// Flowers
-				//if (height > seaLevel && rand() % 64 == 0 && height < CHUNK_HEIGHT) chunk.blocks[x][height][z] = { BlockType::Rose };
+				if (height > seaLevel && rand() % 64 == 0 && height < CHUNK_HEIGHT) chunk.blocks[x][height][z] = { BlockType::Rose };
 			}
 		}
 	}
