@@ -19,6 +19,7 @@ namespace Minecraft
 		Look,
 		Jump,
 		Sprint,
+		Sneak,
 		BreakBlock,
 		PlaceBlock
 	};

@@ -223,7 +223,7 @@ namespace Minecraft
 			{
 			case FaceDirection::PosX:
 				return {
-					{ {1,0,0}, {1.0f,0.9f,1.0f}, {1.0f,0.9f,1.0f}, {1,0,0} },
+					{ {1,0,0}, {1.0f,0.9f,0.0f}, {1.0f,0.9f,1.0f}, {1,0,1} },
 					{1,0,0},
 					{ {1.0f, 0.9f}, {1, 0}, {0, 0}, {0.0f, 1.0f} }
 				};
@@ -271,10 +271,13 @@ namespace Minecraft
 	{
 		switch (type)
 		{
-		case BlockType::YellowFlower:
 		case BlockType::Rose:
+		case BlockType::YellowFlower:
+			return { { 0.3f, 0.0f, 0.3f }, { 0.4f, 0.6f, 0.4f } };
 		case BlockType::OakSapling:
 			return {};
+		case BlockType::Water:
+			return { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.9f, 1.0f } };
 		default:
 			return { { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } };
 		}

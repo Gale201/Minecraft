@@ -44,9 +44,10 @@ namespace Minecraft
 		}
 	}
 
-	void World::LoadAndUnloadChunks(Vec3f playerPosition)
+	void World::LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem)
 	{
-		LoadChunks(playerPosition);
+		Core::Timer timer("Load chunks");
+		LoadChunks(playerPosition, threadSystem);
 		UnloadChunks(playerPosition);
 	}
 
@@ -98,10 +99,26 @@ namespace Minecraft
 		while (distance <= maxDistance)
 		{
 			Block block = GetBlock(pos);
+			BlockBoundingBox box = GetBlockBoundingBox(block.type);
 			if (block.isCollidableWithRaycasts())
 			{
-				result = { pos, normal, GetBlockSize() distance };
-				return true;
+				if (!block.IsCube())
+				{
+					Vec3f min = pos.toVec3f() + box.offset;
+					Vec3f max = min + box.size;
+
+					float t;
+					if (RaycastAgainstBox(origin, direction, min, max, t) && t <= maxDistance)
+					{
+						result = { pos, normal, block.type, t };
+						return true;
+					}
+				}
+				else
+				{
+					result = { pos, normal, block.type, distance };
+					return true;
+				}
 			}
 
 			if (tMaxX < tMaxY)
@@ -296,13 +313,14 @@ namespace Minecraft
 
 	/* Chunk loading */
 
-	void World::LoadChunks(Vec3f playerPosition)
+	void World::LoadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem)
 	{
 		if (playerPosition == m_LastChunkLoadPosition) return;
 
 		int playerX = FloorDiv(static_cast<int>(std::floor(playerPosition.x)), CHUNK_SIZE);
 		int playerZ = FloorDiv(static_cast<int>(std::floor(playerPosition.z)), CHUNK_SIZE);
 
+		std::vector<Vec3i> chunksToLoad;
 		for (int x = playerX - m_ChunkLoadRadius; x <= playerX + m_ChunkLoadRadius; x++) 
 		{ 
 			for (int z = playerZ - m_ChunkLoadRadius; z <= playerZ + m_ChunkLoadRadius; z++)
@@ -313,15 +331,33 @@ namespace Minecraft
 				if (m_Chunks.find(chunkPos) != m_Chunks.end())  // If the chunk is already loaded, skip it
 					continue;
 
+				chunksToLoad.push_back(chunkPos);
+			}
+		}
+
+		std::vector<std::unique_ptr<Chunk>> loadedChunks(chunksToLoad.size());
+		threadSystem.ParallelFor(
+			(int)chunksToLoad.size(),
+			[&](int index)
+			{
+				Vec3i chunkPos = chunksToLoad[index];
+
 				// Load the chunk and add it to the world
 				std::unique_ptr<Chunk> chunk = std::make_unique<Chunk>();
 				chunk->position = chunkPos;
 
 				m_ChunkLoader.LoadChunk(*chunk);
 
-				m_Chunks.emplace(chunkPos, std::move(chunk));
-				AddChunkToMeshingQueue(*m_Chunks[chunkPos]);
+				loadedChunks[index] = std::move(chunk);
 			}
+		);
+
+		for (int i = 0; i < chunksToLoad.size(); i++)
+		{
+			Vec3i chunkPos = chunksToLoad[i];
+
+			m_Chunks.emplace(chunkPos, std::move(loadedChunks[i]));
+			AddChunkToMeshingQueue(*m_Chunks[chunkPos]);
 		}
 	}
 

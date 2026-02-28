@@ -55,7 +55,7 @@ namespace Minecraft
 		if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
 			force -= upVector;
 		else if (m_PhysicsBody.inWater && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
-			m_PhysicsBody.AddForce({ 0.0f, -40.0f, 0.0f });
+			m_PhysicsBody.AddForce({ 0.0f, -30.0f, 0.0f });
 
 		if (m_FlyingAllowed && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{
@@ -65,7 +65,7 @@ namespace Minecraft
 		else if (!m_PhysicsBody.inWater && !m_Flying && m_PhysicsBody.isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 			m_PhysicsBody.AddForce(m_JumpVelocity);
 		else if (m_PhysicsBody.inWater && !m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
-			m_PhysicsBody.AddForce({ 0.0f, 40.0f, 0.0f });
+			m_PhysicsBody.AddForce({ 0.0f, 30.0f, 0.0f });
 		else if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
 			force += upVector;
 
@@ -79,6 +79,14 @@ namespace Minecraft
 			m_CancelSprint = true;
 			m_StartSprint = false;
 		}
+		m_Sneaking = false;
+		if (!m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Sneak)))
+			m_Sneaking = true;
+
+		if (m_Sneaking)
+			m_PhysicsBody.size.y = std::max(m_PhysicsBody.size.y - 0.05f, m_SneakHeight);
+		else
+			m_PhysicsBody.size = { m_Size.x, std::min(m_PhysicsBody.size.y + 0.05f, m_Size.y), m_Size.z };
 	
 		if (m_Sprinting && !m_PhysicsBody.inWater)
 			force = force.normalized() * m_SprintSpeed;
@@ -93,7 +101,10 @@ namespace Minecraft
 		float forceMultiplier = m_PhysicsBody.isGrounded ? 10.0f : 2.f;
 		if (m_Flying)
 			force = { force.x, force.y * 12.0f, force.z };
-		if (m_PhysicsBody.inWater) forceMultiplier = 3.0f;
+		if (m_PhysicsBody.inWater)
+			forceMultiplier = 3.0f;
+		if (m_Sneaking)
+			forceMultiplier *= 0.4f;
 		m_PhysicsBody.AddForce(force * forceMultiplier);
 
 		// Look
@@ -116,7 +127,7 @@ namespace Minecraft
 
 	void Player::SyncCamera()
 	{
-		m_Camera.position = m_PhysicsBody.position + m_RelativeCameraPos;
+		m_Camera.position = m_PhysicsBody.position + GetRelativeCameraPos();
 		m_Camera.pitch = m_HeadRotation.x;
 		m_Camera.yaw = m_HeadRotation.y;
 		m_Camera.roll = m_HeadRotation.z;

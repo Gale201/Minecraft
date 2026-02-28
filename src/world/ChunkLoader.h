@@ -21,10 +21,14 @@ namespace Minecraft
 		~ChunkLoader() = default;
 
 		void LoadChunk(Chunk& chunk) const;
+
+		int GetSeaLevel() const { return m_SeaLevel; }
 	private:
 		const unsigned int m_Seed;
 		const std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash>& m_ModifiedChunks;
 
 		PerlinNoise m_Perlin{ m_Seed };
+
+		int m_SeaLevel = 60;
 	};
 }

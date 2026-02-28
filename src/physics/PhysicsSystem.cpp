@@ -59,7 +59,7 @@ namespace Minecraft
 		else if (body.inWater)
 		{
 			body.velocity -= body.velocity * body.waterDrag * deltaTime;
-			body.velocity.y += 6.0f * deltaTime;
+			body.velocity.y += 3.0f * deltaTime;
 		}
 
 		body.velocity.x = std::min(std::max(body.velocity.x, -m_MaxVelocityValue), m_MaxVelocityValue);

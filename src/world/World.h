@@ -31,7 +31,7 @@ namespace Minecraft
 
 		void Update(Core::ThreadSystem& threadSystem);
 
-		void LoadAndUnloadChunks(Vec3f playerPosition);
+		void LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem);
 
 		void BuildRenderList(
 			const Camera& camera,
@@ -67,6 +67,8 @@ namespace Minecraft
 			return m_ModifiedChunks;
 		}
 
+		int GetSeaLevel() const { return m_ChunkLoader.GetSeaLevel(); }
+
 		void SetBlock(Vec3i pos, BlockType type);
 		void SetTextureAtlas(const Texture& texture)
 		{
@@ -75,7 +77,7 @@ namespace Minecraft
 
 	private:
 		/* Chunk loading functions */
-		void LoadChunks(Vec3f playerPosition);
+		void LoadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem);
 		void UnloadChunks(Vec3f playerPosition);
 
 		/* Mesh building functions */

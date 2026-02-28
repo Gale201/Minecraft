@@ -22,6 +22,8 @@ namespace Minecraft
 		void Update(float deltaTime);
 		void Render();
 
+		void RenderWaterMesh(Mesh& mesh);
+
 		void Save();
 
 		uint32_t* GetFrameBuffer() { return m_Renderer.GetFrameBuffer(); }
@@ -32,12 +34,12 @@ namespace Minecraft
 		Core::ThreadSystem& m_ThreadSystem;
 		Core::InputManager& m_InputManager;
 
-		Minecraft::Renderer m_Renderer;
-		std::vector<Minecraft::RenderCommand> m_RenderList;
+		Renderer m_Renderer;
+		std::vector<RenderCommand> m_RenderList;
 
-		Minecraft::TextureLoader m_TextureLoader{ "res/textures/" };
+		TextureLoader m_TextureLoader{ "res/textures/" };
 
-		Minecraft::GameSaveManager m_GameSaveManager;
+		GameSaveManager m_GameSaveManager;
 
 		std::unique_ptr<World> m_World;
 		BlockInteractionSystem m_BlockInteractionSystem;
@@ -47,6 +49,7 @@ namespace Minecraft
 		float m_PhysicsAccumulator = 0.0f;
 		const float m_PhysicsFixedDelta = 1.0f / 60.0f;
 
-		Texture m_Crosshair;
+		Texture m_WaterScreenTexture;
+
 	};
 }

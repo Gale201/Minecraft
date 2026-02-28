@@ -10,5 +10,6 @@ namespace Minecraft
 	{
 		std::vector<Vertex> vertices;
 		std::vector<int> indices;
+		bool shade = true;
 	};
 }

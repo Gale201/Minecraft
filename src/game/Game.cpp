@@ -61,6 +61,7 @@ namespace Minecraft
 		inputBindings.AddKeyBinding(InputAction::MoveDown, Key::Shift);
 		inputBindings.AddKeyBinding(InputAction::Jump, Key::Space);
 		inputBindings.AddKeyBinding(InputAction::Sprint, Key::LeftCtrl);
+		inputBindings.AddKeyBinding(InputAction::Sneak, Key::Shift);
 		inputBindings.AddMouseButtonBinding(InputAction::BreakBlock, MouseButton::Left);
 		inputBindings.AddMouseButtonBinding(InputAction::PlaceBlock, MouseButton::Right);
 		m_Player.SetInputBindings(inputBindings);
@@ -68,7 +69,11 @@ namespace Minecraft
 		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 1000.0f };
 		m_Player.SetCameraConfig(cameraConfig);
 
-		m_Crosshair = m_TextureLoader.Get("crosshair");
+		m_WaterScreenTexture = Texture(m_Width, m_Height);
+		for (int i = 0; i < m_Width; i++)
+			for (int j = 0; j < m_Height; j++)
+				m_WaterScreenTexture.SetPixel(i, j, 0x334444FF);
+		m_WaterScreenTexture.SetDefaultColor(0x334444FF);
 
 		m_PhysicsSystem.AddBody(m_Player.GetBody());
 	}
@@ -78,7 +83,7 @@ namespace Minecraft
 		Core::Timer timer("Update");
 
 		// Updating world
-		m_World->LoadAndUnloadChunks(m_Player.GetCamera().position);
+		m_World->LoadAndUnloadChunks(m_Player.GetCamera().position, m_ThreadSystem);
 		m_World->Update(m_ThreadSystem);
 
 		if (m_Player.RequestedBlockBreakAction())
@@ -111,12 +116,19 @@ namespace Minecraft
 
 		m_Renderer.Render(m_RenderList, m_Player.GetCamera(), m_ThreadSystem);
 
+		Mesh waterMesh;
+		if (m_Player.IsInWater() && m_Player.GetHeadPosition().y + 0.1f < m_World->GetSeaLevel())
+		{
+			m_Renderer.DrawTexture(0, 0, m_WaterScreenTexture, true);
+			//RenderWaterMesh(waterMesh);
+		}
+
 		m_BlockInteractionSystem.Render(m_Player, m_Renderer);
 
 		m_Renderer.DrawTexture(
-			m_Width / 2 - m_Crosshair.GetWidth() / 2,
-			m_Height / 2 - m_Crosshair.GetHeight() / 2,
-			m_Crosshair, true
+			m_Width / 2 - m_TextureLoader.Get("crosshair").GetWidth() / 2,
+			m_Height / 2 - m_TextureLoader.Get("crosshair").GetHeight() / 2,
+			m_TextureLoader.Get("crosshair"), true
 		);
 
 		Transform t1;
@@ -125,6 +137,60 @@ namespace Minecraft
 		//m_Renderer.DrawCubeWireframe(t1, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
 
 		m_RenderList.clear();
+	}
+
+	void Game::RenderWaterMesh(Mesh& mesh)
+	{
+		Vec3f headPos = m_Player.GetHeadPosition();
+		Vec3f forward = {
+			cos(m_Player.GetCamera().pitch) * sin(m_Player.GetCamera().yaw),
+			sin(m_Player.GetCamera().pitch),
+			cos(m_Player.GetCamera().pitch) * cos(m_Player.GetCamera().yaw)
+		};
+		forward = -forward.normalized();
+
+		Vec3f worldUp = { 0, 1, 0 };
+
+		Vec3f right = worldUp.Cross(forward).normalized() * 4.f;
+		Vec3f up = forward.Cross(right).normalized();
+
+		Vec3f vertices[4] = {
+			headPos + forward * 0.1f + right + up,
+			headPos + forward * 0.1f + right - up,
+			headPos + forward * 0.1f - right - up,
+			headPos + forward * 0.1f - right + up
+		};
+		vertices[0].y = std::min(vertices[0].y, (float)m_World->GetSeaLevel() - 1.0f + GetBlockBoundingBox(BlockType::Water).size.y);
+		vertices[3].y = std::min(vertices[3].y, (float)m_World->GetSeaLevel() - 1.0f + GetBlockBoundingBox(BlockType::Water).size.y);
+
+		Vec2f uvs[4] = { {1,1}, {1,0}, {0,0}, {0,1} };
+		for (int i = 0; i < 4; i++)
+		{
+			Vertex v;
+			v.position = vertices[i];
+			v.u = uvs[i].x;
+			v.v = uvs[i].y;
+			v.tileInfo.isTransparent = true;
+
+			v.tileInfo.u0 = 0.0f;
+			v.tileInfo.v0 = 0.0f;
+			v.tileInfo.uScale = 1.0f;
+			v.tileInfo.vScale = 1.0f;
+			v.tileInfo.atlasWidth = 256;
+			v.tileInfo.atlasHeight = 255;
+
+			mesh.vertices.push_back(v);
+		}
+		mesh.indices.push_back(0);
+		mesh.indices.push_back(1);
+		mesh.indices.push_back(2);
+		mesh.indices.push_back(0);
+		mesh.indices.push_back(2);
+		mesh.indices.push_back(3);
+
+		mesh.shade = false;
+
+		m_RenderList.emplace_back(&mesh, Transform(), m_WaterScreenTexture);
 	}
 
 	void Game::Save()

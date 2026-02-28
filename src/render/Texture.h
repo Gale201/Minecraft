@@ -16,16 +16,22 @@ namespace Minecraft
         int GetWidth() const { return m_Width; }
         int GetHeight() const { return m_Height; }
 
+        uint32_t GetPixel(int x, int y) const
+        {
+            if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return m_DefaultColor;
+
+            return m_Pixels[y * m_Width + x];
+        }
+
+
         uint32_t GetPixelAtUV(float u, float v) const
         {
             int x = (int)(u * m_Width);
             int y = (int)(v * m_Height);
 
-            if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return 0;
-
-            return m_Pixels[y * m_Width + x];
+            return GetPixel(x, y);
         }
-
+        
         const uint32_t* GetPixels() const
         {
             return m_Pixels.data();
@@ -43,9 +49,16 @@ namespace Minecraft
             m_Pixels[i] = color;
         }
 
+        void SetDefaultColor(uint32_t color)
+        {
+            m_DefaultColor = color;
+        }
+
     private:
         int m_Width;
         int m_Height;
         std::vector<uint32_t> m_Pixels;
+
+        uint32_t m_DefaultColor{ 0 };
     };
 }

@@ -19,9 +19,10 @@ namespace Minecraft
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxBreakBlockDistance(), raycast))
 		{
 			Transform t;
-			t.SetScale(raycast.blockSize);
+			BlockBoundingBox box = GetBlockBoundingBox(raycast.blockType);
+			t.SetScale(box.size);
 			t.Scale(Vec3f(1.001f, 1.001f, 1.001f));
-			t.SetPosition(raycast.blockPosition.toVec3f() + Vec3f(0.5f, 0.5f, 0.5f));
+			t.SetPosition(raycast.blockPosition.toVec3f() + box.size * 0.5f + box.offset);
 			renderer.DrawCubeWireframe(t, m_SelectedBlockHighlightColor, player.GetCamera(), 2, true);
 		}
 	}

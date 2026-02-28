@@ -30,14 +30,16 @@ namespace Minecraft
 		Block GetRequestedBlockToPlace();
 
 		bool IsInBlock(Vec3i block) const;
+		bool IsInWater() const { return m_PhysicsBody.inWater; }
 
 		/* Getters & Setters */
 		const Camera& GetCamera() const { return m_Camera; }
 		Vec3f GetPosition() const { return m_PhysicsBody.position; }
 		Vec3f GetHeadRotation() const { return m_HeadRotation; }
 		PhysicsBody& GetBody() { return m_PhysicsBody; }
+		Vec3f GetRelativeCameraPos() const { return m_PhysicsBody.size * 0.5f + Vec3f(0.0f, m_PhysicsBody.size.y / 2.0f, 0.0f); }
 		Vec3f GetFeetPosition() const { return m_PhysicsBody.position + Vec3f(m_Size.x / 2.0f, 0.0f, m_Size.z / 2.0f); }
-		Vec3f GetHeadPosition() const { return m_PhysicsBody.position + m_RelativeCameraPos; }
+		Vec3f GetHeadPosition() const { return m_PhysicsBody.position + GetRelativeCameraPos(); }
 		float GetMaxBreakBlockDistance() const { return m_MaxBreakBlockDistance; }
 		float GetMaxPlaceBlockDistance() const { return m_MaxPlaceBlockDistance; }
 
@@ -66,7 +68,6 @@ namespace Minecraft
 
 	private:
 		Vec3f m_HeadRotation;
-		Vec3f m_RelativeCameraPos{ 0.3f, 1.6f, 0.3f };
 		Vec3f m_Size{ 0.6f, 1.6f, 0.6f };
 		float m_Speed = DEFAULT_PLAYER_SPEED;
 		float m_SprintSpeed = DEFAULT_PLAYER_SPEED * 1.4f;
@@ -85,8 +86,11 @@ namespace Minecraft
 
 		Vec3f m_JumpVelocity{ 0.0f, 520.0f, 0.0f };
 		bool m_Sprinting = false;
+		bool m_Sneaking = false;
 		bool m_CancelSprint = false;
 		bool m_StartSprint = false;
+
+		float m_SneakHeight = 1.4f;
 
 		float m_MaxBreakBlockDistance = 8.0f;
 		float m_MaxPlaceBlockDistance = 8.0f;

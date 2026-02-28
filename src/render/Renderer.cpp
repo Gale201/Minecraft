@@ -568,7 +568,7 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, bool alphaBlend
 	{
 		for (int j = 0; j < texture.GetWidth(); j++)
 		{
-			uint32_t color = texture.GetPixels()[i * texture.GetWidth() + j];
+			uint32_t color = texture.GetPixel(i, j);
 
 			if (alphaBlend)
 				DrawPixelAlphaBlend(x + j, y + i, color);
@@ -729,11 +729,15 @@ void Renderer::BuildScreenTriangles(
 		int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
 
 		// Compute light intensity for the triangle
-		triangle.lightIntensity = ComputeLightIntensityForTriangle(
-			triangle,
-			transformedDirectionalLight,
-			m_AmbientLight
-		);
+		if (mesh.shade)
+		{
+			triangle.lightIntensity = ComputeLightIntensityForTriangle(
+				triangle,
+				transformedDirectionalLight,
+				m_AmbientLight
+			);
+		}
+		else triangle.lightIntensity = 1.0f;
 
 		for (size_t c = 0; c < nClipped; c++)
 		{
@@ -841,11 +845,15 @@ void Renderer::BuildScreenTileTriangles(
 		int nClipped = ClipTriangleNearPlane(triangle, clipped, camera.nearPlane);
 
 		// Compute light intensity for the triangle
-		triangle.lightIntensity = ComputeLightIntensityForTriangle(
-			triangle,
-			transformedDirectionalLight,
-			m_AmbientLight
-		);
+		if (mesh.shade)
+		{
+			triangle.lightIntensity = ComputeLightIntensityForTriangle(
+				triangle,
+				transformedDirectionalLight,
+				m_AmbientLight
+			);
+		}
+		else triangle.lightIntensity = 1.0f;
 
 		for (size_t c = 0; c < nClipped; c++)
 		{
