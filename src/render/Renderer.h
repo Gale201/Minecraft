@@ -65,12 +65,14 @@ namespace Minecraft
 			Triangle triangle;
 			const Texture* texture;
 			AtlasTileInfo tileInfo;
+			float distToCamera = 0.0f;
 		};
 
 		struct ScreenTile
 		{
 			int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-			std::vector<ScreenTriangle> triangles;
+			std::vector<ScreenTriangle> opaqueTriangles;
+			std::vector<ScreenTriangle> transparentTriangles;
 		};
 
 		struct BoxedScreenTriangle
@@ -79,7 +81,7 @@ namespace Minecraft
 			int tileLeft, tileRight, tileTop, tileBottom;
 		};
 
-		void RasterizeTile(const ScreenTile& tile);
+		void RasterizeTile(ScreenTile& tile);
 
 		void BuildScreenTriangles(
 			const Mesh& mesh,

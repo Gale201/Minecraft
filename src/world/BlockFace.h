@@ -88,9 +88,10 @@ namespace Minecraft
 		int atlasWidth;
 		int atlasHeight;
 		bool isTransparent = false;
+		bool isCutout = false;
 	};
 
-	AtlasTileInfo CreateAtlasTileInfo(int x, int y, bool transparent = false);
+	AtlasTileInfo CreateAtlasTileInfo(int x, int y, bool transparent = false, bool cutout = false);
 
 	void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset, int uWraps, int vWraps);
 

@@ -37,7 +37,7 @@ namespace Minecraft
 		Vec3f GetPosition() const { return m_PhysicsBody.position; }
 		Vec3f GetHeadRotation() const { return m_HeadRotation; }
 		PhysicsBody& GetBody() { return m_PhysicsBody; }
-		Vec3f GetRelativeCameraPos() const { return m_PhysicsBody.size * 0.5f + Vec3f(0.0f, m_PhysicsBody.size.y / 2.0f, 0.0f); }
+		Vec3f GetRelativeCameraPos() const { return m_PhysicsBody.size * 0.5f + Vec3f(0.0f, m_PhysicsBody.size.y / 2.0f - 0.1f, 0.0f); }
 		Vec3f GetFeetPosition() const { return m_PhysicsBody.position + Vec3f(m_Size.x / 2.0f, 0.0f, m_Size.z / 2.0f); }
 		Vec3f GetHeadPosition() const { return m_PhysicsBody.position + GetRelativeCameraPos(); }
 		float GetMaxBreakBlockDistance() const { return m_MaxBreakBlockDistance; }

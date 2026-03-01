@@ -36,7 +36,7 @@ namespace Minecraft
 					if (height < m_SeaLevel && y == height - 1) chunk.blocks[x][y][z] = { BlockType::Dirt };
 					else if (y == height - 1) chunk.blocks[x][y][z] = { BlockType::Grass };
 					else if (y > height - 6) chunk.blocks[x][y][z] = { BlockType::Dirt };
-					else chunk.blocks[x][y][z] = Block(BlockType::Stone);
+					else chunk.blocks[x][y][z] = { BlockType::Stone };
 				}
 
 				// Bedrock
@@ -50,7 +50,7 @@ namespace Minecraft
 
 				// Flowers
 				if (height > m_SeaLevel && rand() % 128 == 0 && height < CHUNK_HEIGHT) chunk.blocks[x][height][z] = { BlockType::Rose };
-				if (height > m_SeaLevel && rand() % 128 == 0 && height < CHUNK_HEIGHT) chunk.blocks[x][height][z] = { BlockType::YellowFlower };
+				else if (height > m_SeaLevel && rand() % 128 == 0 && height < CHUNK_HEIGHT) chunk.blocks[x][height][z] = { BlockType::YellowFlower };
 			}
 		}
 

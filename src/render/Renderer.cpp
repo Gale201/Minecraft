@@ -2,13 +2,13 @@
 
 #include <limits>
 #include <algorithm>
+#include <assert.h>
 
 #include "RenderCommand.h"
 #include "../core/Log.h"
 #include "../timer/Timer.h"
 #include "../timer/AccumTimer.h"
 #include "../world/BlockFace.h"
-#include <assert.h>
 
 namespace Minecraft
 {
@@ -64,10 +64,33 @@ inline void Renderer::DrawDepthPixel(int x, int y, float z, uint32_t color)
 
 inline void Renderer::DrawPixelAlphaBlend(int x, int y, uint32_t color)
 {
-	if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
+	//if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
 
 	int pixel = y * m_Width + x;
 	uint32_t dest = m_FrameBuffer[pixel];
+
+	uint8_t srcA = (color >> 24) & 0xFF;
+	if (srcA == 0) return;
+
+	uint32_t invA = 255 - srcA;
+
+	uint8_t srcR = (color >> 16) & 0xFF;
+	uint8_t srcG = (color >> 8) & 0xFF;
+	uint8_t srcB = color & 0xFF;
+
+	uint8_t destR = (dest >> 16) & 0xFF;
+	uint8_t destG = (dest >> 8) & 0xFF;
+	uint8_t destB = dest & 0xFF;
+
+	uint8_t outR = (srcR * srcA + destR * invA) >> 8;
+	uint8_t outG = (srcG * srcA + destG * invA) >> 8;
+	uint8_t outB = (srcB * srcA + destB * invA) >> 8;
+
+	uint32_t outColor = (0xFF << 24) | (outR << 16) | (outG << 8) | outB;
+
+	m_FrameBuffer[pixel] = outColor;
+
+	/*
 
 	uint8_t srcA = (color >> 24) & 0xFF;
 	uint8_t srcR = (color >> 16) & 0xFF;
@@ -87,6 +110,7 @@ inline void Renderer::DrawPixelAlphaBlend(int x, int y, uint32_t color)
 	uint32_t outColor = (0xFF << 24) | (outR << 16) | (outG << 8) | outB;
 
 	m_FrameBuffer[pixel] = outColor;
+	*/
 }
 
 inline void Renderer::DrawDepthPixelAlphaBlend(int x, int y, float z, uint32_t color, bool writeDepth)
@@ -613,7 +637,8 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 			[&](int tileIndex)
 			{
 				ScreenTile& tile = m_ScreenTiles[tileIndex];
-				tile.triangles.clear();
+				tile.opaqueTriangles.clear();
+				tile.transparentTriangles.clear();
 
 				int tilesPerRow = (m_Width + TILE_SIZE - 1) / TILE_SIZE;
 				int tilesPerCol = (m_Height + TILE_SIZE - 1) / TILE_SIZE;
@@ -623,10 +648,16 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 
 				for (auto& threadBuffer : threadBuffers)
 				{
-					for (auto& b : threadBuffer)
+					for (auto& buffer : threadBuffer)
 					{
-						if (tx >= b.tileLeft && tx <= b.tileRight && ty >= b.tileTop && ty <= b.tileBottom)
-							tile.triangles.emplace_back(b.triangle);
+						if (tx >= buffer.tileLeft && tx <= buffer.tileRight && 
+							ty >= buffer.tileTop && ty <= buffer.tileBottom)
+						{
+							if (buffer.triangle.tileInfo.isTransparent)
+								tile.transparentTriangles.emplace_back(std::move(buffer.triangle));
+							else
+								tile.opaqueTriangles.emplace_back(std::move(buffer.triangle));
+						}
 					}
 				}
 			}
@@ -655,7 +686,8 @@ void Renderer::CreateTiles()
 			tile.y0 = y;
 			tile.x1 = std::min(x + TILE_SIZE - 1, m_Width - 1);
 			tile.y1 = std::min(y + TILE_SIZE - 1, m_Height - 1);
-			tile.triangles.reserve(256);
+			tile.opaqueTriangles.reserve(512);
+			tile.transparentTriangles.reserve(256);
 			m_ScreenTiles.push_back(tile);
 		}
 	}
@@ -663,26 +695,24 @@ void Renderer::CreateTiles()
 
 // Private functions
 
-void Renderer::RasterizeTile(const ScreenTile& tile)
+void Renderer::RasterizeTile(ScreenTile& tile)
 {
-	std::vector<const ScreenTriangle*> transparent;
-	transparent.reserve(tile.triangles.size());
-
-	for (const ScreenTriangle& triangle : tile.triangles)
+	for (const ScreenTriangle& triangle : tile.opaqueTriangles)
 	{
-		if (triangle.tileInfo.isTransparent)
-		{
-			transparent.push_back(&triangle);
-			continue;
-		}
 		DrawTriangleBarycentricToTile(triangle.triangle, *triangle.texture, triangle.tileInfo, tile);
 		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
 	}
+	
+	std::sort(tile.transparentTriangles.begin(), tile.transparentTriangles.end(), 
+		[&](const ScreenTriangle& a, const ScreenTriangle& b)
+		{
+			return a.distToCamera > b.distToCamera;
+		});
 
-	for (const ScreenTriangle* triangle : transparent)
+	for (const ScreenTriangle& triangle : tile.transparentTriangles)
 	{
-		DrawTriangleBarycentricToTile(triangle->triangle, *(triangle->texture), triangle->tileInfo, tile);
-		//DrawTriangleWireframeToTile(triangle->triangle, tile, 0);
+		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
+		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
 	}
 }
 
@@ -702,6 +732,7 @@ void Renderer::BuildScreenTriangles(
 
 	Triangle triangle;
 	AtlasTileInfo tileInfo;
+	float distToCamera = 0.0f;
 	for (size_t i = 0; i < mesh.indices.size(); i += 3)
 	{
 		for (size_t j = 0; j < 3; j++)
@@ -719,6 +750,7 @@ void Renderer::BuildScreenTriangles(
 
 			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });
 		}
+		distToCamera = -std::max({ triangle.v0.position.z, triangle.v1.position.z, triangle.v2.position.z });
 
 		// Back face culling (happening in camera space)
 		if (IsTriangleBackFacing(triangle))
@@ -790,7 +822,7 @@ void Renderer::BuildScreenTriangles(
 			tileTop = std::clamp(tileTop, 0, tilesPerCol - 1);
 			tileBottom = std::clamp(tileBottom, 0, tilesPerCol - 1);
 
-			ScreenTriangle screenTriangle{ triangle, &texture, tileInfo };
+			ScreenTriangle screenTriangle{ triangle, &texture, tileInfo, distToCamera };
 			BoxedScreenTriangle boxedTriangle;
 			boxedTriangle.triangle = std::move(screenTriangle);
 			boxedTriangle.tileLeft = tileLeft;
@@ -909,7 +941,10 @@ void Renderer::BuildScreenTileTriangles(
 			for (int ty = tileTop; ty <= tileBottom; ty++)
 				for (int tx = tileLeft; tx <= tileRight; tx++)
 				{
-					m_ScreenTiles[ty * tilesPerRow + tx].triangles.emplace_back(triangle, &texture, tileInfo);
+					if (tileInfo.isTransparent)
+						m_ScreenTiles[ty * tilesPerRow + tx].transparentTriangles.emplace_back(triangle, &texture, tileInfo);
+					else
+						m_ScreenTiles[ty * tilesPerRow + tx].opaqueTriangles.emplace_back(triangle, &texture, tileInfo);
 				}
 		}
 	}
@@ -999,6 +1034,8 @@ void Renderer::DrawTriangleBarycentricToTile(
 					{
 						DrawDepthPixelAlphaBlend(x, y, z, ShadeColor(color, triangle.lightIntensity), false);
 					}
+					else if (tileInfo.isCutout && ((color >> 24) & 0xFF) == 0x00)
+						continue;
 					else
 						DrawDepthPixel(x, y, z, ShadeColor(color, triangle.lightIntensity));
 				}

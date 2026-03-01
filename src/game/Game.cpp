@@ -119,7 +119,7 @@ namespace Minecraft
 		Mesh waterMesh;
 		if (m_Player.IsInWater() && m_Player.GetHeadPosition().y + 0.1f < m_World->GetSeaLevel())
 		{
-			m_Renderer.DrawTexture(0, 0, m_WaterScreenTexture, true);
+			//m_Renderer.DrawTexture(0, 0, m_WaterScreenTexture, true);
 			//RenderWaterMesh(waterMesh);
 		}
 

@@ -46,7 +46,6 @@ namespace Minecraft
 
 	void World::LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem)
 	{
-		Core::Timer timer("Load chunks");
 		LoadChunks(playerPosition, threadSystem);
 		UnloadChunks(playerPosition);
 	}
