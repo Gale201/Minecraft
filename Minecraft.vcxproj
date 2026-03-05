@@ -24,6 +24,7 @@
     <ClCompile Include="src\core\Application.cpp" />
     <ClCompile Include="src\core\Window.cpp" />
     <ClCompile Include="src\game\Game.cpp" />
+    <ClCompile Include="src\game\GameMode.cpp" />
     <ClCompile Include="src\loaders\ModelLoader.cpp" />
     <ClCompile Include="src\loaders\TextureLoader.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -49,6 +50,10 @@
     <ClInclude Include="src\core\Application.h" />
     <ClInclude Include="src\core\Window.h" />
     <ClInclude Include="src\game\Game.h" />
+    <ClInclude Include="src\game\GameMode.h" />
+    <ClInclude Include="src\inventory\Inventory.h" />
+    <ClInclude Include="src\items\Item.h" />
+    <ClInclude Include="src\items\ItemStack.h" />
     <ClInclude Include="src\loaders\ModelLoader.h" />
     <ClInclude Include="src\loaders\TextureLoader.h" />
     <ClInclude Include="src\math\Math.h" />

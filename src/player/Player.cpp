@@ -29,7 +29,7 @@ namespace Minecraft
 		}
 
 		if (m_PhysicsBody.position.y < -100.0f)
-			m_PhysicsBody.position.y = 60.0f;
+			m_PhysicsBody.position.y = 70.0f;
 	}
 
 	void Player::HandleInput()
@@ -39,6 +39,8 @@ namespace Minecraft
 		// Movement
 		Vec3f upVector{ 0.0f, 1.0f, 0.0f };
 		Vec3f forwardVector = -upVector.Cross(m_Camera.GetRight()).normalized();
+
+		if (!m_GameMode.CanPlayerFly()) m_Flying = false;
 
 		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveForward)))
 			force += forwardVector;
@@ -57,7 +59,7 @@ namespace Minecraft
 		else if (m_PhysicsBody.inWater && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
 			m_PhysicsBody.AddForce({ 0.0f, -30.0f, 0.0f });
 
-		if (m_FlyingAllowed && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
+		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{
 			m_Flying = !m_Flying;
 			m_PhysicsBody.applyGravity = !m_PhysicsBody.applyGravity;
@@ -118,11 +120,15 @@ namespace Minecraft
 		m_RequestedBlockBreakAction = false;
 		m_RequestedBlockPlaceAction = false;
 
-		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+		if (m_GameMode.CanInstantBreakBlocks() && m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
 			m_RequestedBlockBreakAction = true;
 
-		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
+		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
 			m_RequestedBlockPlaceAction = true;
+
+		// Inventory
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
+			printf("Opened inventory");
 	}
 
 	void Player::SyncCamera()
@@ -145,17 +151,17 @@ namespace Minecraft
 		return false;
 	}
 
-	bool Player::RequestedBlockBreakAction()
+	bool Player::RequestedBlockBreakAction() const
 	{
 		return m_RequestedBlockBreakAction;
 	}
 
-	bool Player::RequestedBlockPlaceAction()
+	bool Player::RequestedBlockPlaceAction() const
 	{
 		return m_RequestedBlockPlaceAction;
 	}
 
-	Block Player::GetRequestedBlockToPlace()
+	Block Player::GetRequestedBlockToPlace() const
 	{
 		return { BlockType::Glass };
 	}

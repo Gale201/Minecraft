@@ -39,6 +39,13 @@ namespace Minecraft
 		else
 		{
 			m_World = m_GameSaveManager.CreateWorld(seed);
+			Vec3f playerPos(0, 70, 0);
+			Chunk& chunk = m_World->GetChunk({ 0, 0, 0 });
+			for (int y = 0; y < CHUNK_HEIGHT; y++)
+			{
+				if (chunk.blocks[0][y][0].type == BlockType::Grass) playerPos.y = y + 1;
+			}
+			m_Player.SetPosition(playerPos);
 		}
 
 		m_BlockInteractionSystem.Initialize(*m_World);
@@ -64,6 +71,7 @@ namespace Minecraft
 		inputBindings.AddKeyBinding(InputAction::Sneak, Key::Shift);
 		inputBindings.AddMouseButtonBinding(InputAction::BreakBlock, MouseButton::Left);
 		inputBindings.AddMouseButtonBinding(InputAction::PlaceBlock, MouseButton::Right);
+		inputBindings.AddKeyBinding(InputAction::OpenInventory, Key::E);
 		m_Player.SetInputBindings(inputBindings);
 
 		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 1000.0f };

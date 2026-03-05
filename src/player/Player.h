@@ -4,6 +4,8 @@
 #include "../render/Camera.h"
 #include "../world/Block.h"
 #include "../physics/PhysicsBody.h"
+#include "../game/GameMode.h"
+#include "../inventory/Inventory.h"
 
 #define DEFAULT_PLAYER_SPEED 6.0f
 #define DEFAULT_PLAYER_SENSITIVITY 0.001f
@@ -25,9 +27,9 @@ namespace Minecraft
 		void Update(float deltaTime);
 		void SyncCamera();
 
-		bool RequestedBlockBreakAction();
-		bool RequestedBlockPlaceAction();
-		Block GetRequestedBlockToPlace();
+		bool RequestedBlockBreakAction() const;
+		bool RequestedBlockPlaceAction() const;
+		Block GetRequestedBlockToPlace() const;
 
 		bool IsInBlock(Vec3i block) const;
 		bool IsInWater() const { return m_PhysicsBody.inWater; }
@@ -37,6 +39,7 @@ namespace Minecraft
 		Vec3f GetPosition() const { return m_PhysicsBody.position; }
 		Vec3f GetHeadRotation() const { return m_HeadRotation; }
 		PhysicsBody& GetBody() { return m_PhysicsBody; }
+		const GameMode& GetGameMode() const { return m_GameMode; }
 		Vec3f GetRelativeCameraPos() const { return m_PhysicsBody.size * 0.5f + Vec3f(0.0f, m_PhysicsBody.size.y / 2.0f - 0.1f, 0.0f); }
 		Vec3f GetFeetPosition() const { return m_PhysicsBody.position + Vec3f(m_Size.x / 2.0f, 0.0f, m_Size.z / 2.0f); }
 		Vec3f GetHeadPosition() const { return m_PhysicsBody.position + GetRelativeCameraPos(); }
@@ -79,9 +82,12 @@ namespace Minecraft
 
 		PhysicsBody m_PhysicsBody;
 
+		Inventory m_Inventory;
+
+		GameMode m_GameMode{ GameModeType::Creative };
+
 		const Core::InputManager& m_InputManager;
 
-		bool m_FlyingAllowed = true;
 		bool m_Flying = false;
 
 		Vec3f m_JumpVelocity{ 0.0f, 520.0f, 0.0f };

@@ -52,6 +52,16 @@ namespace Minecraft
 			case BlockType::Air:
 			case BlockType::Glass:
 			case BlockType::Water:
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		bool IsCutoffTransparent() const
+		{
+			switch (type)
+			{
 			case BlockType::Cobweb:
 			case BlockType::Rose:
 			case BlockType::YellowFlower:

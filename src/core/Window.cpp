@@ -103,6 +103,9 @@ namespace Core
 				case SDLK_RCTRL: event.key = Key::RightCtrl; break;
 				case SDLK_LCTRL: event.key = Key::LeftCtrl; break;
 				case SDLK_SPACE: event.key = Key::Space; break;
+				case SDLK_e: event.key = Key::E; break;
+				case SDLK_t: event.key = Key::T; break;
+				case SDLK_q: event.key = Key::Q; break;
 				default: event.key = Key::Unknown; break;
 				}
 				outEvents.push_back(event);

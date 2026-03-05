@@ -17,7 +17,7 @@ namespace Core
 	{
 		std::string name = "Test";
 		m_Game = std::make_unique<Minecraft::Game>(WIDTH, HEIGHT, name, m_ThreadSystem, m_InputManager);
-		m_Game->Load(123456);
+		m_Game->Load(0x020209);
 		m_Game->Setup();
 
 		// Main loop

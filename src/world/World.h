@@ -128,7 +128,7 @@ namespace Minecraft
 		std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
 		std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> m_ModifiedChunks;
 		std::queue<Vec3i> m_ChunkMeshingQueue;
-		int m_MaxMeshedChunksPerFrame = 8;
+		int m_MaxMeshedChunksPerFrame = 16;
 
 		Texture m_TextureAtlas;
 
@@ -136,7 +136,7 @@ namespace Minecraft
 		const unsigned int m_Seed;
 
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 8;
+		int m_ChunkLoadRadius = 16;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 	};
 }

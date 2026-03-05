@@ -49,7 +49,7 @@ namespace Minecraft
 			{
 				return false;
 			}
-			m_World->SetBlock(raycast.blockPosition + normal, BlockType::OakLeaves);
+			m_World->SetBlock(raycast.blockPosition + normal, player.GetRequestedBlockToPlace().type);
 			return true;
 		}
 		return false;

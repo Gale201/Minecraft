@@ -21,7 +21,10 @@ namespace Minecraft
 		Sprint,
 		Sneak,
 		BreakBlock,
-		PlaceBlock
+		PlaceBlock,
+		DropItem,
+		OpenInventory,
+		OpenChat
 	};
 
 	struct InputBindings

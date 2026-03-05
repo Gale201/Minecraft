@@ -1088,7 +1088,7 @@ namespace Minecraft
 			neighborBlock = chunk.blocks[neighborPos.x][neighborPos.y][neighborPos.z];
 
 		if (block.IsTransparent() && neighborBlock.type == block.type) return false;
-		return neighborBlock.IsTransparent();
+		return neighborBlock.IsTransparent() || neighborBlock.IsCutoffTransparent();
 	}
 
 	inline int World::FloorDiv(int a, int b)
