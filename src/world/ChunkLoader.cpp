@@ -1,4 +1,7 @@
 #include "ChunkLoader.h"
+
+#include <random>
+
 #include "../timer/Timer.h"
 
 namespace Minecraft
@@ -8,6 +11,8 @@ namespace Minecraft
 		const ModifiedChunk* modifiedChunk = nullptr;
 		auto it = m_ModifiedChunks.find(chunk.position);
 		if (it != m_ModifiedChunks.end()) modifiedChunk = &it->second;
+
+		std::mt19937 rng(m_Seed + chunk.position.x * 341873128712 + chunk.position.z * 132897987541);
 
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
@@ -68,7 +73,8 @@ namespace Minecraft
 				}
 
 				// Bedrock
-				int bedrockBase = rand() % 3;
+				std::uniform_int_distribution<int> bedrockDist(0, 2);
+				int bedrockBase = bedrockDist(rng);
 				for (int y = 0; y < 4; y++)
 				{
 					if (y == 0) chunk.blocks[x][y][z].type = BlockType::Bedrock;
@@ -77,20 +83,24 @@ namespace Minecraft
 				}
 
 				// Flowers
-				if (height > m_SeaLevel && rand() % 128 == 0 && height < CHUNK_HEIGHT && chunk.blocks[x][height - 1][z].type == BlockType::Grass)
+				std::uniform_int_distribution<int> flowerDist(0, 127);
+				if (height > m_SeaLevel && flowerDist(rng) == 0 && height < CHUNK_HEIGHT && chunk.blocks[x][height - 1][z].type == BlockType::Grass)
 					chunk.blocks[x][height][z].type = BlockType::Rose;
-				else if (height > m_SeaLevel && rand() % 128 == 0 && height < CHUNK_HEIGHT && chunk.blocks[x][height - 1][z].type == BlockType::Grass)
+				else if (height > m_SeaLevel && flowerDist(rng) == 0 && height < CHUNK_HEIGHT && chunk.blocks[x][height - 1][z].type == BlockType::Grass)
 					chunk.blocks[x][height][z].type = BlockType::YellowFlower;
 			
 				// Trees
-				if (height > m_SeaLevel && rand() % 50 == 0 && height < CHUNK_HEIGHT && x > 3 && x < CHUNK_SIZE - 3 && z > 3 && z < CHUNK_SIZE - 3 && chunk.blocks[x][height - 1][z].type == BlockType::Grass)
+				float treeBase = m_Perlin.fbm(worldX * 0.001f, worldZ * 0.001f, 6, 0.5f);
+				std::uniform_int_distribution<int> treeDist(0, 49);
+				std::uniform_int_distribution<int> treeDist2(0, 2);
+				if (height > m_SeaLevel && treeBase > 0.3f && treeDist(rng) == 0 && height < CHUNK_HEIGHT && x > 3 && x < CHUNK_SIZE - 3 && z > 3 && z < CHUNK_SIZE - 3 && chunk.blocks[x][height - 1][z].type == BlockType::Grass)
 				{
 					int th = 0;
 					for (int ty = height; ty < CHUNK_HEIGHT - 3; ty++)
 					{
 						th++;
 						if (th > 5) break;
-						if (th > 3 && rand() % 3 == 0) break;
+						if (th > 3 && treeDist2(rng) == 0) break;
 						chunk.blocks[x][ty][z].type = BlockType::OakLog;
 					}
 

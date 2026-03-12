@@ -29,6 +29,12 @@ namespace Core
 		Middle
 	};
 
+	enum class MouseMode
+	{
+		Normal,
+		Captured
+	};
+
 	struct Event
 	{
 		enum class Type
@@ -39,7 +45,8 @@ namespace Core
 			Keyup,
 			MouseMove,
 			MouseButtonDown,
-			MouseButtonUp
+			MouseButtonUp,
+			WindowResize
 		} type;
 
 		Key key;

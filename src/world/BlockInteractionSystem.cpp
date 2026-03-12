@@ -32,7 +32,12 @@ namespace Minecraft
 		WorldRaycastResult raycast;
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxBreakBlockDistance(), raycast))
 		{
+			Vec3f itemPos = raycast.blockPosition.toVec3f() + Vec3f(0.4f, 0.4f, 0.4f);
 			m_World->SetBlock(raycast.blockPosition, BlockType::Air);
+			m_World->SpawnItem(
+				itemPos,
+				{ ItemRegistry::GetItemTypeFromBlockType(raycast.blockType), 1 }
+			);
 			return true;
 		}
 

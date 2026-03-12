@@ -14,6 +14,8 @@ namespace Core
 		m_MouseButtonsJustReleased.clear();
 		m_KeysJustDoublePressed.clear();
 
+		m_JustResized = false;
+
 		for (const Event& e : events)
 		{
 			if (e.type == Event::Type::Keydown)
@@ -62,6 +64,8 @@ namespace Core
 				m_MouseMotionX += e.mouseMotionX;
 				m_MouseMotionY += e.mouseMotionY;
 			}
+			else if (e.type == Event::Type::WindowResize)
+				m_JustResized = true;
 		}
 	}
 
@@ -131,5 +135,10 @@ namespace Core
 			return it->second;
 		}
 		return false;
+	}
+
+	bool InputManager::ResizeJustHappened() const
+	{
+		return m_JustResized;
 	}
 }

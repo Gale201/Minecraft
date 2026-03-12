@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <queue>
+#include <deque>
 #include <memory>
 
 #include "Chunk.h"
@@ -14,18 +15,26 @@
 #include "../render/Camera.h"
 #include "../render/RenderCommand.h"
 #include "../thread/ThreadSystem.h"
+#include "../items/Item.h"
+#include "../items/ItemRegistry.h"
 
 namespace Minecraft
 {
 	class World
 	{
 	public:
-		World(const std::string& name, unsigned int seed) : m_Name(name), m_Seed(seed) {}
+		World(
+			const std::string& name,
+			unsigned int seed,
+			ItemRegistry& itemRegistry
+		) : m_Name(name), m_Seed(seed), m_ItemRegistry(itemRegistry) {}
 		World(
 			const std::string& name,
 			unsigned int seed, 
-			std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> modifiedChunks
-		) : m_Name(name), m_Seed(seed), m_ModifiedChunks(modifiedChunks) {}
+			std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> modifiedChunks,
+			ItemRegistry& itemRegistry
+		) : m_Name(name), m_Seed(seed), m_ModifiedChunks(modifiedChunks), m_ItemRegistry(itemRegistry) {}
+		
 		World(const World&) = delete;
 		~World() = default;
 
@@ -39,6 +48,8 @@ namespace Minecraft
 		);
 
 		bool Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result);
+
+		void SpawnItem(Vec3f position, ItemStack stack);
 
 		Block GetBlock(Vec3i pos) const;
 		Chunk* TryGetChunk(Vec3i pos) const;
@@ -67,12 +78,19 @@ namespace Minecraft
 			return m_ModifiedChunks;
 		}
 
+		const std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash> GetItems() const
+		{
+			return m_Items;
+		}
+
+		std::queue<PhysicsBody*>& GetPhysicsAddQueue() { return m_PhysicsAddQueue; }
+
 		int GetSeaLevel() const { return m_ChunkLoader.GetSeaLevel(); }
 
 		void SetBlock(Vec3i pos, BlockType type);
 		void SetTextureAtlas(const Texture& texture)
 		{
-			m_TextureAtlas = texture;
+			m_TextureAtlas = &texture;
 		}
 
 	private:
@@ -125,18 +143,24 @@ namespace Minecraft
 		inline static int FloorMod(int a, int b);
 
 	private:
-		std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
-		std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> m_ModifiedChunks;
-		std::queue<Vec3i> m_ChunkMeshingQueue;
-		int m_MaxMeshedChunksPerFrame = 16;
-
-		Texture m_TextureAtlas;
-
 		const std::string& m_Name;
 		const unsigned int m_Seed;
 
+		std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
+		std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> m_ModifiedChunks;
+		std::queue<Vec3i> m_ChunkMeshingQueue;
+		int m_MaxMeshedChunksPerFrame = 8;
+
+		std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash> m_Items;
+		ItemRegistry& m_ItemRegistry;
+		const Vec3f m_ItemHitboxSize = Vec3f(0.3f, 0.3f, 0.3f);
+
+		std::queue<PhysicsBody*> m_PhysicsAddQueue;
+
+		const Texture* m_TextureAtlas = nullptr;
+
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 16;
+		int m_ChunkLoadRadius = 1;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 	};
 }

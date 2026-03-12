@@ -7,6 +7,9 @@ namespace Minecraft
 {
 	struct PhysicsBody
 	{
+		PhysicsBody() {}
+		PhysicsBody(Vec3f position, Vec3f size) : position(position), size(size) {}
+
 		Vec3f position;
 		Vec3f velocity;
 		Vec3f size;

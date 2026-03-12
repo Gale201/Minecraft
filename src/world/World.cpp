@@ -5,11 +5,16 @@
 #include "../render/Frustum.h"
 #include "../render/Camera.h"
 #include "../timer/Timer.h"
+#include "../items/ItemRegistry.h"
+#include <assert.h>
 
 namespace Minecraft
 {
 	void World::Update(Core::ThreadSystem& threadSystem)
 	{
+		std::vector<Chunk*> chunksToBuild;
+		chunksToBuild.reserve(m_MaxMeshedChunksPerFrame);
+
 		// Fetching chunks that need meshing and submit their meshing to the thread system
 		int meshedChunks = 0;
 		while (!m_ChunkMeshingQueue.empty() && meshedChunks < m_MaxMeshedChunksPerFrame)
@@ -25,12 +30,21 @@ namespace Minecraft
 		
 			// Submit the BuildChunkMesh job to the thread system
 			Chunk* chunk = it->second.get();
-			threadSystem.Submit([this, chunk]() {
+			chunksToBuild.push_back(chunk);
+			/*threadSystem.Submit([this, chunk]() {
 				BuildChunkMesh(*chunk);
-			});
+			});*/
 			m_ChunkMeshingQueue.pop();
 			meshedChunks++;
 		}
+
+		threadSystem.ParallelFor(
+			(int)chunksToBuild.size(),
+			[this, chunksToBuild](int index)
+			{
+				BuildChunkMesh(*chunksToBuild[index]);
+			}
+		);
 
 		// Check if there are any chunks that are meshed, and move their buildMesh buffer to the main mesh
 		// This needs to be on the main thread to avoid vector thread collisions
@@ -55,18 +69,40 @@ namespace Minecraft
 		const std::vector<const Chunk*> visibleChunks = GetFrustumVisibleChunks(camera);
 		for (const Chunk* chunk : visibleChunks)
 		{
-			Transform t;
-			t.SetPosition(GetChunkWorldPosition(chunk->position).toVec3f());
+			Vec3i chunkPos = chunk->position;
+
+			// Blocks
+			Transform transform;
+			transform.SetPosition(GetChunkWorldPosition(chunkPos).toVec3f());
 
 			for (int dir = 0; dir < 6; dir++)
 			{
 				if (chunk->mesh.meshes[dir].indices.size() > 0)
 				{
-					outCommands.push_back({
+					outCommands.emplace_back(
 						&chunk->mesh.meshes[dir],
-						t,
-						m_TextureAtlas
-						});
+						transform,
+						*m_TextureAtlas
+						);
+				}
+			}
+
+			// Items
+			auto it = m_Items.find(chunkPos);
+			if (it != m_Items.end())
+			{
+				for (const Item& item : it->second)
+				{
+					ItemDefinition definition = m_ItemRegistry.GetItemDefinition(item.stack.type);
+
+					transform.SetPosition(item.body.position + item.body.size * 0.5f);
+					transform.SetRotation(item.rotation);
+
+					outCommands.emplace_back(
+						definition.mesh,
+						transform,
+						*definition.texture
+					);
 				}
 			}
 		}
@@ -155,6 +191,26 @@ namespace Minecraft
 		}
 
 		return false;
+	}
+
+	void World::SpawnItem(Vec3f position, ItemStack stack)
+	{
+		Vec3i chunkPosition = GetChunkPosition(Vec3i::floor(position));
+
+		PhysicsBody body = PhysicsBody(position, m_ItemHitboxSize);
+		Vec3f spawnForce = Vec3f(
+			(static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f),
+			1.0f,
+			(static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f)
+		);
+		body.mass = 0.1f;
+		body.AddForce(spawnForce * 10.0f);
+
+		float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
+
+		m_Items[chunkPosition].emplace_back(stack, std::move(body), Vec3f(0.0f, rotY, 0.0f));
+
+		m_PhysicsAddQueue.push(&m_Items[chunkPosition].back().body);
 	}
 
 	Vec3i World::GetChunkPosition(Vec3i pos) const
@@ -472,8 +528,6 @@ namespace Minecraft
 							BlockFace face = GetBlockFace(block.type, dir, false);
 							AddFaceToMesh(chunk.buildMesh.meshes[i++], face, Vec3i(x, y, z), block.type, dir);
 						}
-						chunk.buildMesh.meshes[4] = Mesh();
-						chunk.buildMesh.meshes[5] = Mesh();
 						continue;
 					}
 

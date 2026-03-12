@@ -1,5 +1,6 @@
 #include "PhysicsSystem.h"
 #include "AABB.h"
+#include "../timer/Timer.h"
 
 namespace Minecraft
 {
@@ -10,6 +11,25 @@ namespace Minecraft
 
 	void PhysicsSystem::Update(float deltaTime)
 	{
+		/*m_ThreadSystem.ParallelFor(
+			(int)m_Bodies.size(),
+			[this, deltaTime](int i)
+			{
+				PhysicsBody& body = *m_Bodies[i];
+
+				ApplyGravity(body, deltaTime);
+				
+				CalculateVelocity(body, deltaTime);
+				
+				body.isGrounded = false;
+				body.inWater = false;
+				
+				MoveBody(body, deltaTime);
+				
+				body.ClearTotalForce();
+			}
+			);*/
+
 		for (PhysicsBody* body : m_Bodies)
 		{
 			ApplyGravity(*body, deltaTime);
@@ -79,7 +99,7 @@ namespace Minecraft
 		Vec3f velocity = body.velocity;
 		Vec3f displacement = velocity * deltaTime;
 		AABB bodyCollider = body.GetAABB();
-
+		
 		Vec3i bodyPos = Vec3i::floor(body.position);
 		std::vector<Vec3i> surroundingBlocks = m_World->GetSurroundingCollidableBlocks(bodyPos);
 

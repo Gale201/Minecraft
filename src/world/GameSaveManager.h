@@ -6,6 +6,7 @@
 
 #include "World.h"
 #include "../player/Player.h"
+#include "../items/ItemRegistry.h"
 
 namespace Minecraft
 {
@@ -18,7 +19,11 @@ namespace Minecraft
 	class GameSaveManager
 	{
 	public:
-		GameSaveManager(const std::string& worldsFolderPath, const std::string& worldName);
+		GameSaveManager(
+			const std::string& worldsFolderPath, 
+			const std::string& worldName,
+			ItemRegistry& itemRegistry
+		);
 
 		// World loading/saving
 		std::unique_ptr<World> CreateWorld(unsigned int seed) const;
@@ -41,5 +46,7 @@ namespace Minecraft
 
 		const std::string m_WorldSaveFileName = "world.data";
 		const std::string m_PlayerSaveFileName = "player.data";
+
+		ItemRegistry& m_ItemRegistry;
 	};
 }

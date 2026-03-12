@@ -60,7 +60,14 @@ namespace Core
 
 	void Application::Update(float deltaTime)
 	{
+		if (m_InputManager.ResizeJustHappened())
+		{
+			m_Game->Resize(m_Window.GetWidth(), m_Window.GetHeight());
+		}
+
 		m_Game->Update(deltaTime);
+
+		m_Window.SetMouseMode(m_Game->GetMouseMode());
 	}
 
 	void Application::Render()

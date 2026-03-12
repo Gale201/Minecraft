@@ -49,6 +49,8 @@ namespace Minecraft
 
 		void DrawTexture(int x, int y, const Texture& texture, bool alphaBlend = false);
 
+		void DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend = false, bool cutoff = false);
+
 		void Render(const std::vector<RenderCommand>& renderList, const Camera& camera, Core::ThreadSystem& threadSystem);
 
 		void CreateTiles();

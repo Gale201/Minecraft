@@ -16,6 +16,11 @@ namespace Minecraft
 	void Player::Update(float deltaTime)
 	{
 		HandleInput();
+	}
+
+	void Player::UpdatePhysics(float deltaTime)
+	{
+		HandleMovementInput();
 
 		if (m_CancelSprint && (m_PhysicsBody.isGrounded || m_Flying))
 		{
@@ -32,7 +37,31 @@ namespace Minecraft
 			m_PhysicsBody.position.y = 70.0f;
 	}
 
+	void Player::Render(Renderer& renderer)
+	{
+		
+	}
+
+	void Player::RenderUI(Renderer& renderer)
+	{
+		if (m_InventoryOpen)
+			m_Inventory.Render(renderer);
+	}
+
 	void Player::HandleInput()
+	{
+		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
+		{
+			m_Flying = !m_Flying;
+			m_PhysicsBody.applyGravity = !m_PhysicsBody.applyGravity;
+		}
+
+		// Inventory
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
+			m_InventoryOpen = !m_InventoryOpen;
+	}
+
+	void Player::HandleMovementInput()
 	{
 		Vec3f force;
 
@@ -59,12 +88,7 @@ namespace Minecraft
 		else if (m_PhysicsBody.inWater && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
 			m_PhysicsBody.AddForce({ 0.0f, -30.0f, 0.0f });
 
-		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
-		{
-			m_Flying = !m_Flying;
-			m_PhysicsBody.applyGravity = !m_PhysicsBody.applyGravity;
-		}
-		else if (!m_PhysicsBody.inWater && !m_Flying && m_PhysicsBody.isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
+		if (!m_PhysicsBody.inWater && !m_Flying && m_PhysicsBody.isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 			m_PhysicsBody.AddForce(m_JumpVelocity);
 		else if (m_PhysicsBody.inWater && !m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
 			m_PhysicsBody.AddForce({ 0.0f, 30.0f, 0.0f });
@@ -125,10 +149,6 @@ namespace Minecraft
 
 		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
 			m_RequestedBlockPlaceAction = true;
-
-		// Inventory
-		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
-			printf("Opened inventory");
 	}
 
 	void Player::SyncCamera()
@@ -137,6 +157,11 @@ namespace Minecraft
 		m_Camera.pitch = m_HeadRotation.x;
 		m_Camera.yaw = m_HeadRotation.y;
 		m_Camera.roll = m_HeadRotation.z;
+	}
+
+	void Player::UpdateCameraAspectRatio(float ratio)
+	{
+		m_Camera.aspect = ratio;
 	}
 
 	bool Player::IsInBlock(Vec3i blockPos) const

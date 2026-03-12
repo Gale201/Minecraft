@@ -8,8 +8,8 @@
 #include "../game/Game.h"
 
 #define TITLE "Minecraft"
-#define WIDTH 1280
-#define HEIGHT 720
+#define WIDTH 720
+#define HEIGHT 480
 
 #define TARGET_FPS 60
 

@@ -8,7 +8,9 @@ namespace Minecraft
 		Grass,
 		Dirt,
 		Stone,
-		Glass
+		Glass,
+		Rose,
+		Undefined
 	};
 
 	struct ItemStack
@@ -22,6 +24,20 @@ namespace Minecraft
 			{
 			default: return 64;
 			};
+		}
+
+		static bool IsItemBlock(ItemType type)
+		{
+			switch (type)
+			{
+			case ItemType::Grass:
+			case ItemType::Dirt:
+			case ItemType::Stone:
+			case ItemType::Glass:
+				return true;
+			default:
+				return false;
+			}
 		}
 	};
 }

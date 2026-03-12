@@ -16,6 +16,16 @@ namespace Minecraft
 		{
 		}
 
+		Transform(Vec3f position, Vec3f rotation) :
+			m_Position(position), m_Rotation(rotation), m_Scale{ 1.0f, 1.0f, 1.0f }
+		{
+		}
+
+		Transform(Vec3f position, Vec3f rotation, Vec3f scale) :
+			m_Position(position), m_Rotation(rotation), m_Scale(scale)
+		{
+		}
+
 		~Transform() = default;
 
 		const Mat4& GetMatrix() const

@@ -2,13 +2,14 @@
 #include <vector>
 #include "PhysicsBody.h"
 #include "../world/World.h"
+#include "../thread/ThreadSystem.h"
 
 namespace Minecraft
 {
 	class PhysicsSystem
 	{
 	public:
-		PhysicsSystem() = default;
+		PhysicsSystem(Core::ThreadSystem& threadSystem) : m_ThreadSystem(threadSystem) {};
 
 		void Initialize(World& world);
 
@@ -22,6 +23,8 @@ namespace Minecraft
 	private:
 		World* m_World = nullptr;
 		std::vector<PhysicsBody*> m_Bodies;
+
+		Core::ThreadSystem& m_ThreadSystem;
 
 		float m_GravityValue = -30.f;
 		float m_MaxVelocityValue = 500.0f;

@@ -27,6 +27,8 @@ namespace Core
 		bool IsMouseButtonJustPressed(MouseButton button) const;
 		bool IsMouseButtonJustReleased(MouseButton button) const;
 
+		bool ResizeJustHappened() const;
+
 		int GetMouseX() const { return m_MouseX; }
 		int GetMouseY() const { return m_MouseY; }
 		int GetMouseMotionX() const { return m_MouseMotionX; }
@@ -45,6 +47,8 @@ namespace Core
 		int m_MouseY = 0;
 		int m_MouseMotionX = 0;
 		int m_MouseMotionY = 0;
+		
+		bool m_JustResized = false;
 
 		long long m_DoublePressMaxDelay = 200;
 		std::unordered_map<Key, long long> m_KeyPressTimeTable;

@@ -1,4 +1,8 @@
 #include "Game.h"
+
+#include <cstdlib>
+#include <ctime>
+
 #include "../core/Log.h"
 #include "../timer/Timer.h"
 
@@ -10,7 +14,8 @@ namespace Minecraft
 		m_ThreadSystem(threadSystem), 
 		m_InputManager(inputManager),
 		m_Player(inputManager),
-		m_GameSaveManager("saves/worlds/", name)
+		m_GameSaveManager("saves/worlds/", name, m_ItemRegistry),
+		m_PhysicsSystem(threadSystem)
 	{
 		m_ThreadSystem.Initialize();
 
@@ -25,6 +30,8 @@ namespace Minecraft
 			LOG_ERROR("Error loading textures. Exiting...");
 			exit(1);
 		}
+
+		srand(time(0));
 	}
 
 	void Game::Load(unsigned int seed)
@@ -50,6 +57,9 @@ namespace Minecraft
 
 		m_BlockInteractionSystem.Initialize(*m_World);
 		m_PhysicsSystem.Initialize(*m_World);
+		m_ItemRegistry.Initialize();
+
+		// m_Player.SetGameMode(GameModeType::Survival);
 	}
 
 	void Game::Setup()
@@ -83,6 +93,8 @@ namespace Minecraft
 				m_WaterScreenTexture.SetPixel(i, j, 0x334444FF);
 		m_WaterScreenTexture.SetDefaultColor(0x334444FF);
 
+		m_Player.SetInventoryTexture(m_TextureLoader.Get("inventory"));
+
 		m_PhysicsSystem.AddBody(m_Player.GetBody());
 	}
 
@@ -100,25 +112,39 @@ namespace Minecraft
 		if (m_Player.RequestedBlockPlaceAction())
 			m_BlockInteractionSystem.PlaceBlock(m_Player, m_Player.GetRequestedBlockToPlace());
 
-		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
+		while (!m_World->GetPhysicsAddQueue().empty())
+		{
+			PhysicsBody* body = m_World->GetPhysicsAddQueue().front();
+			m_PhysicsSystem.AddBody(*body);
+			m_World->GetPhysicsAddQueue().pop();
+		}
+
+		m_Player.Update(deltaTime);
+
+		if (m_Player.IsInventoryOpen())
+			m_MouseMode = Core::MouseMode::Normal;
+		else
+			m_MouseMode = Core::MouseMode::Captured;
 
 		// Physics update
 		m_PhysicsAccumulator += deltaTime;
 
 		while (m_PhysicsAccumulator >= m_PhysicsFixedDelta)
 		{
-			m_Player.Update(deltaTime);
+			m_Player.UpdatePhysics(deltaTime);
 
 			m_PhysicsSystem.Update(m_PhysicsFixedDelta);
 			m_PhysicsAccumulator -= m_PhysicsFixedDelta;
 		}
 
 		m_Player.SyncCamera();
+
+		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
 	}
 
 	void Game::Render()
 	{
-		Core::Timer timer("Render");
+		Core::Timer timer("Render");	
 
 		m_Renderer.Clear(SKY_COLOR);
 
@@ -139,12 +165,40 @@ namespace Minecraft
 			m_TextureLoader.Get("crosshair"), true
 		);
 
+		m_Player.Render(m_Renderer);
+
 		Transform t1;
 		t1.SetPosition(m_Player.GetPosition());
 		t1.SetScale(m_Player.GetBody().size);
 		//m_Renderer.DrawCubeWireframe(t1, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
+		
+		try
+		{
+			auto ls = m_World->GetItems().at(m_World->GetChunkPosition(Vec3i::floor(m_Player.GetPosition())));
+
+			for (const Item& item : ls)
+			{
+				Transform t;
+				t.SetPosition(item.body.position);
+				t.SetScale(item.body.size);
+				//m_Renderer.DrawCubeWireframe(t, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
+			}
+		}
+		catch (std::exception e) { printf("%s\n", e.what()); }
 
 		m_RenderList.clear();
+
+		// UI Rendering
+		m_Player.RenderUI(m_Renderer);
+	}
+
+	void Game::Resize(int width, int height)
+	{
+		m_Width = width;
+		m_Height = height;
+		m_Renderer.Initialize(m_Width, m_Height);
+		m_Renderer.CreateTiles();
+		m_Player.UpdateCameraAspectRatio(static_cast<float>(m_Width) / static_cast<float>(m_Height));
 	}
 
 	void Game::RenderWaterMesh(Mesh& mesh)

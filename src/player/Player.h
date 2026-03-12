@@ -8,7 +8,7 @@
 #include "../inventory/Inventory.h"
 
 #define DEFAULT_PLAYER_SPEED 6.0f
-#define DEFAULT_PLAYER_SENSITIVITY 0.001f
+#define DEFAULT_PLAYER_SENSITIVITY 0.003f
 #define DEFAULT_PITCH_LIMIT 1.55f
 
 namespace Minecraft
@@ -24,8 +24,13 @@ namespace Minecraft
 
 		~Player() = default;
 
+		void UpdatePhysics(float deltaTime);
 		void Update(float deltaTime);
+		void Render(Renderer& renderer);
+		void RenderUI(Renderer& renderer);
+
 		void SyncCamera();
+		void UpdateCameraAspectRatio(float ratio);
 
 		bool RequestedBlockBreakAction() const;
 		bool RequestedBlockPlaceAction() const;
@@ -33,6 +38,7 @@ namespace Minecraft
 
 		bool IsInBlock(Vec3i block) const;
 		bool IsInWater() const { return m_PhysicsBody.inWater; }
+		bool IsInventoryOpen() const { return m_InventoryOpen; }
 
 		/* Getters & Setters */
 		const Camera& GetCamera() const { return m_Camera; }
@@ -66,8 +72,12 @@ namespace Minecraft
 
 		void SetInputBindings(InputBindings inputBindings) { m_InputBindings = inputBindings; }
 
+		void SetInventoryTexture(Texture& texture) { m_Inventory.SetTexture(texture); }
+
+		void SetGameMode(GameMode mode) { m_GameMode = mode; }
 	private:
 		void HandleInput();
+		void HandleMovementInput();
 
 	private:
 		Vec3f m_HeadRotation;
@@ -90,11 +100,13 @@ namespace Minecraft
 
 		bool m_Flying = false;
 
-		Vec3f m_JumpVelocity{ 0.0f, 520.0f, 0.0f };
+		Vec3f m_JumpVelocity{ 0.0f, 200.0f, 0.0f };
 		bool m_Sprinting = false;
 		bool m_Sneaking = false;
 		bool m_CancelSprint = false;
 		bool m_StartSprint = false;
+
+		bool m_InventoryOpen = false;
 
 		float m_SneakHeight = 1.4f;
 

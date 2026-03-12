@@ -49,6 +49,17 @@ namespace Minecraft
 			return false;
 		}
 
+		auto inventoryTexture = LoadTexture("inventory.png");
+		if (inventoryTexture.has_value())
+		{
+			m_Textures["inventory"] = std::make_unique<Texture>(inventoryTexture.value());
+		}
+		else
+		{
+			LOG_ERROR("Inventory texture failed to load!");
+			return false;
+		}
+
 		return true;
 	}
 

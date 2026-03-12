@@ -27,6 +27,8 @@ namespace Core
 		int GetWidth() const { return m_Width; }
 		int GetHeight() const { return m_Height; }
 
+		void SetMouseMode(MouseMode state);
+
 	private:
 		int m_Width = 0;
 		int m_Height = 0;

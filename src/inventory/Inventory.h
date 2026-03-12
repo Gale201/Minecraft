@@ -25,10 +25,17 @@ namespace Minecraft
 			m_Slots[slot] = stack;
 		}
 
+		void SetTexture(Texture& texture)
+		{
+			m_InventoryTexture = &texture;
+		}
+
 	private:
 		static constexpr int s_Size = 36;
 		static constexpr int s_CraftAreaSize = 4;
 		std::array<ItemStack, s_Size> m_Slots;
 		std::array<ItemStack, s_CraftAreaSize> m_CraftingSlots;
+
+		Texture* m_InventoryTexture = nullptr;
 	};
 }

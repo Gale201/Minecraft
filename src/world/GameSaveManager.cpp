@@ -3,8 +3,15 @@
 
 namespace Minecraft
 {
-	GameSaveManager::GameSaveManager(const std::string& worldFolderPath, const std::string& worldName) :
-		m_BaseFolderPath(worldFolderPath), m_WorldName(worldName), m_WorldFolderPath(worldFolderPath)
+	GameSaveManager::GameSaveManager(
+		const std::string& worldFolderPath,
+		const std::string& worldName,
+		ItemRegistry& itemRegistry
+	) :
+		m_BaseFolderPath(worldFolderPath),
+		m_WorldName(worldName), 
+		m_WorldFolderPath(worldFolderPath),
+		m_ItemRegistry(itemRegistry)
 	{
 		if (m_WorldFolderPath.back() != '/' && m_WorldFolderPath.back() != '\\')
 		{
@@ -22,7 +29,7 @@ namespace Minecraft
 			if (entry.is_directory() && entry.path().filename() == m_WorldName) return nullptr;
 		}
 		std::filesystem::create_directories(m_WorldFolderPath);
-		return std::make_unique<World>(m_WorldName, seed);
+		return std::make_unique<World>(m_WorldName, seed, m_ItemRegistry);
 	}
 
 	std::unique_ptr<World> GameSaveManager::LoadWorld() const
@@ -68,7 +75,7 @@ namespace Minecraft
 			}
 		}
 
-		return std::make_unique<World>(m_WorldName, seed, modifiedChunks);
+		return std::make_unique<World>(m_WorldName, seed, modifiedChunks, m_ItemRegistry);
 	}
 
 	void GameSaveManager::SaveWorld(const World& world) const

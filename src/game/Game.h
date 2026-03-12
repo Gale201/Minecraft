@@ -5,6 +5,7 @@
 #include "../world/BlockInteractionSystem.h"
 #include "../world/GameSaveManager.h"
 #include "../physics/PhysicsSystem.h"
+#include "../items/ItemRegistry.h"
 
 #define SKY_COLOR 0xFF99BBFF
 
@@ -14,7 +15,6 @@ namespace Minecraft
 	{
 	public:
 		Game(int width, int height, const std::string& name, Core::ThreadSystem&, Core::InputManager&);
-		~Game() = default;
 
 		void Load(unsigned int seed = 0);
 		void Setup();
@@ -22,11 +22,14 @@ namespace Minecraft
 		void Update(float deltaTime);
 		void Render();
 
+		void Resize(int width, int height);
+
 		void RenderWaterMesh(Mesh& mesh);
 
 		void Save();
 
 		uint32_t* GetFrameBuffer() { return m_Renderer.GetFrameBuffer(); }
+		Core::MouseMode GetMouseMode() const { return m_MouseMode; }
 
 	private:
 		int m_Width;
@@ -38,6 +41,7 @@ namespace Minecraft
 		std::vector<RenderCommand> m_RenderList;
 
 		TextureLoader m_TextureLoader{ "res/textures/" };
+		ItemRegistry m_ItemRegistry{ m_TextureLoader };
 
 		GameSaveManager m_GameSaveManager;
 
@@ -47,9 +51,10 @@ namespace Minecraft
 		Player m_Player;
 
 		float m_PhysicsAccumulator = 0.0f;
-		const float m_PhysicsFixedDelta = 1.0f / 60.0f;
+		const float m_PhysicsFixedDelta = 1.0f / 20.0f;
 
 		Texture m_WaterScreenTexture;
 
+		Core::MouseMode m_MouseMode = Core::MouseMode::Captured;
 	};
 }

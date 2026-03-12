@@ -19,7 +19,7 @@ namespace Core
 			SDL_WINDOWPOS_CENTERED,
 			SDL_WINDOWPOS_CENTERED,
 			width, height,
-			0
+			SDL_WINDOW_RESIZABLE
 		);
 
 		if (!m_WindowHandle)
@@ -81,6 +81,21 @@ namespace Core
 		while (SDL_PollEvent(&e))
 		{
 			Event event;
+			if (e.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				m_Width = e.window.data1;
+				m_Height = e.window.data2;
+				event.type = Event::Type::WindowResize;
+				outEvents.push_back(event);
+				m_Texture = SDL_CreateTexture(
+					static_cast<SDL_Renderer*>(m_Renderer),
+					SDL_PIXELFORMAT_ARGB8888,
+					SDL_TEXTUREACCESS_STREAMING,
+					m_Width, m_Height
+				);
+				continue;
+			}
+
 			switch (e.type)
 			{
 			case SDL_QUIT:
@@ -142,5 +157,13 @@ namespace Core
 				break;
 			}
 		}
+	}
+
+	void Window::SetMouseMode(MouseMode state)
+	{
+		if (state == MouseMode::Captured)
+			SDL_SetRelativeMouseMode(SDL_TRUE);
+		else
+			SDL_SetRelativeMouseMode(SDL_FALSE);
 	}
 }

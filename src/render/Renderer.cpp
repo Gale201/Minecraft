@@ -602,6 +602,34 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, bool alphaBlend
 	}
 }
 
+void Renderer::DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend, bool cutoff)
+{
+	if (width <= 0 || height <= 0) return;
+
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			float u = (float)j / (float)width;
+			float v = (float)i / (float)height;
+
+			uint32_t color = texture.GetPixelAtUV(u, v);
+
+			if (alphaBlend)
+				DrawPixelAlphaBlend(x + j, y + i, color);
+			else if (cutoff)
+			{
+				uint8_t alpha = (color >> 24) & 0xFF;
+				if (alpha > 128)
+					DrawPixel(x + j, y + i, color);
+			}
+			else
+				DrawPixel(x + j, y + i, color);
+		}
+	}
+}
+
+
 void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera, Core::ThreadSystem& threadSystem)
 {
 	m_ActiveRenderList = &renderList;
