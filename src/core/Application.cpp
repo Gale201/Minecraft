@@ -47,7 +47,7 @@ namespace Core
 
 			// Render
 			Render();
-
+	
 			// Render the frame buffer to the window
 			m_Window.Render(m_Game->GetFrameBuffer());
 		}

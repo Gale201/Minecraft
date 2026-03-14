@@ -13,6 +13,19 @@ namespace Minecraft
         {
         }
 
+        Texture Crop(int x, int y, int width, int height) const
+        {
+			Texture cropped(width, height);
+            for (int i = x; i < x + width; i++)
+            {
+				for (int j = y; j < y + height; j++)
+                {
+                    cropped.SetPixel(i - x, j - y, GetPixel(i, j));
+                }
+            }
+            return cropped;
+        }
+
         int GetWidth() const { return m_Width; }
         int GetHeight() const { return m_Height; }
 

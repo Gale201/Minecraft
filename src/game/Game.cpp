@@ -39,6 +39,7 @@ namespace Minecraft
 		if (m_GameSaveManager.WorldExists())
 		{
 			m_World = m_GameSaveManager.LoadWorld();
+			m_GameSaveManager.LoadWorldItems(*m_World, m_PhysicsSystem);
 			PlayerSaveData playerData = m_GameSaveManager.LoadPlayerData();
 			m_Player.SetPosition(playerData.position);
 			m_Player.SetHeadRotation(playerData.headRotation);
@@ -164,27 +165,21 @@ namespace Minecraft
 			m_Height / 2 - m_TextureLoader.Get("crosshair").GetHeight() / 2,
 			m_TextureLoader.Get("crosshair"), true
 		);
-
+		
 		m_Player.Render(m_Renderer);
+
+		for (Item& item : m_World->GetItems()[m_World->GetChunkPosition(Vec3i::floor(m_Player.GetPosition()))])
+		{
+			Transform t;
+			t.SetPosition(item.body.position);
+			t.SetScale(item.body.size);
+			//m_Renderer.DrawCubeWireframe(t, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
+		}
 
 		Transform t1;
 		t1.SetPosition(m_Player.GetPosition());
 		t1.SetScale(m_Player.GetBody().size);
 		//m_Renderer.DrawCubeWireframe(t1, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
-		
-		try
-		{
-			auto ls = m_World->GetItems().at(m_World->GetChunkPosition(Vec3i::floor(m_Player.GetPosition())));
-
-			for (const Item& item : ls)
-			{
-				Transform t;
-				t.SetPosition(item.body.position);
-				t.SetScale(item.body.size);
-				//m_Renderer.DrawCubeWireframe(t, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
-			}
-		}
-		catch (std::exception e) { printf("%s\n", e.what()); }
 
 		m_RenderList.clear();
 
@@ -257,7 +252,9 @@ namespace Minecraft
 
 	void Game::Save()
 	{
+		LOG_INFO("Saving world...");
 		m_GameSaveManager.SaveWorld(*m_World);
 		m_GameSaveManager.SavePlayer(m_Player);
+		m_GameSaveManager.SaveWorldItems(*m_World);
 	}
 }

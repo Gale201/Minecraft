@@ -7,6 +7,7 @@
 #include "World.h"
 #include "../player/Player.h"
 #include "../items/ItemRegistry.h"
+#include "../physics/PhysicsSystem.h"
 
 namespace Minecraft
 {
@@ -35,6 +36,10 @@ namespace Minecraft
 		// Player loading/saving
 		PlayerSaveData LoadPlayerData() const;
 		void SavePlayer(const Player& player) const;
+
+		// Item loading/saving
+		void LoadWorldItems(World& world, PhysicsSystem& physicsSystem) const;
+		void SaveWorldItems(const World& world) const;
 
 		// Getters
 		const std::string& GetWorldFolderPath() const { return m_WorldFolderPath; }

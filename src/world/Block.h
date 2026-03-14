@@ -13,7 +13,7 @@ namespace Minecraft
 		Grass,
 		Dirt,
 		Stone,
-		OakPlank,
+		OakPlanks,
 		DoubleStoneSlab,
 		PolishedStone,
 		Brick,

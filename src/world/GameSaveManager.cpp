@@ -149,4 +149,64 @@ namespace Minecraft
 		out.write(reinterpret_cast<const char*>(&playerData.position), sizeof(playerData.position));
 		out.write(reinterpret_cast<const char*>(&playerData.headRotation), sizeof(playerData.headRotation));
 	}
+
+	/* Item saving and loading */
+
+	void GameSaveManager::LoadWorldItems(World& world, PhysicsSystem& physicsSystem) const
+	{
+		const std::string itemsFilePath = m_WorldFolderPath + "items.data";
+		
+		std::ifstream in(itemsFilePath, std::ios::binary);
+		if (!in) return;
+		
+		int chunkCount;
+		in.read(reinterpret_cast<char*>(&chunkCount), sizeof(chunkCount));
+		
+		for (int i = 0; i < chunkCount; i++)
+		{
+			Vec3i chunkPos;
+			in.read(reinterpret_cast<char*>(&chunkPos), sizeof(chunkPos));
+			
+			int itemCount;
+			in.read(reinterpret_cast<char*>(&itemCount), sizeof(itemCount));
+			
+			std::deque<Item> items;
+			for (int j = 0; j < itemCount; j++)
+			{
+				Item item;
+				in.read(reinterpret_cast<char*>(&item), sizeof(item));
+				items.push_back(item);
+			}
+			auto& worldItems = world.GetItems()[chunkPos];
+			worldItems = std::move(items);
+			for (Item& item : worldItems)
+			{
+				physicsSystem.AddBody(item.body);
+			}
+		}
+	}
+
+	void GameSaveManager::SaveWorldItems(const World& world) const
+	{
+		const std::string itemsFilePath = m_WorldFolderPath + "items.data";
+		
+		std::ofstream out(itemsFilePath, std::ios::binary);
+		if (!out) return;
+		
+		int chunkCount = static_cast<int>(world.GetItems().size());
+		out.write(reinterpret_cast<const char*>(&chunkCount), sizeof(chunkCount));
+		
+		for (const auto& [chunkPos, items] : world.GetItems())
+		{
+			out.write(reinterpret_cast<const char*>(&chunkPos), sizeof(chunkPos));
+			
+			int itemCount = static_cast<int>(items.size());
+			out.write(reinterpret_cast<const char*>(&itemCount), sizeof(itemCount));
+			
+			for (const Item& item : items)
+			{
+				out.write(reinterpret_cast<const char*>(&item), sizeof(item));
+			}
+		}
+	}
 }

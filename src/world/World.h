@@ -78,7 +78,12 @@ namespace Minecraft
 			return m_ModifiedChunks;
 		}
 
-		const std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash> GetItems() const
+		const std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash>& GetItems() const
+		{
+			return m_Items;
+		}
+
+		std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash>& GetItems()
 		{
 			return m_Items;
 		}
@@ -153,7 +158,7 @@ namespace Minecraft
 
 		std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash> m_Items;
 		ItemRegistry& m_ItemRegistry;
-		const Vec3f m_ItemHitboxSize = Vec3f(0.3f, 0.3f, 0.3f);
+		const Vec3f m_ItemHitboxSize = Vec3f(0.3f, 0.25f, 0.3f);
 
 		std::queue<PhysicsBody*> m_PhysicsAddQueue;
 

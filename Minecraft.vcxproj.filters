@@ -226,5 +226,26 @@
     <Image Include="res\textures\texture-atlas.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="res\textures\crosshair.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\textures\dirt.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\textures\grass.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\textures\inventory.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\textures\stone.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\textures\texture-atlas-old.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\textures\item-atlas.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

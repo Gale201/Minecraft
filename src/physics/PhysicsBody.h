@@ -22,6 +22,7 @@ namespace Minecraft
 		bool collidable = true;
 		bool isGrounded = false;
 		bool inWater = false;
+		bool pausePhysics = false;
 
 		void ClearTotalForce()
 		{

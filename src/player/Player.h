@@ -8,7 +8,7 @@
 #include "../inventory/Inventory.h"
 
 #define DEFAULT_PLAYER_SPEED 6.0f
-#define DEFAULT_PLAYER_SENSITIVITY 0.003f
+#define DEFAULT_PLAYER_SENSITIVITY 0.005f
 #define DEFAULT_PITCH_LIMIT 1.55f
 
 namespace Minecraft

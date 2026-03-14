@@ -730,7 +730,7 @@ void Renderer::RasterizeTile(ScreenTile& tile)
 		DrawTriangleBarycentricToTile(triangle.triangle, *triangle.texture, triangle.tileInfo, tile);
 		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
 	}
-	
+
 	std::sort(tile.transparentTriangles.begin(), tile.transparentTriangles.end(), 
 		[&](const ScreenTriangle& a, const ScreenTriangle& b)
 		{

@@ -59,6 +59,16 @@ namespace Minecraft
 		// Inventory
 		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
 			m_InventoryOpen = !m_InventoryOpen;
+
+		// Placing/Destroying blocks
+		m_RequestedBlockBreakAction = false;
+		m_RequestedBlockPlaceAction = false;
+
+		if (m_GameMode.CanInstantBreakBlocks() && m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+			m_RequestedBlockBreakAction = true;
+
+		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
+			m_RequestedBlockPlaceAction = true;
 	}
 
 	void Player::HandleMovementInput()
@@ -139,16 +149,6 @@ namespace Minecraft
 		if (m_HeadRotation.y > 2.0f * PI) m_HeadRotation.y -= 2.0f * PI;
 		m_HeadRotation.x += m_InputManager.GetMouseMotionY() * m_Sensitivity;
 		m_HeadRotation.x = std::clamp(m_HeadRotation.x, -m_PitchLimit, m_PitchLimit);
-
-		// Placing/Destroying blocks
-		m_RequestedBlockBreakAction = false;
-		m_RequestedBlockPlaceAction = false;
-
-		if (m_GameMode.CanInstantBreakBlocks() && m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
-			m_RequestedBlockBreakAction = true;
-
-		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
-			m_RequestedBlockPlaceAction = true;
 	}
 
 	void Player::SyncCamera()

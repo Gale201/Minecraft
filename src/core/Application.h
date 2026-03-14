@@ -11,7 +11,7 @@
 #define WIDTH 720
 #define HEIGHT 480
 
-#define TARGET_FPS 60
+#define TARGET_FPS 128
 
 namespace Core
 {

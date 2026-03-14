@@ -37,6 +37,15 @@ namespace Minecraft
 			return false;
 		}
 
+		auto itemTexture = LoadTexture("item-atlas.png");
+		if (itemTexture.has_value())
+			m_Textures["item-atlas"] = std::make_unique<Texture>(itemTexture.value());
+		else
+		{
+			LOG_ERROR("Item atlas texture failed to load!");
+			return false;
+		}
+
 		auto crosshairTexture = LoadTexture("crosshair.png");
 		if (crosshairTexture.has_value())
 		{

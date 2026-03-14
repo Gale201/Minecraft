@@ -91,6 +91,13 @@
     <ClInclude Include="src\world\GameSaveManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\textures\crosshair.png" />
+    <Image Include="res\textures\dirt.png" />
+    <Image Include="res\textures\grass.png" />
+    <Image Include="res\textures\inventory.png" />
+    <Image Include="res\textures\item-atlas.png" />
+    <Image Include="res\textures\stone.png" />
+    <Image Include="res\textures\texture-atlas-old.png" />
     <Image Include="res\textures\texture-atlas.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

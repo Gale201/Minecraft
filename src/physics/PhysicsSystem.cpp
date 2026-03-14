@@ -32,6 +32,8 @@ namespace Minecraft
 
 		for (PhysicsBody* body : m_Bodies)
 		{
+			if (body->pausePhysics) continue;
+
 			ApplyGravity(*body, deltaTime);
 
 			CalculateVelocity(*body, deltaTime);

@@ -413,6 +413,15 @@ namespace Minecraft
 
 			m_Chunks.emplace(chunkPos, std::move(loadedChunks[i]));
 			AddChunkToMeshingQueue(*m_Chunks[chunkPos]);
+
+			auto it = m_Items.find(chunkPos);
+			if (it != m_Items.end())
+			{
+				for (Item& item : it->second)
+				{
+					item.body.pausePhysics = false;
+				}
+			}
 		}
 	}
 
@@ -435,9 +444,18 @@ namespace Minecraft
 			/*if ((chunkPos.x - playerX) * (chunkPos.x - playerX) + (chunkPos.z - playerZ) * (chunkPos.z - playerZ) > m_ChunkLoadRadius * m_ChunkLoadRadius)
 				chunksToUnload.push_back(chunkPos);*/
 		}
-		for (const Vec3i& pos : chunksToUnload)
+		for (const Vec3i& chunkPos : chunksToUnload)
 		{ 
-			m_Chunks.erase(pos);
+			m_Chunks.erase(chunkPos);
+
+			auto it = m_Items.find(chunkPos);
+			if (it != m_Items.end())
+			{
+				for (Item& item : it->second)
+				{
+					item.body.pausePhysics = true;
+				}
+			}
 		}
 
 		m_LastChunkLoadPosition = playerPosition;
