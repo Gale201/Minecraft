@@ -8,7 +8,7 @@
 #include "../inventory/Inventory.h"
 
 #define DEFAULT_PLAYER_SPEED 6.0f
-#define DEFAULT_PLAYER_SENSITIVITY 0.005f
+#define DEFAULT_PLAYER_SENSITIVITY 0.001f
 #define DEFAULT_PITCH_LIMIT 1.55f
 
 namespace Minecraft
@@ -29,7 +29,7 @@ namespace Minecraft
 		void Render(Renderer& renderer);
 		void RenderUI(Renderer& renderer);
 
-		void SyncCamera();
+		void SyncCamera(float alpha = 1.0f);
 		void UpdateCameraAspectRatio(float ratio);
 
 		bool RequestedBlockBreakAction() const;

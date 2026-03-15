@@ -52,25 +52,28 @@ namespace Minecraft
 				Mesh mesh;
 				AtlasTileInfo tileInfo = GetAtlasTileInfoForItem(type);
 
+				float yScale = 0.12f;
+
 				FaceDirection dirs[2] = { FaceDirection::PosY, FaceDirection::NegY };
-				for (int i = 0; i < 2; i++)
+				for (int dir = 0; dir < 2; dir++)
 				{
 					int startIndex = mesh.vertices.size();
-					BlockFace face = GetBlockFace(BlockType::Dirt, dirs[i]);
+					BlockFace face = GetBlockFace(BlockType::Dirt, dirs[dir]);
 					for (int i = 0; i < 4; i++)
 					{
 						Vertex v;
 						v.position = Vec3f(
 							face.vertices[i].x - 0.5f,
-							face.vertices[i].y - 0.5f,
+							face.vertices[i].y,
 							face.vertices[i].z - 0.5f
 						) * m_ItemScaleFactor;
-						v.position.y *= 0.1f;
-						v.position.y -= 0.1f;
+						v.position.y *= yScale;
+						v.position.y -= m_ItemHitboxSize.y / 2.f;
 						v.normal = face.normal;
 
 						v.u = face.uvs[i].x;
 						v.v = face.uvs[i].y;
+						if (dir == 1) v.v = 1.0f - v.v;
 
 						v.tileInfo = tileInfo;
 
@@ -92,6 +95,12 @@ namespace Minecraft
 				int h = tileInfo.vScale * tileInfo.atlasHeight;
 				Texture tileTexture = m_TextureLoader.Get("item-atlas").Crop(u, v, w, h);
 
+				AtlasTileInfo sideTileInfo;
+				sideTileInfo.isCutout = true;
+				sideTileInfo.uScale = tileInfo.uScale / (float)tileTexture.GetWidth();
+				sideTileInfo.vScale = tileInfo.vScale / (float)tileTexture.GetHeight();
+				sideTileInfo.atlasWidth = tileInfo.atlasWidth;
+				sideTileInfo.atlasHeight = tileInfo.atlasHeight;
 				for (int y = 0; y < tileTexture.GetHeight(); y++)
 				{
 					for (int x = 0; x < tileTexture.GetWidth(); x++)
@@ -99,54 +108,45 @@ namespace Minecraft
 						uint32_t pixel = tileTexture.GetPixel(x, y);
 						if ((pixel >> 24) != 0)
 						{
+							sideTileInfo.u0 = tileInfo.u0 + (float)x / (float)tileTexture.GetWidth() / ATLAS_TILE_SIZE;
+							sideTileInfo.v0 = tileInfo.v0 + (float)y / (float)tileTexture.GetHeight() / ATLAS_TILE_SIZE;
+							/*
+							// Gray sides
+							sideTileInfo.u0 = 1.0f - 1.f / 16.f;
+							sideTileInfo.v0 = 1.0f - 1.f / 16.f;
+							*/
+
 							// Check pixel above
-							if (y > 0 && (tileTexture.GetPixel(x, y - 1) >> 24) == 0)
+							if (y == 0 || (tileTexture.GetPixel(x, y - 1) >> 24) == 0)
 							{
-								int faceX = x / tileTexture.GetWidth();
-								int faceZ = (y - 1) / tileTexture.GetHeight();
+								float faceX = (float)x / tileTexture.GetWidth();
+								float faceZ = (float)(y - 1) / tileTexture.GetHeight();
 
-								int startIndex = mesh.vertices.size();
-
-								BlockFace face = GetBlockFace(BlockType::Dirt, FaceDirection::PosZ);
-								for (int i = 0; i < 4; i++)
-								{
-									Vertex v;
-									v.position = Vec3f(
-										face.vertices[i].x,
-										face.vertices[i].y,
-										face.vertices[i].z
-									) * m_ItemScaleFactor;
-									v.position.y *= 0.1f;
-									v.position.y -= 0.1f;
-									v.normal = face.normal;
-
-									v.u = face.uvs[i].x;
-									v.v = face.uvs[i].y;
-
-									v.tileInfo = tileInfo;
-
-									mesh.vertices.push_back(v);
-								}
-
-								mesh.indices.push_back(startIndex + 0);
-								mesh.indices.push_back(startIndex + 1);
-								mesh.indices.push_back(startIndex + 2);
-
-								mesh.indices.push_back(startIndex + 0);
-								mesh.indices.push_back(startIndex + 2);
-								mesh.indices.push_back(startIndex + 3);
+								ConstructItemSideMesh(mesh, FaceDirection::PosZ, sideTileInfo, faceX, faceZ, yScale, Vec3f(0.5f - 1.f / 16.f, -0.0f, 0.5f - 2.f / 16.f));
 							}
 							// Check pixel below
-							if (y < tileTexture.GetHeight() - 1 && (tileTexture.GetPixel(x, y + 1) >> 24) == 0)
+							if (y == tileTexture.GetHeight() - 1 || (tileTexture.GetPixel(x, y + 1) >> 24) == 0)
 							{
+								float faceX = (float)x / tileTexture.GetWidth();
+								float faceZ = (float)(y + 1) / tileTexture.GetHeight();
+
+								ConstructItemSideMesh(mesh, FaceDirection::NegZ, sideTileInfo, faceX, faceZ, yScale, Vec3f(0.5f - 1.f / 16.f, 0.0f, 0.5f));
 							}
 							// Check pixel left
-							if (x > 0 && (tileTexture.GetPixel(x - 1, y) >> 24) == 0)
+							if (x == 0 || (tileTexture.GetPixel(x - 1, y) >> 24) == 0)
 							{
+								float faceX = (float)(x - 1) / tileTexture.GetWidth();
+								float faceZ = (float)y / tileTexture.GetHeight();
+
+								ConstructItemSideMesh(mesh, FaceDirection::PosX, sideTileInfo, faceX, faceZ, yScale, Vec3f(0.5f - 2.f / 16.f, 0.0f, 0.5f - 1.f / 16.f));
 							}
 							// Check pixel right
-							if (x < tileTexture.GetWidth() - 1 && (tileTexture.GetPixel(x + 1, y) >> 24) == 0)
+							if (x == tileTexture.GetWidth() - 1 || (tileTexture.GetPixel(x + 1, y) >> 24) == 0)
 							{
+								float faceX = (float)(x + 1) / tileTexture.GetWidth();
+								float faceZ = (float)y / tileTexture.GetHeight();
+
+								ConstructItemSideMesh(mesh, FaceDirection::NegX, sideTileInfo, faceX, faceZ, yScale, Vec3f(0.5f, 0.0f, 0.5f - 1.f / 16.f));
 							}
 						}
 					}
@@ -246,5 +246,53 @@ namespace Minecraft
 		case BlockType::YellowFlower:	  return ItemType::YellowFlower;
 		default:                          return ItemType::Undefined;
 		}
+	}
+
+	void ItemRegistry::ConstructItemSideMesh(
+		Mesh& mesh, FaceDirection dir, AtlasTileInfo tileInfo, 
+		float faceX, float faceZ, float yScale, Vec3f offset
+	) const
+	{
+		int startIndex = mesh.vertices.size();
+
+		BlockFace face = GetBlockFace(BlockType::Stone, dir);
+		for (int i = 0; i < 4; i++)
+		{
+			Vertex v;
+			v.position = Vec3f(
+				face.vertices[i].x,
+				face.vertices[i].y,
+				face.vertices[i].z
+			);
+
+			v.position.x /= static_cast<float>(ATLAS_TILE_SIZE);
+			v.position.z /= static_cast<float>(ATLAS_TILE_SIZE);
+
+			v.position.x -= faceX;
+			v.position.z -= faceZ;
+
+			v.position.y *= yScale;
+			v.position *= m_ItemScaleFactor;
+			v.position.y -= m_ItemHitboxSize.y * m_ItemScaleFactor;
+
+			v.position += offset * m_ItemScaleFactor;
+
+			v.normal = face.normal;
+
+			v.u = face.uvs[i].x;
+			v.v = face.uvs[i].y;
+
+			v.tileInfo = tileInfo;
+
+			mesh.vertices.push_back(v);
+		}
+
+		mesh.indices.push_back(startIndex + 0);
+		mesh.indices.push_back(startIndex + 1);
+		mesh.indices.push_back(startIndex + 2);
+
+		mesh.indices.push_back(startIndex + 0);
+		mesh.indices.push_back(startIndex + 2);
+		mesh.indices.push_back(startIndex + 3);
 	}
 }

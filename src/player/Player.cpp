@@ -69,6 +69,33 @@ namespace Minecraft
 
 		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
 			m_RequestedBlockPlaceAction = true;
+
+		// Sprinting & sneaking
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
+		{
+			m_StartSprint = true;
+			m_CancelSprint = false;
+		}
+		if (m_InputManager.IsKeyJustReleased(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
+		{
+			m_CancelSprint = true;
+			m_StartSprint = false;
+		}
+		m_Sneaking = false;
+		if (!m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Sneak)))
+			m_Sneaking = true;
+
+		if (m_Sneaking)
+			m_PhysicsBody.size.y = std::max(m_PhysicsBody.size.y - 0.05f, m_SneakHeight);
+		else
+			m_PhysicsBody.size = { m_Size.x, std::min(m_PhysicsBody.size.y + 0.05f, m_Size.y), m_Size.z };
+
+		// Look
+		m_HeadRotation.y += m_InputManager.GetMouseMotionX() * m_Sensitivity;
+		if (m_HeadRotation.y < -2.0f * PI) m_HeadRotation.y += 2.0f * PI;
+		if (m_HeadRotation.y > 2.0f * PI) m_HeadRotation.y -= 2.0f * PI;
+		m_HeadRotation.x += m_InputManager.GetMouseMotionY() * m_Sensitivity;
+		m_HeadRotation.x = std::clamp(m_HeadRotation.x, -m_PitchLimit, m_PitchLimit);
 	}
 
 	void Player::HandleMovementInput()
@@ -104,25 +131,6 @@ namespace Minecraft
 			m_PhysicsBody.AddForce({ 0.0f, 30.0f, 0.0f });
 		else if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
 			force += upVector;
-
-		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
-		{
-			m_StartSprint = true;
-			m_CancelSprint = false;
-		}
-		if (m_InputManager.IsKeyJustReleased(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
-		{
-			m_CancelSprint = true;
-			m_StartSprint = false;
-		}
-		m_Sneaking = false;
-		if (!m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Sneak)))
-			m_Sneaking = true;
-
-		if (m_Sneaking)
-			m_PhysicsBody.size.y = std::max(m_PhysicsBody.size.y - 0.05f, m_SneakHeight);
-		else
-			m_PhysicsBody.size = { m_Size.x, std::min(m_PhysicsBody.size.y + 0.05f, m_Size.y), m_Size.z };
 	
 		if (m_Sprinting && !m_PhysicsBody.inWater)
 			force = force.normalized() * m_SprintSpeed;
@@ -142,18 +150,13 @@ namespace Minecraft
 		if (m_Sneaking)
 			forceMultiplier *= 0.4f;
 		m_PhysicsBody.AddForce(force * forceMultiplier);
-
-		// Look
-		m_HeadRotation.y += m_InputManager.GetMouseMotionX() * m_Sensitivity;
-		if (m_HeadRotation.y < -2.0f * PI) m_HeadRotation.y += 2.0f * PI;
-		if (m_HeadRotation.y > 2.0f * PI) m_HeadRotation.y -= 2.0f * PI;
-		m_HeadRotation.x += m_InputManager.GetMouseMotionY() * m_Sensitivity;
-		m_HeadRotation.x = std::clamp(m_HeadRotation.x, -m_PitchLimit, m_PitchLimit);
 	}
 
-	void Player::SyncCamera()
+	void Player::SyncCamera(float alpha)
 	{
-		m_Camera.position = m_PhysicsBody.position + GetRelativeCameraPos();
+		Vec3f interpolated = m_PhysicsBody.GetPreviousPosition() * (1.0f - alpha) + m_PhysicsBody.position * alpha;
+
+		m_Camera.position = interpolated + GetRelativeCameraPos();
 		m_Camera.pitch = m_HeadRotation.x;
 		m_Camera.yaw = m_HeadRotation.y;
 		m_Camera.roll = m_HeadRotation.z;

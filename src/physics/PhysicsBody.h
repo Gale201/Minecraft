@@ -29,6 +29,11 @@ namespace Minecraft
 			m_AccumulatedForce = Vec3f();
 		}
 
+		void UpdatePreviousPosition()
+		{
+			m_PrevPosition = position;
+		}
+
 		void AddForce(const Vec3f& force)
 		{
 			m_AccumulatedForce += force;
@@ -44,7 +49,13 @@ namespace Minecraft
 			return AABB(position, size);
 		}
 
+		Vec3f GetPreviousPosition() const
+		{
+			return m_PrevPosition;
+		}
+
 	private:
 		Vec3f m_AccumulatedForce;
+		Vec3f m_PrevPosition;
 	};
 }

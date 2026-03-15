@@ -40,6 +40,7 @@ namespace Minecraft
 
 			body->isGrounded = false;
 			body->inWater = false;
+			body->UpdatePreviousPosition();
 			MoveBody(*body, deltaTime);
 
 			body->ClearTotalForce();

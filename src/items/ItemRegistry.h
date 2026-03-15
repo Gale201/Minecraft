@@ -35,6 +35,11 @@ namespace Minecraft
 
 		static BlockType GetBlockTypeFromItemType(ItemType type);
 		static ItemType GetItemTypeFromBlockType(BlockType type);
+
+		Vec3f GetItemHitboxSize() const { return m_ItemHitboxSize; }
+	private:
+		void ConstructItemSideMesh(Mesh& mesh, FaceDirection dir, AtlasTileInfo tileInfo, float faceX, float faceZ, float yScale, Vec3f offset) const;
+
 	private:
 		TextureLoader& m_TextureLoader;
 
@@ -67,5 +72,7 @@ namespace Minecraft
 
 		float m_ItemScaleFactor = 0.5f;
 		float m_BlockItemScaleFactor = 0.25f;
+
+		const Vec3f m_ItemHitboxSize = Vec3f(0.3f, 0.25f, 0.3f);
 	};
 }

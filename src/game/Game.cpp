@@ -95,7 +95,6 @@ namespace Minecraft
 		m_WaterScreenTexture.SetDefaultColor(0x334444FF);
 
 		m_Player.SetInventoryTexture(m_TextureLoader.Get("inventory"));
-
 		m_PhysicsSystem.AddBody(m_Player.GetBody());
 	}
 
@@ -121,6 +120,7 @@ namespace Minecraft
 		}
 
 		m_Player.Update(deltaTime);
+		m_Player.SyncCamera();
 
 		if (m_Player.IsInventoryOpen())
 			m_MouseMode = Core::MouseMode::Normal;
@@ -132,13 +132,13 @@ namespace Minecraft
 
 		while (m_PhysicsAccumulator >= m_PhysicsFixedDelta)
 		{
-			m_Player.UpdatePhysics(deltaTime);
+			m_Player.UpdatePhysics(m_PhysicsFixedDelta);
 
 			m_PhysicsSystem.Update(m_PhysicsFixedDelta);
 			m_PhysicsAccumulator -= m_PhysicsFixedDelta;
 		}
 
-		m_Player.SyncCamera();
+		m_Player.SyncCamera(m_PhysicsAccumulator / m_PhysicsFixedDelta);
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
 	}
@@ -152,9 +152,9 @@ namespace Minecraft
 		m_Renderer.Render(m_RenderList, m_Player.GetCamera(), m_ThreadSystem);
 
 		Mesh waterMesh;
-		if (m_Player.IsInWater() && m_Player.GetHeadPosition().y + 0.1f < m_World->GetSeaLevel())
+		if (m_Player.IsInWater() && m_Player.GetHeadPosition().y - 0.9f < m_World->GetSeaLevel())
 		{
-			//m_Renderer.DrawTexture(0, 0, m_WaterScreenTexture, true);
+			m_Renderer.DrawTexture(0, 0, m_WaterScreenTexture, true);
 			//RenderWaterMesh(waterMesh);
 		}
 

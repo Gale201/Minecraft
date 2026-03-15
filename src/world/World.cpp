@@ -197,7 +197,7 @@ namespace Minecraft
 	{
 		Vec3i chunkPosition = GetChunkPosition(Vec3i::floor(position));
 
-		PhysicsBody body = PhysicsBody(position, m_ItemHitboxSize);
+		PhysicsBody body = PhysicsBody(position, m_ItemRegistry.GetItemHitboxSize());
 		Vec3f spawnForce = Vec3f(
 			(static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f),
 			1.0f,

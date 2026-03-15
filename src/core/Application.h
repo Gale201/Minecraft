@@ -8,10 +8,10 @@
 #include "../game/Game.h"
 
 #define TITLE "Minecraft"
-#define WIDTH 720
-#define HEIGHT 480
+#define WIDTH 1080
+#define HEIGHT 720
 
-#define TARGET_FPS 128
+#define TARGET_FPS 60
 
 namespace Core
 {

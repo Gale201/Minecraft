@@ -158,14 +158,13 @@ namespace Minecraft
 
 		std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash> m_Items;
 		ItemRegistry& m_ItemRegistry;
-		const Vec3f m_ItemHitboxSize = Vec3f(0.3f, 0.25f, 0.3f);
 
 		std::queue<PhysicsBody*> m_PhysicsAddQueue;
 
 		const Texture* m_TextureAtlas = nullptr;
 
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 1;
+		int m_ChunkLoadRadius = 8;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 	};
 }
