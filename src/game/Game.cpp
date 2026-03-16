@@ -13,9 +13,9 @@ namespace Minecraft
 		m_Height(height),
 		m_ThreadSystem(threadSystem), 
 		m_InputManager(inputManager),
-		m_Player(inputManager),
-		m_GameSaveManager("saves/worlds/", name, m_ItemRegistry),
-		m_PhysicsSystem(threadSystem)
+		m_PhysicsSystem(threadSystem),
+		m_Player(inputManager, m_PhysicsSystem),
+		m_GameSaveManager("saves/worlds/", name, m_ItemRegistry)
 	{
 		m_ThreadSystem.Initialize();
 
@@ -41,7 +41,7 @@ namespace Minecraft
 			m_World = m_GameSaveManager.LoadWorld();
 			m_GameSaveManager.LoadWorldItems(*m_World, m_PhysicsSystem);
 			PlayerSaveData playerData = m_GameSaveManager.LoadPlayerData();
-			m_Player.SetPosition(playerData.position);
+			m_Player.SetInitialPosition(playerData.position);
 			m_Player.SetHeadRotation(playerData.headRotation);
 		}
 		else
@@ -53,12 +53,20 @@ namespace Minecraft
 			{
 				if (chunk.blocks[0][y][0].type == BlockType::Grass) playerPos.y = y + 1;
 			}
-			m_Player.SetPosition(playerPos);
+			m_Player.SetInitialPosition(playerPos);
 		}
 
 		m_BlockInteractionSystem.Initialize(*m_World);
 		m_PhysicsSystem.Initialize(*m_World);
 		m_ItemRegistry.Initialize();
+
+		while (!m_World->GetPhysicsAddQueue().empty())
+		{
+			auto& [index, body] = m_World->GetPhysicsAddQueue().front();
+			PhysicsBody* bodyPtr = m_PhysicsSystem.AddBody(body);
+			m_World->GetItems()[index].body = bodyPtr;
+			m_World->GetPhysicsAddQueue().pop();
+		}
 
 		// m_Player.SetGameMode(GameModeType::Survival);
 	}
@@ -85,6 +93,10 @@ namespace Minecraft
 		inputBindings.AddKeyBinding(InputAction::OpenInventory, Key::E);
 		m_Player.SetInputBindings(inputBindings);
 
+		m_Player.SetPhysicsBodyPtr(m_PhysicsSystem.AddBody(
+			PhysicsBody(m_Player.GetInitialPosition(), m_Player.GetInitialSize())
+		));
+
 		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 1000.0f };
 		m_Player.SetCameraConfig(cameraConfig);
 
@@ -95,7 +107,6 @@ namespace Minecraft
 		m_WaterScreenTexture.SetDefaultColor(0x334444FF);
 
 		m_Player.SetInventoryTexture(m_TextureLoader.Get("inventory"));
-		m_PhysicsSystem.AddBody(m_Player.GetBody());
 	}
 
 	void Game::Update(float deltaTime)
@@ -114,8 +125,9 @@ namespace Minecraft
 
 		while (!m_World->GetPhysicsAddQueue().empty())
 		{
-			PhysicsBody* body = m_World->GetPhysicsAddQueue().front();
-			m_PhysicsSystem.AddBody(*body);
+			auto& [index, body] = m_World->GetPhysicsAddQueue().front();
+			PhysicsBody* bodyPtr = m_PhysicsSystem.AddBody(body);
+			m_World->GetItems()[index].body = bodyPtr;
 			m_World->GetPhysicsAddQueue().pop();
 		}
 
@@ -138,6 +150,7 @@ namespace Minecraft
 			m_PhysicsAccumulator -= m_PhysicsFixedDelta;
 		}
 
+		m_Player.HandleItemPickup(*m_World, m_PhysicsSystem);
 		m_Player.SyncCamera(m_PhysicsAccumulator / m_PhysicsFixedDelta);
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
@@ -168,13 +181,13 @@ namespace Minecraft
 		
 		m_Player.Render(m_Renderer);
 
-		for (Item& item : m_World->GetItems()[m_World->GetChunkPosition(Vec3i::floor(m_Player.GetPosition()))])
+/*		for (Item& item : m_World->GetItems()[m_World->GetChunkPosition(Vec3i::floor(m_Player.GetPosition()))])
 		{
 			Transform t;
-			t.SetPosition(item.body.position);
-			t.SetScale(item.body.size);
+			t.SetPosition(item.body->position);
+			t.SetScale(item.body->size);
 			//m_Renderer.DrawCubeWireframe(t, 0xAAFF0000, m_Player.GetCamera(), 4, true, false);
-		}
+		}*/
 
 		Transform t1;
 		t1.SetPosition(m_Player.GetPosition());

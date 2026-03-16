@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <queue>
 #include <deque>
+#include <array>
 #include <memory>
 
 #include "Chunk.h"
@@ -23,17 +24,26 @@ namespace Minecraft
 	class World
 	{
 	public:
+		static const size_t MAX_ITEMS = 10000;
+
+	public:
 		World(
 			const std::string& name,
 			unsigned int seed,
 			ItemRegistry& itemRegistry
-		) : m_Name(name), m_Seed(seed), m_ItemRegistry(itemRegistry) {}
+		) : m_Name(name), m_Seed(seed), m_ItemRegistry(itemRegistry)
+		{
+			InitItems();
+		}
 		World(
 			const std::string& name,
 			unsigned int seed, 
 			std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> modifiedChunks,
 			ItemRegistry& itemRegistry
-		) : m_Name(name), m_Seed(seed), m_ModifiedChunks(modifiedChunks), m_ItemRegistry(itemRegistry) {}
+		) : m_Name(name), m_Seed(seed), m_ModifiedChunks(modifiedChunks), m_ItemRegistry(itemRegistry)
+		{
+			InitItems();
+		}
 		
 		World(const World&) = delete;
 		~World() = default;
@@ -50,6 +60,12 @@ namespace Minecraft
 		bool Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result);
 
 		void SpawnItem(Vec3f position, ItemStack stack);
+		void AddItem(PhysicsBody body, ItemStack stack, float rotY);
+		void RemoveItem(ItemID id);
+		void AddToItemLookupTable(ItemID id, Vec3i chunkPos, size_t index)
+		{
+			m_ItemLookupTable.emplace(id, index);
+		}
 
 		Block GetBlock(Vec3i pos) const;
 		Chunk* TryGetChunk(Vec3i pos) const;
@@ -78,17 +94,37 @@ namespace Minecraft
 			return m_ModifiedChunks;
 		}
 
-		const std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash>& GetItems() const
+		const std::vector<Item>& GetItems() const
 		{
 			return m_Items;
 		}
 
-		std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash>& GetItems()
+		std::vector<Item>& GetItems()
 		{
 			return m_Items;
 		}
 
-		std::queue<PhysicsBody*>& GetPhysicsAddQueue() { return m_PhysicsAddQueue; }
+		const std::vector<size_t>& GetActiveItemSlots() const
+		{
+			return m_ActiveItemSlots;
+		}
+
+		const std::vector<size_t>& GetFreeItemSlots() const
+		{
+			return m_FreeItemSlots;
+		}
+
+		const std::unordered_map<Vec3i, std::vector<size_t>, Vec3iHash>& GetItemsByChunk() const
+		{
+			return m_ItemsByChunk;
+		}
+
+		std::queue<std::pair<size_t, PhysicsBody>>& GetPhysicsAddQueue() { return m_PhysicsAddQueue; }
+
+		size_t GetItemIndex(ItemID id) const
+		{
+			return m_ItemLookupTable.at(id);
+		}
 
 		int GetSeaLevel() const { return m_ChunkLoader.GetSeaLevel(); }
 
@@ -99,6 +135,8 @@ namespace Minecraft
 		}
 
 	private:
+		void InitItems();
+
 		/* Chunk loading functions */
 		void LoadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem);
 		void UnloadChunks(Vec3f playerPosition);
@@ -156,15 +194,21 @@ namespace Minecraft
 		std::queue<Vec3i> m_ChunkMeshingQueue;
 		int m_MaxMeshedChunksPerFrame = 8;
 
-		std::unordered_map<Vec3i, std::deque<Item>, Vec3iHash> m_Items;
+		std::vector<Item> m_Items;
+		std::vector<size_t> m_FreeItemSlots;
+		std::vector<size_t> m_ActiveItemSlots;
+		std::unordered_map<ItemID, size_t> m_ItemLookupTable;
+		std::unordered_map<Vec3i, std::vector<size_t>, Vec3iHash> m_ItemsByChunk;
 		ItemRegistry& m_ItemRegistry;
 
-		std::queue<PhysicsBody*> m_PhysicsAddQueue;
+		std::queue<std::pair<size_t, PhysicsBody>> m_PhysicsAddQueue;
 
 		const Texture* m_TextureAtlas = nullptr;
 
 		Vec3f m_LastChunkLoadPosition;
 		int m_ChunkLoadRadius = 8;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
+
+		ItemID m_CurrentItemID = 0;
 	};
 }

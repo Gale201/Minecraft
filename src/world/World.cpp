@@ -88,14 +88,18 @@ namespace Minecraft
 			}
 
 			// Items
-			auto it = m_Items.find(chunkPos);
-			if (it != m_Items.end())
+			auto it = m_ItemsByChunk.find(chunkPos);
+			if (it != m_ItemsByChunk.end())
 			{
-				for (const Item& item : it->second)
+				const auto& indices = it->second;
+
+				for (size_t index : indices)
 				{
+					const Item& item = m_Items[index];
+
 					ItemDefinition definition = m_ItemRegistry.GetItemDefinition(item.stack.type);
 
-					transform.SetPosition(item.body.position + item.body.size * 0.5f);
+					transform.SetPosition(item.body->position + item.body->size * 0.5f);
 					transform.SetRotation(item.rotation);
 
 					outCommands.emplace_back(
@@ -204,13 +208,79 @@ namespace Minecraft
 			(static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f)
 		);
 		body.mass = 0.1f;
-		body.AddForce(spawnForce * 10.0f);
+		body.AddForce(spawnForce * 20.0f);
 
 		float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
 
-		m_Items[chunkPosition].emplace_back(stack, std::move(body), Vec3f(0.0f, rotY, 0.0f));
+		AddItem(body, stack, rotY);
+	}
 
-		m_PhysicsAddQueue.push(&m_Items[chunkPosition].back().body);
+	void World::AddItem(PhysicsBody body, ItemStack stack, float rotY)
+	{
+		Vec3i chunkPosition = GetChunkPosition(Vec3i::floor(body.position));
+
+		if (m_FreeItemSlots.empty())
+		{
+			LOG_WARNING("Global item storage is full!");
+			return;
+		}
+
+		size_t index = m_FreeItemSlots.back();
+		m_FreeItemSlots.pop_back();
+
+		if (index >= m_Items.size())
+			m_Items.resize(index + 1);
+
+		m_Items[index] = Item(m_CurrentItemID, stack, nullptr, Vec3f(0.0f, rotY, 0.0f));
+		m_Items[index].chunkPos = chunkPosition;
+		m_ItemLookupTable.emplace(m_CurrentItemID, index);
+		m_ActiveItemSlots.push_back(index);
+		m_ItemsByChunk[chunkPosition].push_back(index);
+
+		printf("World added %d\n", m_CurrentItemID);
+
+		m_CurrentItemID++;
+
+		m_PhysicsAddQueue.push(std::make_pair(index, body));
+	}
+
+	void World::RemoveItem(ItemID id)
+	{
+		auto it = m_ItemLookupTable.find(id);
+		if (it == m_ItemLookupTable.end())
+			return;
+
+		size_t index = it->second;
+		Item& item = m_Items[index];
+
+		// Remove item from chunk list
+		auto& chunkItems = m_ItemsByChunk[item.chunkPos];
+		for (size_t i = 0; i < chunkItems.size(); i++)
+		{
+			if (chunkItems[i] == index)
+			{
+				std::swap(chunkItems[i], chunkItems.back());
+				chunkItems.pop_back();
+				break;
+			}
+		}
+
+		// Remove from active items
+		for (size_t i = 0; i < m_ActiveItemSlots.size(); i++)
+		{
+			if (m_ActiveItemSlots[i] == index)
+			{
+				std::swap(m_ActiveItemSlots[i], m_ActiveItemSlots.back());
+				m_ActiveItemSlots.pop_back();
+				break;
+			}
+		}
+
+		m_FreeItemSlots.push_back(index);
+
+		m_ItemLookupTable.erase(id);
+
+		printf("World removed %d\n", id);
 	}
 
 	Vec3i World::GetChunkPosition(Vec3i pos) const
@@ -362,6 +432,14 @@ namespace Minecraft
 		return blocks;
 	}
 
+	void World::InitItems()
+	{
+		m_Items.resize(MAX_ITEMS);
+
+		for (size_t i = 0; i < MAX_ITEMS; i++)
+			m_FreeItemSlots.push_back(i);
+	}
+
 	/* 
 	 Private functions 
 	*/
@@ -414,12 +492,14 @@ namespace Minecraft
 			m_Chunks.emplace(chunkPos, std::move(loadedChunks[i]));
 			AddChunkToMeshingQueue(*m_Chunks[chunkPos]);
 
-			auto it = m_Items.find(chunkPos);
-			if (it != m_Items.end())
+			auto it = m_ItemsByChunk.find(chunkPos);
+			if (it != m_ItemsByChunk.end())
 			{
-				for (Item& item : it->second)
+				const auto& indices = it->second;
+
+				for (size_t index : indices)
 				{
-					item.body.pausePhysics = false;
+					m_Items[index].body->pausePhysics = false;
 				}
 			}
 		}
@@ -448,12 +528,14 @@ namespace Minecraft
 		{ 
 			m_Chunks.erase(chunkPos);
 
-			auto it = m_Items.find(chunkPos);
-			if (it != m_Items.end())
+			auto it = m_ItemsByChunk.find(chunkPos);
+			if (it != m_ItemsByChunk.end())
 			{
-				for (Item& item : it->second)
+				const auto& indices = it->second;
+
+				for (size_t index : indices)
 				{
-					item.body.pausePhysics = true;
+					m_Items[index].body->pausePhysics = false;
 				}
 			}
 		}

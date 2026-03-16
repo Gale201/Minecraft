@@ -170,18 +170,14 @@ namespace Minecraft
 			int itemCount;
 			in.read(reinterpret_cast<char*>(&itemCount), sizeof(itemCount));
 			
-			std::deque<Item> items;
 			for (int j = 0; j < itemCount; j++)
 			{
 				Item item;
+				PhysicsBody body;
 				in.read(reinterpret_cast<char*>(&item), sizeof(item));
-				items.push_back(item);
-			}
-			auto& worldItems = world.GetItems()[chunkPos];
-			worldItems = std::move(items);
-			for (Item& item : worldItems)
-			{
-				physicsSystem.AddBody(item.body);
+				in.read(reinterpret_cast<char*>(&body), sizeof(body));
+
+				world.AddItem(body, item.stack, item.rotation.y);
 			}
 		}
 	}
@@ -192,20 +188,27 @@ namespace Minecraft
 		
 		std::ofstream out(itemsFilePath, std::ios::binary);
 		if (!out) return;
-		
-		int chunkCount = static_cast<int>(world.GetItems().size());
+
+		const auto& items = world.GetItems();
+		const auto& itemsByChunk = world.GetItemsByChunk();
+
+		int chunkCount = static_cast<int>(itemsByChunk.size());
 		out.write(reinterpret_cast<const char*>(&chunkCount), sizeof(chunkCount));
-		
-		for (const auto& [chunkPos, items] : world.GetItems())
+
+		for (const auto& [chunkPos, indices] : itemsByChunk)
 		{
 			out.write(reinterpret_cast<const char*>(&chunkPos), sizeof(chunkPos));
-			
-			int itemCount = static_cast<int>(items.size());
+
+			int itemCount = static_cast<int>(indices.size());
 			out.write(reinterpret_cast<const char*>(&itemCount), sizeof(itemCount));
-			
-			for (const Item& item : items)
+
+			for (size_t index : indices)
 			{
+				const Item& item = items[index];
+				PhysicsBody& body = *item.body;
+
 				out.write(reinterpret_cast<const char*>(&item), sizeof(item));
+				out.write(reinterpret_cast<const char*>(&body), sizeof(body));
 			}
 		}
 	}

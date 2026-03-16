@@ -51,7 +51,7 @@ namespace Minecraft
 		Player m_Player;
 
 		float m_PhysicsAccumulator = 0.0f;
-		const float m_PhysicsFixedDelta = 1.0f / 20.0f;
+		const float m_PhysicsFixedDelta = 1.0f / 40.0f;
 
 		Texture m_WaterScreenTexture;
 

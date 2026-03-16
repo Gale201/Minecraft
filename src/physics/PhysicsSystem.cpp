@@ -1,6 +1,7 @@
 #include "PhysicsSystem.h"
 #include "AABB.h"
 #include "../timer/Timer.h"
+#include <assert.h>
 
 namespace Minecraft
 {
@@ -30,20 +31,22 @@ namespace Minecraft
 			}
 			);*/
 
-		for (PhysicsBody* body : m_Bodies)
+		for (size_t index : m_ActiveBodies)
 		{
-			if (body->pausePhysics) continue;
+			PhysicsBody& body = m_Bodies[index];
 
-			ApplyGravity(*body, deltaTime);
+			if (body.pausePhysics) continue;
 
-			CalculateVelocity(*body, deltaTime);
+			ApplyGravity(body, deltaTime);
 
-			body->isGrounded = false;
-			body->inWater = false;
-			body->UpdatePreviousPosition();
-			MoveBody(*body, deltaTime);
+			CalculateVelocity(body, deltaTime);
 
-			body->ClearTotalForce();
+			body.isGrounded = false;
+			body.inWater = false;
+			body.UpdatePreviousPosition();
+			MoveBody(body, deltaTime);
+
+			body.ClearTotalForce();
 		}
 	}
 
@@ -147,8 +150,28 @@ namespace Minecraft
 		if (type == BlockType::Water) body.inWater = true;
 	}
 
-	void PhysicsSystem::AddBody(PhysicsBody& body)
+	PhysicsBody* PhysicsSystem::AddBody(PhysicsBody body)
 	{
-		m_Bodies.push_back(&body);
+		if (m_FreeSlots.empty()) return nullptr;
+
+		size_t index = m_FreeSlots.back();
+		m_FreeSlots.pop_back();
+
+		m_Bodies[index] = body;
+		m_Bodies[index].id = static_cast<uint32_t>(index);
+		
+		m_ActiveBodies.push_back(index);
+		return &m_Bodies[index];
+	}
+
+	void PhysicsSystem::RemoveBody(PhysicsBody* body)
+	{
+		size_t index = body->id;
+
+		auto it = std::find(m_ActiveBodies.begin(), m_ActiveBodies.end(), index);
+		if (it != m_ActiveBodies.end())
+			m_ActiveBodies.erase(it);
+
+		m_FreeSlots.push_back(index);
 	}
 }

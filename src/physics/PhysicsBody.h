@@ -13,6 +13,7 @@ namespace Minecraft
 		Vec3f position;
 		Vec3f velocity;
 		Vec3f size;
+		uint32_t id = 0;
 		float mass = 1.0f;
 		float groundFriction = 8.0f;
 		float airFriction = 1.0f;
@@ -49,6 +50,11 @@ namespace Minecraft
 			return AABB(position, size);
 		}
 
+		Vec3f GetCenter() const
+		{
+			return position + size * 0.5f;
+		}
+
 		Vec3f GetPreviousPosition() const
 		{
 			return m_PrevPosition;
@@ -56,6 +62,6 @@ namespace Minecraft
 
 	private:
 		Vec3f m_AccumulatedForce;
-		Vec3f m_PrevPosition;
+		Vec3f m_PrevPosition = position;
 	};
 }

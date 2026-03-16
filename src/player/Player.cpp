@@ -4,13 +4,13 @@
 
 namespace Minecraft
 {
-	Player::Player(const Core::InputManager& inputManager, InputBindings inputBindings, CameraConfig cameraConfig) :
+	Player::Player(const Core::InputManager& inputManager, PhysicsSystem& physicsSystem, InputBindings inputBindings, CameraConfig cameraConfig) :
 		m_InputManager(inputManager),
+		m_PhysicsSystem(physicsSystem),
 		m_InputBindings(inputBindings),
 		m_Camera()
 	{
 		SetCameraConfig(cameraConfig);
-		m_PhysicsBody.size = m_Size;
 	}
 
 	void Player::Update(float deltaTime)
@@ -22,19 +22,19 @@ namespace Minecraft
 	{
 		HandleMovementInput();
 
-		if (m_CancelSprint && (m_PhysicsBody.isGrounded || m_Flying))
+		if (m_CancelSprint && (m_PhysicsBody->isGrounded || m_Flying))
 		{
 			m_Sprinting = false;
 			m_CancelSprint = false;
 		}
-		else if (m_StartSprint && (m_PhysicsBody.isGrounded || m_Flying))
+		else if (m_StartSprint && (m_PhysicsBody->isGrounded || m_Flying))
 		{
 			m_Sprinting = true;
 			m_StartSprint = false;
 		}
 
-		if (m_PhysicsBody.position.y < -100.0f)
-			m_PhysicsBody.position.y = 70.0f;
+		if (m_PhysicsBody->position.y < -100.0f)
+			m_PhysicsBody->position.y = 70.0f;
 	}
 
 	void Player::Render(Renderer& renderer)
@@ -48,12 +48,69 @@ namespace Minecraft
 			m_Inventory.Render(renderer);
 	}
 
+	void Player::HandleItemPickup(World& world, PhysicsSystem& physicsSystem)
+	{
+		Vec3i chunkPos = world.GetChunkPosition(Vec3i::floor(m_PhysicsBody->GetCenter()));
+
+		auto& items = world.GetItems();
+		auto& itemsByChunk = world.GetItemsByChunk();
+
+		for (int x = -1; x <= 1; x++)
+			for (int z = -1; z <= 1; z++)
+			{
+				Vec3i neighbor = chunkPos + Vec3i(x, 0, z);
+
+				auto it = itemsByChunk.find(neighbor);
+				if (it == itemsByChunk.end())
+					continue;
+
+				const auto& indices = it->second;
+
+				for (size_t index : indices)
+				{
+					Item& item = items[index];
+
+					if (std::find(m_ItemsToRemove.begin(), m_ItemsToRemove.end(), item.id) != m_ItemsToRemove.end())
+						continue;
+
+					if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance)
+					{
+						printf("Add to remove queue %d\n", item.id);
+						m_ItemsToRemove.push_back(item.id);
+						physicsSystem.RemoveBody(item.body);
+					}
+				}
+			}
+
+		for (auto it = m_ItemsToRemove.begin(); it != m_ItemsToRemove.end(); )
+		{
+			ItemID id = *it;
+
+			printf("Check %d\n", id);
+
+			size_t index = world.GetItemIndex(id);
+			Item& item = items[index];
+
+			Vec3f direction = (m_PhysicsBody->GetCenter() - item.body->GetCenter()).normalized();
+			item.body->position += direction * 0.3f;
+
+			if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() <= 0.5f)
+			{
+				printf("Removed %d\n", item.id);
+				it = m_ItemsToRemove.erase(it);
+				world.RemoveItem(item.id);
+			}
+			else
+				++it;
+		}
+	}
+
 	void Player::HandleInput()
 	{
 		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{
 			m_Flying = !m_Flying;
-			m_PhysicsBody.applyGravity = !m_PhysicsBody.applyGravity;
+			m_PhysicsBody->applyGravity = !m_PhysicsBody->applyGravity;
 		}
 
 		// Inventory
@@ -86,9 +143,9 @@ namespace Minecraft
 			m_Sneaking = true;
 
 		if (m_Sneaking)
-			m_PhysicsBody.size.y = std::max(m_PhysicsBody.size.y - 0.05f, m_SneakHeight);
+			m_PhysicsBody->size.y = std::max(m_PhysicsBody->size.y - 0.05f, m_SneakHeight);
 		else
-			m_PhysicsBody.size = { m_Size.x, std::min(m_PhysicsBody.size.y + 0.05f, m_Size.y), m_Size.z };
+			m_PhysicsBody->size = { m_Size.x, std::min(m_PhysicsBody->size.y + 0.05f, m_Size.y), m_Size.z };
 
 		// Look
 		m_HeadRotation.y += m_InputManager.GetMouseMotionX() * m_Sensitivity;
@@ -122,39 +179,39 @@ namespace Minecraft
 
 		if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
 			force -= upVector;
-		else if (m_PhysicsBody.inWater && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
-			m_PhysicsBody.AddForce({ 0.0f, -30.0f, 0.0f });
+		else if (m_PhysicsBody->inWater && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveDown)))
+			m_PhysicsBody->AddForce({ 0.0f, -30.0f, 0.0f });
 
-		if (!m_PhysicsBody.inWater && !m_Flying && m_PhysicsBody.isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
-			m_PhysicsBody.AddForce(m_JumpVelocity);
-		else if (m_PhysicsBody.inWater && !m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
-			m_PhysicsBody.AddForce({ 0.0f, 30.0f, 0.0f });
+		if (!m_PhysicsBody->inWater && !m_Flying && m_PhysicsBody->isGrounded && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Jump)))
+			m_PhysicsBody->AddForce(m_JumpVelocity);
+		else if (m_PhysicsBody->inWater && !m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
+			m_PhysicsBody->AddForce({ 0.0f, 30.0f, 0.0f });
 		else if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
 			force += upVector;
 	
-		if (m_Sprinting && !m_PhysicsBody.inWater)
+		if (m_Sprinting && !m_PhysicsBody->inWater)
 			force = force.normalized() * m_SprintSpeed;
 		else
 			force = force.normalized() * m_Speed;
 
 		if (m_Flying)
-			m_PhysicsBody.flyingFriction = 10.0f;
+			m_PhysicsBody->flyingFriction = 10.0f;
 		else
-			m_PhysicsBody.flyingFriction = 0.0f;
+			m_PhysicsBody->flyingFriction = 0.0f;
 
-		float forceMultiplier = m_PhysicsBody.isGrounded ? 10.0f : 2.f;
+		float forceMultiplier = m_PhysicsBody->isGrounded ? 10.0f : 2.f;
 		if (m_Flying)
 			force = { force.x, force.y * 12.0f, force.z };
-		if (m_PhysicsBody.inWater)
+		if (m_PhysicsBody->inWater)
 			forceMultiplier = 3.0f;
 		if (m_Sneaking)
 			forceMultiplier *= 0.4f;
-		m_PhysicsBody.AddForce(force * forceMultiplier);
+		m_PhysicsBody->AddForce(force * forceMultiplier);
 	}
 
 	void Player::SyncCamera(float alpha)
 	{
-		Vec3f interpolated = m_PhysicsBody.GetPreviousPosition() * (1.0f - alpha) + m_PhysicsBody.position * alpha;
+		Vec3f interpolated = m_PhysicsBody->GetPreviousPosition() * (1.0f - alpha) + m_PhysicsBody->position * alpha;
 
 		m_Camera.position = interpolated + GetRelativeCameraPos();
 		m_Camera.pitch = m_HeadRotation.x;
