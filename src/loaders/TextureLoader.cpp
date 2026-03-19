@@ -19,54 +19,10 @@ namespace Minecraft
 
 	bool TextureLoader::LoadAllTextures()
 	{
-		auto atlasTexture = LoadTexture("texture-atlas.png");
-		if (atlasTexture.has_value())
-			m_Textures["atlas"] = std::make_unique<Texture>(atlasTexture.value());
-		else
+		for (const auto& [name, fileName] : m_TextureFileNames)
 		{
-			LOG_ERROR("Atlas texture failed to load!");
-			return false;
-		}
-
-		auto oldAtlasTexture = LoadTexture("texture-atlas-old.png");
-		if (oldAtlasTexture.has_value())
-			m_Textures["atlas-old"] = std::make_unique<Texture>(oldAtlasTexture.value());
-		else
-		{
-			LOG_ERROR("Old atlas texture failed to load!");
-			return false;
-		}
-
-		auto itemTexture = LoadTexture("item-atlas.png");
-		if (itemTexture.has_value())
-			m_Textures["item-atlas"] = std::make_unique<Texture>(itemTexture.value());
-		else
-		{
-			LOG_ERROR("Item atlas texture failed to load!");
-			return false;
-		}
-
-		auto crosshairTexture = LoadTexture("crosshair.png");
-		if (crosshairTexture.has_value())
-		{
-			m_Textures["crosshair"] = std::make_unique<Texture>(crosshairTexture.value());
-			SetOpacityForTexture(*m_Textures["crosshair"], 0.6f);
-		}
-		else
-		{
-			LOG_ERROR("Crosshair texture failed to load!");
-			return false;
-		}
-
-		auto inventoryTexture = LoadTexture("inventory.png");
-		if (inventoryTexture.has_value())
-		{
-			m_Textures["inventory"] = std::make_unique<Texture>(inventoryTexture.value());
-		}
-		else
-		{
-			LOG_ERROR("Inventory texture failed to load!");
-			return false;
+			if (!LoadAndCheckTexture(name, fileName))
+				return false;
 		}
 
 		return true;
@@ -102,6 +58,20 @@ namespace Minecraft
 		stbi_image_free(data);
 
 		return texture;
+	}
+
+	/* Private functions */
+
+	bool TextureLoader::LoadAndCheckTexture(const std::string& name, const std::string& fileName)
+	{
+		auto texture = LoadTexture(fileName);
+		if (texture.has_value())
+			m_Textures[name] = std::make_unique<Texture>(texture.value());
+		else
+		{
+			LOG_ERROR(("Texture '" + name + "' failed to load!").c_str());
+			return false;
+		}
 	}
 
 	void TextureLoader::SetOpacityForTexture(Texture& texture, float opacity)

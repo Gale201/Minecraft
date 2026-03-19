@@ -16,10 +16,17 @@ namespace Minecraft
 	void Player::Update(float deltaTime)
 	{
 		HandleInput();
+
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
 	{
+		if (m_PhysicsBody->position.y < -100.0f)
+			m_PhysicsBody->position.y = 70.0f;
+
+		if (m_InventoryOpen)
+			return;
+
 		HandleMovementInput();
 
 		if (m_CancelSprint && (m_PhysicsBody->isGrounded || m_Flying))
@@ -32,23 +39,20 @@ namespace Minecraft
 			m_Sprinting = true;
 			m_StartSprint = false;
 		}
-
-		if (m_PhysicsBody->position.y < -100.0f)
-			m_PhysicsBody->position.y = 70.0f;
 	}
 
-	void Player::Render(Renderer& renderer)
+	void Player::Render(Renderer& renderer, const ItemRegistry& itemRegistry)
 	{
-		
+		m_Inventory.RenderHotbar(renderer, itemRegistry);
 	}
 
-	void Player::RenderUI(Renderer& renderer)
+	void Player::RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry)
 	{
 		if (m_InventoryOpen)
-			m_Inventory.Render(renderer);
+			m_Inventory.Render(renderer, itemRegistry);
 	}
 
-	void Player::HandleItemPickup(World& world, PhysicsSystem& physicsSystem)
+	void Player::HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime)
 	{
 		Vec3i chunkPos = world.GetChunkPosition(Vec3i::floor(m_PhysicsBody->GetCenter()));
 
@@ -73,9 +77,8 @@ namespace Minecraft
 					if (std::find(m_ItemsToRemove.begin(), m_ItemsToRemove.end(), item.id) != m_ItemsToRemove.end())
 						continue;
 
-					if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance)
+					if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance && m_Inventory.CanAddItemStack(item.stack))
 					{
-						printf("Add to remove queue %d\n", item.id);
 						m_ItemsToRemove.push_back(item.id);
 						physicsSystem.RemoveBody(item.body);
 					}
@@ -86,19 +89,23 @@ namespace Minecraft
 		{
 			ItemID id = *it;
 
-			printf("Check %d\n", id);
-
 			size_t index = world.GetItemIndex(id);
 			Item& item = items[index];
 
 			Vec3f direction = (m_PhysicsBody->GetCenter() - item.body->GetCenter()).normalized();
-			item.body->position += direction * 0.3f;
+			item.body->position += direction * 15.f * deltaTime;
 
 			if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() <= 0.5f)
 			{
-				printf("Removed %d\n", item.id);
 				it = m_ItemsToRemove.erase(it);
-				world.RemoveItem(item.id);
+				ItemStack leftover = m_Inventory.AddItemStack(item.stack);
+				if (leftover.size == 0)
+					world.RemoveItem(item.id);
+				else
+				{
+					size_t index = world.GetItemIndex(item.id);
+					world.GetItems()[index].stack.size = leftover.size;
+				}
 			}
 			else
 				++it;
@@ -107,15 +114,18 @@ namespace Minecraft
 
 	void Player::HandleInput()
 	{
+		// Inventory
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
+			m_InventoryOpen = !m_InventoryOpen;
+
+		if (m_InventoryOpen)
+			return;
+
 		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{
 			m_Flying = !m_Flying;
 			m_PhysicsBody->applyGravity = !m_PhysicsBody->applyGravity;
 		}
-
-		// Inventory
-		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
-			m_InventoryOpen = !m_InventoryOpen;
 
 		// Placing/Destroying blocks
 		m_RequestedBlockBreakAction = false;

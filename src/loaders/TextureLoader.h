@@ -34,8 +34,21 @@ namespace Minecraft
 	private:
 		void SetOpacityForTexture(Texture& texture, float opacity);
 
+		bool LoadAndCheckTexture(const std::string& name, const std::string& fileName);
+
 	private:
 		std::string m_TexturesFolderPath;
 		std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
+
+		std::unordered_map<std::string, std::string> m_TextureFileNames{
+			{ "atlas", "texture-atlas.png" },
+			{ "atlas-old", "texture-atlas-old.png" },
+			{ "item-atlas", "item-atlas.png" },
+			{ "block-item-atlas", "block-item-atlas.png" },
+			{ "crosshair", "crosshair.png" },
+			{ "inventory", "inventory.png" },
+			{ "hotbar", "hotbar.png" },
+			{ "selected-slot", "selected-slot.png" },
+		};
 	};
 }

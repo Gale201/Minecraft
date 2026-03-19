@@ -29,10 +29,10 @@ namespace Minecraft
 
 		void UpdatePhysics(float deltaTime);
 		void Update(float deltaTime);
-		void Render(Renderer& renderer);
-		void RenderUI(Renderer& renderer);
+		void Render(Renderer& renderer, const ItemRegistry& itemRegistry);
+		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry);
 
-		void HandleItemPickup(World& world, PhysicsSystem& physicsSystem);
+		void HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime);
 
 		void SyncCamera(float alpha = 1.0f);
 		void UpdateCameraAspectRatio(float ratio);
@@ -58,6 +58,7 @@ namespace Minecraft
 		float GetMaxPlaceBlockDistance() const { return m_MaxPlaceBlockDistance; }
 		Vec3f GetInitialPosition() const { return m_InitialPosition; }
 		Vec3f GetInitialSize() const { return m_Size; }
+		Inventory& GetInventory() { return m_Inventory; }
 
 		void SetPhysicsBodyPtr(PhysicsBody* body)
 		{
@@ -84,8 +85,6 @@ namespace Minecraft
 		void SetHeadRotation(Vec3f rotation) { m_HeadRotation = rotation; }
 
 		void SetInputBindings(InputBindings inputBindings) { m_InputBindings = inputBindings; }
-
-		void SetInventoryTexture(Texture& texture) { m_Inventory.SetTexture(texture); }
 
 		void SetGameMode(GameMode mode) { m_GameMode = mode; }
 	private:

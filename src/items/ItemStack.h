@@ -26,6 +26,7 @@ namespace Minecraft
 		CoalOre,
 		Bookshelf,
 		Glass,
+		Obsidian,
 
 		Rose,
 		YellowFlower
@@ -35,56 +36,5 @@ namespace Minecraft
 	{
 		ItemType type;
 		uint8_t size{ 0 };
-
-		static uint8_t GetSizeForType(ItemType type)
-		{
-			switch (type)
-			{
-			default: return 64;
-			};
-		}
-
-		static bool IsItemBlock(ItemType type)
-		{
-			switch (type)
-			{
-			case ItemType::Grass:
-			case ItemType::Dirt:
-			case ItemType::Stone:
-			case ItemType::OakPlanks:
-			case ItemType::DoubleStoneSlab:
-			case ItemType::PolishedStone:
-			case ItemType::Brick:
-			case ItemType::TNT:
-			case ItemType::Cobblestone:
-			case ItemType::Sand:
-			case ItemType::Gravel:
-			case ItemType::OakLog:
-			case ItemType::OakLeaves:
-			case ItemType::IronBlock:
-			case ItemType::GoldOre:
-			case ItemType::IronOre:
-			case ItemType::CoalOre:
-			case ItemType::Bookshelf:
-			case ItemType::Glass:
-				return true;
-			default:
-				return false;
-			}
-		}
-
-		static bool IsItemPlacable(ItemType type)
-		{
-			if (IsItemBlock(type)) return true;
-
-			switch (type)
-			{
-			case ItemType::Rose:
-			case ItemType::YellowFlower:
-				return true;
-			default:
-				return false;
-			}
-		}
 	};
 }

@@ -56,45 +56,18 @@ namespace Minecraft
 		{ 0, 0, -1 }
 	};
 
-	// Not needed anymore
-	BlockTypeInfo GetBlockTypeInfo(BlockType type)
-	{
-		switch (type)
-		{
-		case BlockType::Grass:
-			return {
-				{ {0,0}, {0,0}, {2,0}, {1,0}, {0,0}, {0,0} },
-				{ 0.1f, 0.1f }
-			};
-		case BlockType::Dirt:
-			return {
-				{ {1,0}, {1,0}, {1,0}, {1,0}, {1,0}, {1,0} },
-				{ 0.1f, 0.1f }
-			};
-		case BlockType::Stone:
-			return {
-				{ {3,0}, {3,0}, {3,0}, {3,0}, {3,0}, {3,0} },
-				{ 0.1f, 0.1f }
-			};
-		case BlockType::Glass:
-			return {
-				{ {4,0}, {4,0}, {4,0}, {4,0}, {4,0}, {4,0} },
-				{ 0.1f, 0.1f }
-			};
-		default:
-			return {};
-		}
-	}
-
-	AtlasTileInfo CreateAtlasTileInfo(int x, int y, bool transparent, bool cutout)
+	AtlasTileInfo CreateAtlasTileInfo(
+		int x, int y, bool transparent, bool cutout, 
+		float atlasWidth, float atlasHeight, float atlasTileSize
+	)
 	{
 		return {
-			x * ATLAS_TILE_SIZE / ATLAS_WIDTH,
-			y * ATLAS_TILE_SIZE / ATLAS_HEIGHT,
-			ATLAS_TILE_SIZE / ATLAS_WIDTH,
-			ATLAS_TILE_SIZE / ATLAS_HEIGHT,
-			static_cast<int>(ATLAS_WIDTH),
-			static_cast<int>(ATLAS_HEIGHT),
+			x * atlasTileSize / atlasWidth,
+			y * atlasTileSize / atlasHeight,
+			atlasTileSize / atlasWidth,
+			atlasTileSize / atlasHeight,
+			static_cast<int>(atlasWidth),
+			static_cast<int>(atlasHeight),
 			transparent,
 			cutout
 		};
@@ -164,6 +137,8 @@ namespace Minecraft
 			return CreateAtlasTileInfo(3, 2);
 		case TileType::Glass:
 			return CreateAtlasTileInfo(1, 3, false, true);
+		case TileType::Obsidian:
+			return CreateAtlasTileInfo(5, 2);
 		default:
 			return {};
 		}
@@ -211,6 +186,7 @@ namespace Minecraft
 		else if (type == BlockType::CoalOre) tileType = TileType::CoalOre;
 		else if (type == BlockType::Bookshelf) tileType = TileType::Bookshelf;
 		else if (type == BlockType::Glass) tileType = TileType::Glass;
+		else if (type == BlockType::Obsidian) tileType = TileType::Obsidian;
 		return tileType;
 	}
 
@@ -289,19 +265,5 @@ namespace Minecraft
 		if (static_cast<size_t>(dir) < 6)
 			return CUBE_NEIGHBOR_OFFSET[static_cast<size_t>(dir)];
 		return Vec3i();
-	}
-
-	// This function is broken currently
-	void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvMin, Vec2f& uvMax, int uWraps, int vWraps)
-	{
-		BlockTypeInfo info = GetBlockTypeInfo(type);
-		Vec2f uvScale = info.uvScale;
-		Vec2f uvOffset = info.uvOffset[(int)dir];
-		uvOffset.x *= uvScale.x;
-		uvOffset.y *= uvScale.y;
-
-		float insetU = 0.01f / 160.f, insetV = 0.01f / 160.f;
-		uvMin = { uvOffset.x + insetU, uvOffset.y + insetV };
-		uvMax = { uvOffset.x + uvScale.x + uWraps - insetU, uvOffset.y + uvScale.y + vWraps - insetV };
 	}
 }

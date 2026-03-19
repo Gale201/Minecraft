@@ -106,7 +106,11 @@ namespace Minecraft
 				m_WaterScreenTexture.SetPixel(i, j, 0x334444FF);
 		m_WaterScreenTexture.SetDefaultColor(0x334444FF);
 
-		m_Player.SetInventoryTexture(m_TextureLoader.Get("inventory"));
+		m_Player.GetInventory().SetTextures(
+			m_TextureLoader.Get("inventory"),
+			m_TextureLoader.Get("hotbar"),
+			m_TextureLoader.Get("selected-slot")
+		);
 	}
 
 	void Game::Update(float deltaTime)
@@ -150,7 +154,7 @@ namespace Minecraft
 			m_PhysicsAccumulator -= m_PhysicsFixedDelta;
 		}
 
-		m_Player.HandleItemPickup(*m_World, m_PhysicsSystem);
+		m_Player.HandleItemPickup(*m_World, m_PhysicsSystem, deltaTime);
 		m_Player.SyncCamera(m_PhysicsAccumulator / m_PhysicsFixedDelta);
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
@@ -179,7 +183,7 @@ namespace Minecraft
 			m_TextureLoader.Get("crosshair"), true
 		);
 		
-		m_Player.Render(m_Renderer);
+		m_Player.Render(m_Renderer, m_ItemRegistry);
 
 /*		for (Item& item : m_World->GetItems()[m_World->GetChunkPosition(Vec3i::floor(m_Player.GetPosition()))])
 		{
@@ -197,7 +201,7 @@ namespace Minecraft
 		m_RenderList.clear();
 
 		// UI Rendering
-		m_Player.RenderUI(m_Renderer);
+		m_Player.RenderUI(m_Renderer, m_ItemRegistry);
 	}
 
 	void Game::Resize(int width, int height)

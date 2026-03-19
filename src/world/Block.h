@@ -35,10 +35,9 @@ namespace Minecraft
 		IronOre,
 		CoalOre,
 		Bookshelf,
-		Glass
+		Glass,
+		Obsidian
 	};
-
-	inline const int BLOCK_TYPE_COUNT = 7;
 
 	struct Block
 	{

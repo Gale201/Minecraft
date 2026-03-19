@@ -29,12 +29,18 @@ namespace Minecraft
 		void Initialize();
 
 		ItemDefinition GetItemDefinition(ItemType type);
+		Texture GetTextureForItemType(ItemType type) const;
+		
 		std::unordered_map<ItemType, Mesh>& GetMeshes() { return m_Meshes; }
 
 		static AtlasTileInfo GetAtlasTileInfoForItem(ItemType type);
 
 		static BlockType GetBlockTypeFromItemType(ItemType type);
 		static ItemType GetItemTypeFromBlockType(BlockType type);
+
+		static uint8_t GetStackSizeForItemType(ItemType type);
+		static bool IsItemBlock(ItemType type);
+		static bool IsItemPlacable(ItemType type);
 
 		Vec3f GetItemHitboxSize() const { return m_ItemHitboxSize; }
 	private:
@@ -64,6 +70,7 @@ namespace Minecraft
 			ItemType::CoalOre,
 			ItemType::Bookshelf,
 			ItemType::Glass,
+			ItemType::Obsidian,
 
 			ItemType::Rose,
 			ItemType::YellowFlower
@@ -72,6 +79,10 @@ namespace Minecraft
 
 		float m_ItemScaleFactor = 0.5f;
 		float m_BlockItemScaleFactor = 0.25f;
+
+		static constexpr float s_BlockItemAtlasWidth = 1000.f;
+		static constexpr float s_BlockItemAtlasHeight = 1000.f;
+		static constexpr float s_BlockItemAtlasTileSize = 100.f;
 
 		const Vec3f m_ItemHitboxSize = Vec3f(0.3f, 0.25f, 0.3f);
 	};

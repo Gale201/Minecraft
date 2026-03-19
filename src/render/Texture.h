@@ -13,6 +13,13 @@ namespace Minecraft
         {
         }
 
+        void UpdateSize(int width, int height)
+        {
+            m_Width = width;
+            m_Height = height;
+            m_Pixels.resize(width * height);
+		}
+
         Texture Crop(int x, int y, int width, int height) const
         {
 			Texture cropped(width, height);

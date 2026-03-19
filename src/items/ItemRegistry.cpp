@@ -1,4 +1,5 @@
 #include "ItemRegistry.h"
+#include "Item.h"
 
 namespace Minecraft
 {
@@ -6,7 +7,7 @@ namespace Minecraft
 	{
 		for (ItemType type : m_ItemTypes)
 		{
-			if (ItemStack::IsItemBlock(type))
+			if (IsItemBlock(type))
 			{
 				BlockType blockType = GetBlockTypeFromItemType(type);
 
@@ -57,7 +58,7 @@ namespace Minecraft
 				FaceDirection dirs[2] = { FaceDirection::PosY, FaceDirection::NegY };
 				for (int dir = 0; dir < 2; dir++)
 				{
-					int startIndex = mesh.vertices.size();
+					int startIndex = static_cast<int>(mesh.vertices.size());
 					BlockFace face = GetBlockFace(BlockType::Dirt, dirs[dir]);
 					for (int i = 0; i < 4; i++)
 					{
@@ -89,10 +90,10 @@ namespace Minecraft
 					mesh.indices.push_back(startIndex + 3);
 				}
 				
-				int u = tileInfo.u0 * tileInfo.atlasWidth;
-				int v = tileInfo.v0 * tileInfo.atlasHeight;
-				int w = tileInfo.uScale * tileInfo.atlasWidth;
-				int h = tileInfo.vScale * tileInfo.atlasHeight;
+				int u = static_cast<int>(tileInfo.u0 * tileInfo.atlasWidth);
+				int v = static_cast<int>(tileInfo.v0 * tileInfo.atlasHeight);
+				int w = static_cast<int>(tileInfo.uScale * tileInfo.atlasWidth);
+				int h = static_cast<int>(tileInfo.vScale * tileInfo.atlasHeight);
 				Texture tileTexture = m_TextureLoader.Get("item-atlas").Crop(u, v, w, h);
 
 				AtlasTileInfo sideTileInfo;
@@ -160,7 +161,7 @@ namespace Minecraft
 	ItemDefinition ItemRegistry::GetItemDefinition(ItemType type)
 	{
 		Texture* texture;
-		if (ItemStack::IsItemBlock(type))
+		if (IsItemBlock(type))
 			texture = &m_TextureLoader.Get("atlas-old");
 		else
 			texture = &m_TextureLoader.Get("item-atlas");
@@ -173,6 +174,32 @@ namespace Minecraft
 		return { type, &it->second, texture };
 	}
 
+	Texture ItemRegistry::GetTextureForItemType(ItemType type) const
+	{
+		Texture* atlasTexture = &m_TextureLoader.Get("item-atlas");
+		Texture texture(ITEM_TEXTURE_SIZE, ITEM_TEXTURE_SIZE);
+
+		if (IsItemBlock(type))
+			atlasTexture = &m_TextureLoader.Get("block-item-atlas");
+
+		AtlasTileInfo tileInfo = GetAtlasTileInfoForItem(type);
+		int width = tileInfo.uScale * tileInfo.atlasWidth;
+		int height = tileInfo.vScale * tileInfo.atlasHeight;
+		for (int y = 0; y < height; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				uint32_t pixel = atlasTexture->GetPixel(
+					(int)(tileInfo.u0 * tileInfo.atlasWidth) + x,
+					(int)(tileInfo.v0 * tileInfo.atlasHeight) + y
+				);
+				texture.SetPixel(x, y, pixel);
+			}
+		}
+
+		return texture;
+	}
+
 	AtlasTileInfo ItemRegistry::GetAtlasTileInfoForItem(ItemType type)
 	{
 		switch (type)
@@ -181,6 +208,48 @@ namespace Minecraft
 			return CreateAtlasTileInfo(0, 0, false, true);
 		case ItemType::YellowFlower:
 			return CreateAtlasTileInfo(1, 0, false, true);
+
+		// Block items
+		case ItemType::Stone:
+			return CreateAtlasTileInfo(0, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Grass:
+			return CreateAtlasTileInfo(1, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Dirt:
+			return CreateAtlasTileInfo(2, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Cobblestone:
+			return CreateAtlasTileInfo(3, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::OakPlanks:
+			return CreateAtlasTileInfo(4, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Sand:
+			return CreateAtlasTileInfo(6, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Gravel:
+			return CreateAtlasTileInfo(7, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::GoldOre:
+			return CreateAtlasTileInfo(8, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::IronOre:
+			return CreateAtlasTileInfo(9, 0, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::CoalOre:
+			return CreateAtlasTileInfo(0, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::OakLog:
+			return CreateAtlasTileInfo(1, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::OakLeaves:
+			return CreateAtlasTileInfo(2, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Glass:
+			return CreateAtlasTileInfo(4, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::GoldBlock:
+			return CreateAtlasTileInfo(5, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::IronBlock:
+			return CreateAtlasTileInfo(6, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::DoubleStoneSlab:
+			return CreateAtlasTileInfo(7, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Brick:
+			return CreateAtlasTileInfo(8, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::TNT:
+			return CreateAtlasTileInfo(9, 1, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Bookshelf:
+			return CreateAtlasTileInfo(0, 2, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
+		case ItemType::Obsidian:
+			return CreateAtlasTileInfo(1, 2, false, true, s_BlockItemAtlasWidth, s_BlockItemAtlasHeight, s_BlockItemAtlasTileSize);
 		default:
 			return {};
 		}
@@ -210,6 +279,7 @@ namespace Minecraft
 		case ItemType::CoalOre:          return BlockType::CoalOre;
 		case ItemType::Bookshelf:        return BlockType::Bookshelf;
 		case ItemType::Glass:            return BlockType::Glass;
+		case ItemType::Obsidian:         return BlockType::Obsidian;
 
 		case ItemType::Rose:			 return BlockType::Rose;
 		case ItemType::YellowFlower:	 return BlockType::YellowFlower;
@@ -241,12 +311,67 @@ namespace Minecraft
 		case BlockType::CoalOre:          return ItemType::CoalOre;
 		case BlockType::Bookshelf:        return ItemType::Bookshelf;
 		case BlockType::Glass:            return ItemType::Glass;
+		case BlockType::Obsidian:         return ItemType::Obsidian;
 		
 		case BlockType::Rose:			  return ItemType::Rose;
 		case BlockType::YellowFlower:	  return ItemType::YellowFlower;
 		default:                          return ItemType::Undefined;
 		}
 	}
+
+	uint8_t ItemRegistry::GetStackSizeForItemType(ItemType type)
+	{
+		switch (type)
+		{
+		default: return 64;
+		};
+	}
+
+	bool ItemRegistry::IsItemBlock(ItemType type)
+	{
+		switch (type)
+		{
+		case ItemType::Grass:
+		case ItemType::Dirt:
+		case ItemType::Stone:
+		case ItemType::OakPlanks:
+		case ItemType::DoubleStoneSlab:
+		case ItemType::PolishedStone:
+		case ItemType::Brick:
+		case ItemType::TNT:
+		case ItemType::Cobblestone:
+		case ItemType::Sand:
+		case ItemType::Gravel:
+		case ItemType::OakLog:
+		case ItemType::OakLeaves:
+		case ItemType::IronBlock:
+		case ItemType::GoldOre:
+		case ItemType::IronOre:
+		case ItemType::CoalOre:
+		case ItemType::Bookshelf:
+		case ItemType::Glass:
+		case ItemType::Obsidian:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	bool ItemRegistry::IsItemPlacable(ItemType type)
+	{
+		if (IsItemBlock(type)) return true;
+
+		switch (type)
+		{
+		case ItemType::Rose:
+		case ItemType::YellowFlower:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	/* Private functions */
 
 	void ItemRegistry::ConstructItemSideMesh(
 		Mesh& mesh, FaceDirection dir, AtlasTileInfo tileInfo, 

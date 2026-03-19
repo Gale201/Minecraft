@@ -78,7 +78,8 @@ namespace Minecraft
 		IronOre,
 		CoalOre,
 		Bookshelf,
-		Glass
+		Glass,
+		Obsidian
 	};
 
 	struct AtlasTileInfo
@@ -91,9 +92,11 @@ namespace Minecraft
 		bool isCutout = false;
 	};
 
-	AtlasTileInfo CreateAtlasTileInfo(int x, int y, bool transparent = false, bool cutout = false);
-
-	void GetFaceUV(BlockType type, FaceDirection dir, Vec2f& uvScale, Vec2f& uvOffset, int uWraps, int vWraps);
+	AtlasTileInfo CreateAtlasTileInfo(
+		int x, int y, bool transparent = false, bool cutout = false,
+		float atlasWidth = ATLAS_WIDTH, float atlasHeight = ATLAS_HEIGHT,
+		float atlasTileSize = ATLAS_TILE_SIZE
+	);
 
 	AtlasTileInfo GetAtlasTileInfo(TileType type);
 

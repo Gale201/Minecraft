@@ -237,8 +237,6 @@ namespace Minecraft
 		m_ActiveItemSlots.push_back(index);
 		m_ItemsByChunk[chunkPosition].push_back(index);
 
-		printf("World added %d\n", m_CurrentItemID);
-
 		m_CurrentItemID++;
 
 		m_PhysicsAddQueue.push(std::make_pair(index, body));
