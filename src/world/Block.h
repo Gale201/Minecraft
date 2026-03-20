@@ -102,7 +102,7 @@ namespace Minecraft
 			}
 		}
 
-		bool IsCube() const
+		bool IsFullBlock() const
 		{
 			switch (type)
 			{

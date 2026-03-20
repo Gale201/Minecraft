@@ -33,6 +33,7 @@ namespace Core
 		int GetMouseY() const { return m_MouseY; }
 		int GetMouseMotionX() const { return m_MouseMotionX; }
 		int GetMouseMotionY() const { return m_MouseMotionY; }
+		int GetMouseWheelMotion() const { return m_MouseWheelMotion; }
 
 	private:
 		std::unordered_map<Key, bool> m_KeysDown;
@@ -47,6 +48,7 @@ namespace Core
 		int m_MouseY = 0;
 		int m_MouseMotionX = 0;
 		int m_MouseMotionY = 0;
+		int m_MouseWheelMotion = 0;
 		
 		bool m_JustResized = false;
 

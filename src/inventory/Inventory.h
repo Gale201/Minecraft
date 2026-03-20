@@ -15,7 +15,7 @@ namespace Minecraft
 		static constexpr int s_Size = 36;
 		static constexpr int s_CraftAreaSize = 4;
 		static constexpr int s_SlotSize = 18;
-		static constexpr int s_HotbarSlotSize = 20;
+		static constexpr int s_HotbarSlotSize = 16;
 
 	public:
 		Inventory() {}
@@ -39,10 +39,23 @@ namespace Minecraft
 			return m_Slots[slot];
 		}
 
+		std::array<ItemStack, s_Size>& GetSlots() { return m_Slots; }
+		const std::array<ItemStack, s_Size>& GetSlots() const { return m_Slots; }
+
+		ItemStack& GetSelectedHotbarSlot() { return m_Slots[m_SelectedHotbarSlotIndex]; }
+		const ItemStack& GetSelectedHotbarSlot() const { return m_Slots[m_SelectedHotbarSlotIndex]; }
+		int GetSelectedHotbarSlotIndex() const { return m_SelectedHotbarSlotIndex; }
+
 		void SetSlot(int slot, ItemStack stack)
 		{
 			assert(slot >= 0 && slot < s_Size);
 			m_Slots[slot] = stack;
+		}
+
+		void SetSelectedHotbarSlotIndex(int slot)
+		{
+			assert(slot >= 0 && slot < 9);
+			m_SelectedHotbarSlotIndex = slot;
 		}
 
 		void SetTextures(Texture& inventroyTexture, Texture& hotbarTexture, Texture& selectedTexture)
@@ -57,6 +70,8 @@ namespace Minecraft
 		std::array<ItemStack, s_CraftAreaSize> m_CraftingSlots;
 
 		Vec2f m_SlotsTopLeftPoint{ 7.f, 83.f };
+
+		int m_SelectedHotbarSlotIndex = 0;
 
 		Texture* m_InventoryTexture = nullptr;
 		Texture* m_HotbarTexture = nullptr;

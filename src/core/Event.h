@@ -46,6 +46,8 @@ namespace Core
 			MouseMove,
 			MouseButtonDown,
 			MouseButtonUp,
+			MouseWheelUp,
+			MouseWheelDown,
 			WindowResize
 		} type;
 
@@ -54,6 +56,7 @@ namespace Core
 		int mouseY;
 		int mouseMotionX;
 		int mouseMotionY;
+		int wheelValue;
 		MouseButton mouseButton;
 	};
 }

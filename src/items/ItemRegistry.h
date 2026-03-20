@@ -39,7 +39,7 @@ namespace Minecraft
 		static ItemType GetItemTypeFromBlockType(BlockType type);
 
 		static uint8_t GetStackSizeForItemType(ItemType type);
-		static bool IsItemBlock(ItemType type);
+		static bool IsItemFullBlock(ItemType type);
 		static bool IsItemPlacable(ItemType type);
 
 		Vec3f GetItemHitboxSize() const { return m_ItemHitboxSize; }

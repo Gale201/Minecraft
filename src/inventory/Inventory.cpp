@@ -73,25 +73,38 @@ namespace Minecraft
 		float ratioX = static_cast<float>(textureWidth) / static_cast<float>(m_HotbarTexture->GetWidth());
 		float ratioY = static_cast<float>(textureHeight) / static_cast<float>(m_HotbarTexture->GetHeight());
 
-		float startX = std::ceilf(renderer.GetWidth() / 2 - textureWidth / 2 + ratioX);
+		float startX = std::ceilf(renderer.GetWidth() / 2 - textureWidth / 2) + ratioY * 3;
 		float startY = ratioY * 3;
 
 		for (size_t i = 0; i < 9; i++)
 		{
 			const ItemStack& stack = m_Slots[i];
-
+			
 			if (stack.size < 1) continue;
-
-			int x = static_cast<int>(startX + ((i % 9) * s_HotbarSlotSize + 2) * ratioX);
-			int y = static_cast<int>(startY);
 
 			Texture itemTexture = itemRegistry.GetTextureForItemType(stack.type);
 
 			int width = static_cast<int>(itemTexture.GetWidth() * ratioX * 0.16f);
 			int height = static_cast<int>(itemTexture.GetHeight() * ratioY * 0.16f);
 
+			int x = static_cast<int>(std::ceilf(startX + (i % 9) * (s_HotbarSlotSize + 4) * ratioX));
+			int y = static_cast<int>(std::ceilf(startY));
+
 			renderer.DrawTexture(x, hotbarStartY + y + 1, itemTexture, width, height, false, true);
 		}
+
+		// Render selected slot
+		float selectedX = std::ceilf(startX - ratioX * 4 + (m_SelectedHotbarSlotIndex % 9) * (s_HotbarSlotSize + 4) * ratioX);
+		float selectedY = std::ceilf(startY - ratioY * 4);
+
+		renderer.DrawTexture(
+			static_cast<int>(selectedX),
+			hotbarStartY + static_cast<int>(selectedY),
+			*m_SelectedSlotTexture,
+			static_cast<int>(m_SelectedSlotTexture->GetWidth() * ratioX),
+			static_cast<int>(m_SelectedSlotTexture->GetHeight() * ratioY),
+			true
+		);
 	}
 
 	ItemStack Inventory::AddItemStack(ItemStack stack)

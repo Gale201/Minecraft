@@ -15,6 +15,8 @@ namespace Minecraft
 	{
 		Vec3f position;
 		Vec3f headRotation;
+		int selectedHotbarSlotIndex;
+		std::array<ItemStack, Inventory::s_Size> inventorySlots;
 	};
 
 	class GameSaveManager

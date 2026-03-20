@@ -7,7 +7,7 @@ namespace Minecraft
 	{
 		for (ItemType type : m_ItemTypes)
 		{
-			if (IsItemBlock(type))
+			if (IsItemFullBlock(type))
 			{
 				BlockType blockType = GetBlockTypeFromItemType(type);
 
@@ -161,7 +161,7 @@ namespace Minecraft
 	ItemDefinition ItemRegistry::GetItemDefinition(ItemType type)
 	{
 		Texture* texture;
-		if (IsItemBlock(type))
+		if (IsItemFullBlock(type))
 			texture = &m_TextureLoader.Get("atlas-old");
 		else
 			texture = &m_TextureLoader.Get("item-atlas");
@@ -179,19 +179,19 @@ namespace Minecraft
 		Texture* atlasTexture = &m_TextureLoader.Get("item-atlas");
 		Texture texture(ITEM_TEXTURE_SIZE, ITEM_TEXTURE_SIZE);
 
-		if (IsItemBlock(type))
+		if (IsItemFullBlock(type))
 			atlasTexture = &m_TextureLoader.Get("block-item-atlas");
 
 		AtlasTileInfo tileInfo = GetAtlasTileInfoForItem(type);
 		int width = tileInfo.uScale * tileInfo.atlasWidth;
 		int height = tileInfo.vScale * tileInfo.atlasHeight;
-		for (int y = 0; y < height; y++)
+		for (int y = 0; y < ITEM_TEXTURE_SIZE; y++)
 		{
-			for (int x = 0; x < width; x++)
+			for (int x = 0; x < ITEM_TEXTURE_SIZE; x++)
 			{
 				uint32_t pixel = atlasTexture->GetPixel(
-					(int)(tileInfo.u0 * tileInfo.atlasWidth) + x,
-					(int)(tileInfo.v0 * tileInfo.atlasHeight) + y
+					(int)(tileInfo.u0 * tileInfo.atlasWidth) + x * ((float)width / (float)ITEM_TEXTURE_SIZE),
+					(int)(tileInfo.v0 * tileInfo.atlasHeight) + y * ((float)height / (float)ITEM_TEXTURE_SIZE)
 				);
 				texture.SetPixel(x, y, pixel);
 			}
@@ -283,7 +283,7 @@ namespace Minecraft
 
 		case ItemType::Rose:			 return BlockType::Rose;
 		case ItemType::YellowFlower:	 return BlockType::YellowFlower;
-		default:                         return BlockType::Air;
+		default:                         return BlockType::Undefined;
 		}
 	}
 
@@ -327,39 +327,14 @@ namespace Minecraft
 		};
 	}
 
-	bool ItemRegistry::IsItemBlock(ItemType type)
+	bool ItemRegistry::IsItemFullBlock(ItemType type)
 	{
-		switch (type)
-		{
-		case ItemType::Grass:
-		case ItemType::Dirt:
-		case ItemType::Stone:
-		case ItemType::OakPlanks:
-		case ItemType::DoubleStoneSlab:
-		case ItemType::PolishedStone:
-		case ItemType::Brick:
-		case ItemType::TNT:
-		case ItemType::Cobblestone:
-		case ItemType::Sand:
-		case ItemType::Gravel:
-		case ItemType::OakLog:
-		case ItemType::OakLeaves:
-		case ItemType::IronBlock:
-		case ItemType::GoldOre:
-		case ItemType::IronOre:
-		case ItemType::CoalOre:
-		case ItemType::Bookshelf:
-		case ItemType::Glass:
-		case ItemType::Obsidian:
-			return true;
-		default:
-			return false;
-		}
+		return Block(GetBlockTypeFromItemType(type)).IsFullBlock();
 	}
 
 	bool ItemRegistry::IsItemPlacable(ItemType type)
 	{
-		if (IsItemBlock(type)) return true;
+		if (IsItemFullBlock(type)) return true;
 
 		switch (type)
 		{

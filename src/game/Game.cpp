@@ -43,6 +43,8 @@ namespace Minecraft
 			PlayerSaveData playerData = m_GameSaveManager.LoadPlayerData();
 			m_Player.SetInitialPosition(playerData.position);
 			m_Player.SetHeadRotation(playerData.headRotation);
+			m_Player.GetInventory().SetSelectedHotbarSlotIndex(playerData.selectedHotbarSlotIndex);
+			m_Player.GetInventory().GetSlots() = playerData.inventorySlots;
 		}
 		else
 		{

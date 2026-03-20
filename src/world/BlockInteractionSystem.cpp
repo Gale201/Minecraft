@@ -44,17 +44,21 @@ namespace Minecraft
 		return false;
 	}
 
-	bool BlockInteractionSystem::PlaceBlock(const Player& player, Block block)
+	bool BlockInteractionSystem::PlaceBlock(Player& player, Block block)
 	{
 		WorldRaycastResult raycast;
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxPlaceBlockDistance(), raycast))
 		{
 			Vec3i normal = Vec3i::from(raycast.normal);
-			if (player.IsInBlock(raycast.blockPosition + normal))
-			{
+			BlockType type = player.GetRequestedBlockToPlace().type;
+
+			if (Block(type).IsFullBlock() && player.IsInBlock(raycast.blockPosition + normal))
 				return false;
-			}
-			m_World->SetBlock(raycast.blockPosition + normal, player.GetRequestedBlockToPlace().type);
+
+			if (type == BlockType::Undefined)
+				return false;
+			m_World->SetBlock(raycast.blockPosition + normal, type);
+			player.RemoveItemAfterPlacing();
 			return true;
 		}
 		return false;

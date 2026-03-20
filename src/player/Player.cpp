@@ -112,6 +112,11 @@ namespace Minecraft
 		}
 	}
 
+	void Player::RemoveItemAfterPlacing()
+	{
+		m_Inventory.GetSelectedHotbarSlot().size--;
+	}
+	
 	void Player::HandleInput()
 	{
 		// Inventory
@@ -120,6 +125,11 @@ namespace Minecraft
 
 		if (m_InventoryOpen)
 			return;
+
+		if (m_InputManager.GetMouseWheelMotion() > 0)
+			m_Inventory.SetSelectedHotbarSlotIndex((m_Inventory.GetSelectedHotbarSlotIndex() + 8) % 9);
+		else if (m_InputManager.GetMouseWheelMotion() < 0)
+			m_Inventory.SetSelectedHotbarSlotIndex((m_Inventory.GetSelectedHotbarSlotIndex() + 1) % 9);
 
 		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{
@@ -258,7 +268,10 @@ namespace Minecraft
 
 	Block Player::GetRequestedBlockToPlace() const
 	{
-		return { BlockType::Glass };
+		const ItemStack& stack = m_Inventory.GetSelectedHotbarSlot();
+		if (stack.size == 0 || !ItemRegistry::IsItemPlacable(stack.type)) 
+			return Block(BlockType::Undefined);
+		return Block(ItemRegistry::GetBlockTypeFromItemType(stack.type));
 	}
 
 }

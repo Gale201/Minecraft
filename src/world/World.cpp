@@ -141,7 +141,7 @@ namespace Minecraft
 			BlockBoundingBox box = GetBlockBoundingBox(block.type);
 			if (block.isCollidableWithRaycasts())
 			{
-				if (!block.IsCube())
+				if (!block.IsFullBlock())
 				{
 					Vec3f min = pos.toVec3f() + box.offset;
 					Vec3f max = min + box.size;
@@ -618,7 +618,7 @@ namespace Minecraft
 					Block& block = chunk.blocks[x][y][z];
 					if (block.type == BlockType::Undefined || block.type == BlockType::Air) continue;
 
-					if (!block.IsCube())
+					if (!block.IsFullBlock())
 					{
 						int i = 0;
 						for (FaceDirection dir : X_FACE_DIRECTIONS)

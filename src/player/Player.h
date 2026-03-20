@@ -33,6 +33,7 @@ namespace Minecraft
 		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry);
 
 		void HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime);
+		void RemoveItemAfterPlacing();
 
 		void SyncCamera(float alpha = 1.0f);
 		void UpdateCameraAspectRatio(float ratio);
@@ -59,6 +60,8 @@ namespace Minecraft
 		Vec3f GetInitialPosition() const { return m_InitialPosition; }
 		Vec3f GetInitialSize() const { return m_Size; }
 		Inventory& GetInventory() { return m_Inventory; }
+		const Inventory& GetInventory() const { return m_Inventory; }
+		int GetSelectedHotbarSlotIndex() const { return m_Inventory.GetSelectedHotbarSlotIndex(); }
 
 		void SetPhysicsBodyPtr(PhysicsBody* body)
 		{

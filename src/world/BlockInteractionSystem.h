@@ -15,7 +15,7 @@ namespace Minecraft
 		void Render(const Player& player, Renderer& renderer);
 
 		bool BreakBlock(const Player& player);
-		bool PlaceBlock(const Player& player, Block block);
+		bool PlaceBlock(Player& player, Block block);
 
 	private:
 		World* m_World;

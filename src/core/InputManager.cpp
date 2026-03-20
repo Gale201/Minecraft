@@ -8,6 +8,7 @@ namespace Core
 	{
 		m_MouseMotionX = 0;
 		m_MouseMotionY = 0;
+		m_MouseWheelMotion = 0;
 		m_KeysJustPressed.clear();
 		m_KeysJustReleased.clear();
 		m_MouseButtonsJustPressed.clear();
@@ -64,6 +65,10 @@ namespace Core
 				m_MouseMotionX += e.mouseMotionX;
 				m_MouseMotionY += e.mouseMotionY;
 			}
+			else if (e.type == Event::Type::MouseWheelDown)
+				m_MouseWheelMotion += e.wheelValue;
+			else if (e.type == Event::Type::MouseWheelUp)
+				m_MouseWheelMotion += e.wheelValue;
 			else if (e.type == Event::Type::WindowResize)
 				m_JustResized = true;
 		}

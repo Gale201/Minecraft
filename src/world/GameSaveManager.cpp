@@ -134,6 +134,12 @@ namespace Minecraft
 		PlayerSaveData playerData;
 		in.read(reinterpret_cast<char*>(&playerData.position), sizeof(playerData.position));
 		in.read(reinterpret_cast<char*>(&playerData.headRotation), sizeof(playerData.headRotation));
+		in.read(reinterpret_cast<char*>(&playerData.selectedHotbarSlotIndex), sizeof(playerData.selectedHotbarSlotIndex));
+
+		for (int i = 0; i < Inventory::s_Size; i++)
+		{
+			in.read(reinterpret_cast<char*>(&playerData.inventorySlots[i]), sizeof(ItemStack));
+		}
 
 		return playerData;
 	}
@@ -145,9 +151,19 @@ namespace Minecraft
 		std::ofstream out(playerFilePath, std::ios::binary);
 		if (!out) return;
 
-		PlayerSaveData playerData = { player.GetPosition(), player.GetHeadRotation() };
+		PlayerSaveData playerData = {
+			player.GetPosition(),
+			player.GetHeadRotation(),
+			player.GetSelectedHotbarSlotIndex(),
+		};
 		out.write(reinterpret_cast<const char*>(&playerData.position), sizeof(playerData.position));
 		out.write(reinterpret_cast<const char*>(&playerData.headRotation), sizeof(playerData.headRotation));
+		out.write(reinterpret_cast<const char*>(&playerData.selectedHotbarSlotIndex), sizeof(playerData.selectedHotbarSlotIndex));
+
+		for (const ItemStack& stack : player.GetInventory().GetSlots())
+		{
+			out.write(reinterpret_cast<const char*>(&stack), sizeof(stack));
+		}
 	}
 
 	/* Item saving and loading */

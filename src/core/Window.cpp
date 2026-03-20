@@ -153,6 +153,12 @@ namespace Core
 				}
 				outEvents.push_back(event);
 				break;
+			case SDL_MOUSEWHEEL:
+				event.type = (e.wheel.y > 0) ? Event::Type::MouseWheelDown : Event::Type::MouseWheelUp;
+				event.mouseButton = MouseButton::Middle;
+				event.wheelValue = e.wheel.y;
+				outEvents.push_back(event);
+				break;
 			default:
 				break;
 			}
