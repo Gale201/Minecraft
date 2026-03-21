@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "../thread/ThreadSystem.h"
 #include "../world/BlockFace.h"
+#include "../font/FontLoader.h"
 
 /*
  Renderer class handles the 3d rendering of meshes to a frame buffer.
@@ -49,7 +50,9 @@ namespace Minecraft
 
 		void DrawTexture(int x, int y, const Texture& texture, bool alphaBlend = false);
 
-		void DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend = false, bool cutoff = false);
+		void DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend = false, bool cutoff = false, uint32_t maskColor = 0);
+
+		void DrawText(const std::string& text, int x, int y, int width, int height, const FontLoader& fontLoader, bool shadow = true);
 
 		void Render(const std::vector<RenderCommand>& renderList, const Camera& camera, Core::ThreadSystem& threadSystem);
 

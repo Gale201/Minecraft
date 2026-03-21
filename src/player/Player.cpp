@@ -13,10 +13,24 @@ namespace Minecraft
 		SetCameraConfig(cameraConfig);
 	}
 
-	void Player::Update(float deltaTime)
+	void Player::Update(float deltaTime, World& world)
 	{
 		HandleInput();
-
+		if (m_InventoryOpen)
+		{
+			m_Inventory.Update(m_InputManager);
+			
+			ItemStack holdingStack = m_Inventory.GetItemToRemove();
+			if (holdingStack.size > 0)
+			{
+				Vec3f spawnPos = GetHeadPosition() + m_Camera.GetForward() * 0.5f;
+				float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
+				world.AddItem(PhysicsBody(spawnPos), holdingStack, rotY, m_Camera.GetForward() * 30.0f);
+				world.GetItems()[world.GetItemIndex(world.GetCurrentItemID() - 1)].pickupCooldown = 120;
+			}
+		}
+		else
+			m_Inventory.UpdateHotbar(m_InputManager);
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
@@ -43,13 +57,14 @@ namespace Minecraft
 
 	void Player::Render(Renderer& renderer, const ItemRegistry& itemRegistry)
 	{
-		m_Inventory.RenderHotbar(renderer, itemRegistry);
+		
 	}
 
-	void Player::RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry)
+	void Player::RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
 	{
+		m_Inventory.RenderHotbar(renderer, itemRegistry, fontLoader);
 		if (m_InventoryOpen)
-			m_Inventory.Render(renderer, itemRegistry);
+			m_Inventory.Render(renderer, itemRegistry, fontLoader);
 	}
 
 	void Player::HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime)
@@ -77,7 +92,7 @@ namespace Minecraft
 					if (std::find(m_ItemsToRemove.begin(), m_ItemsToRemove.end(), item.id) != m_ItemsToRemove.end())
 						continue;
 
-					if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance && m_Inventory.CanAddItemStack(item.stack))
+					if (item.pickupCooldown == 0 && item.body && (item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance && m_Inventory.CanAddItemStack(item.stack))
 					{
 						m_ItemsToRemove.push_back(item.id);
 						physicsSystem.RemoveBody(item.body);
@@ -125,11 +140,6 @@ namespace Minecraft
 
 		if (m_InventoryOpen)
 			return;
-
-		if (m_InputManager.GetMouseWheelMotion() > 0)
-			m_Inventory.SetSelectedHotbarSlotIndex((m_Inventory.GetSelectedHotbarSlotIndex() + 8) % 9);
-		else if (m_InputManager.GetMouseWheelMotion() < 0)
-			m_Inventory.SetSelectedHotbarSlotIndex((m_Inventory.GetSelectedHotbarSlotIndex() + 1) % 9);
 
 		if (m_GameMode.CanPlayerFly() && m_InputManager.IsKeyJustDoublePressed(m_InputBindings.GetKeyForAction(InputAction::Jump)))
 		{

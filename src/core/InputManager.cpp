@@ -11,9 +11,10 @@ namespace Core
 		m_MouseWheelMotion = 0;
 		m_KeysJustPressed.clear();
 		m_KeysJustReleased.clear();
+		m_KeysJustDoublePressed.clear();
 		m_MouseButtonsJustPressed.clear();
 		m_MouseButtonsJustReleased.clear();
-		m_KeysJustDoublePressed.clear();
+		m_MouseButtonsJustDoublePressed.clear();
 
 		m_JustResized = false;
 
@@ -47,6 +48,13 @@ namespace Core
 				if (!m_MouseButtonsDown[e.mouseButton])
 				{
 					m_MouseButtonsJustPressed[e.mouseButton] = true;
+					auto now = std::chrono::high_resolution_clock::now().time_since_epoch();
+					auto miliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+					if (miliseconds - m_MouseButtonPressTimeTable[e.mouseButton] < m_DoublePressMaxDelay)
+					{
+						m_MouseButtonsJustDoublePressed[e.mouseButton] = true;
+					}
+					m_MouseButtonPressTimeTable[e.mouseButton] = miliseconds;
 				}
 				m_MouseButtonsDown[e.mouseButton] = true;
 			}
@@ -139,6 +147,14 @@ namespace Core
 		{
 			return it->second;
 		}
+		return false;
+	}
+
+	bool InputManager::IsMouseButtonJustDoublePressed(MouseButton button) const
+	{
+		auto it = m_MouseButtonsJustDoublePressed.find(button);
+		if (it != m_MouseButtonsJustDoublePressed.end())
+			return it->second;
 		return false;
 	}
 

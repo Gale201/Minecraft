@@ -26,6 +26,7 @@ namespace Core
 		bool IsMouseButtonDown(MouseButton button) const;
 		bool IsMouseButtonJustPressed(MouseButton button) const;
 		bool IsMouseButtonJustReleased(MouseButton button) const;
+		bool IsMouseButtonJustDoublePressed(MouseButton button) const;
 
 		bool ResizeJustHappened() const;
 
@@ -44,6 +45,7 @@ namespace Core
 		std::unordered_map<MouseButton, bool> m_MouseButtonsJustPressed;
 		std::unordered_map<MouseButton, bool> m_MouseButtonsJustReleased;
 		std::unordered_map<MouseButton, bool> m_MouseButtonsDown;
+		std::unordered_map<MouseButton, bool> m_MouseButtonsJustDoublePressed;
 		int m_MouseX = 0;
 		int m_MouseY = 0;
 		int m_MouseMotionX = 0;
@@ -54,5 +56,6 @@ namespace Core
 
 		long long m_DoublePressMaxDelay = 200;
 		std::unordered_map<Key, long long> m_KeyPressTimeTable;
+		std::unordered_map<MouseButton, long long> m_MouseButtonPressTimeTable;
 	};
 }

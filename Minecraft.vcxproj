@@ -45,6 +45,7 @@
     <ClCompile Include="src\world\GameSaveManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="font\FontLoader.h" />
     <ClInclude Include="src\core\Clock.h" />
     <ClInclude Include="src\core\Event.h" />
     <ClInclude Include="src\core\InputManager.h" />

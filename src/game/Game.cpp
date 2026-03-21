@@ -13,9 +13,9 @@ namespace Minecraft
 		m_Height(height),
 		m_ThreadSystem(threadSystem), 
 		m_InputManager(inputManager),
+		m_GameSaveManager("saves/worlds/", name, m_ItemRegistry),
 		m_PhysicsSystem(threadSystem),
-		m_Player(inputManager, m_PhysicsSystem),
-		m_GameSaveManager("saves/worlds/", name, m_ItemRegistry)
+		m_Player(inputManager, m_PhysicsSystem)
 	{
 		m_ThreadSystem.Initialize();
 
@@ -30,6 +30,7 @@ namespace Minecraft
 			LOG_ERROR("Error loading textures. Exiting...");
 			exit(1);
 		}
+		m_FontLoader.LoadFont(m_TextureLoader.Get("font"));
 
 		srand(time(0));
 	}
@@ -137,7 +138,7 @@ namespace Minecraft
 			m_World->GetPhysicsAddQueue().pop();
 		}
 
-		m_Player.Update(deltaTime);
+		m_Player.Update(deltaTime, *m_World);
 		m_Player.SyncCamera();
 
 		if (m_Player.IsInventoryOpen())
@@ -203,7 +204,7 @@ namespace Minecraft
 		m_RenderList.clear();
 
 		// UI Rendering
-		m_Player.RenderUI(m_Renderer, m_ItemRegistry);
+		m_Player.RenderUI(m_Renderer, m_ItemRegistry, m_FontLoader);
 	}
 
 	void Game::Resize(int width, int height)

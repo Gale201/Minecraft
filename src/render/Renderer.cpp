@@ -602,7 +602,7 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, bool alphaBlend
 	}
 }
 
-void Renderer::DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend, bool cutoff)
+void Renderer::DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend, bool cutoff, uint32_t maskColor)
 {
 	if (width <= 0 || height <= 0) return;
 
@@ -620,6 +620,7 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, int width, int 
 			else if (cutoff)
 			{
 				uint8_t alpha = (color >> 24) & 0xFF;
+				if (maskColor != 0) color = maskColor;
 				if (alpha > 128)
 					DrawPixel(x + j, y + i, color);
 			}
@@ -629,6 +630,32 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, int width, int 
 	}
 }
 
+void Renderer::DrawText(const std::string& text, int x, int y, int width, int height, const FontLoader& fontLoader, bool shadow)
+{
+	int cursorX = x;
+	int cursorY = y;
+	for (char c : text)
+	{
+		if (c == '\n')
+		{
+			cursorX = x;
+			cursorY += height;
+			continue;
+		}
+		const Texture* charTexture = fontLoader.GetCharacterTexture(c);
+		if (charTexture)
+		{
+			if (shadow)
+				DrawTexture(
+					cursorX + static_cast<int>(width / (float)fontLoader.GetCharWidth()),
+					cursorY + static_cast<int>(height / (float)fontLoader.GetCharHeight()),
+					*charTexture, width, height, false, true, 0xFF444444
+					);
+			DrawTexture(cursorX, cursorY, *charTexture, width, height, false, true);
+			cursorX += width;
+		}
+	}
+}
 
 void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera& camera, Core::ThreadSystem& threadSystem)
 {

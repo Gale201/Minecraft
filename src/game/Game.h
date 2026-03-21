@@ -6,6 +6,7 @@
 #include "../world/GameSaveManager.h"
 #include "../physics/PhysicsSystem.h"
 #include "../items/ItemRegistry.h"
+#include "../../font/FontLoader.h"
 
 #define SKY_COLOR 0xFF99BBFF
 
@@ -41,6 +42,9 @@ namespace Minecraft
 		std::vector<RenderCommand> m_RenderList;
 
 		TextureLoader m_TextureLoader{ "res/textures/" };
+		std::string m_FontCharacters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_´abcdefghijklmnopqrstuvwxyz{|}~";
+		FontLoader m_FontLoader{ m_FontCharacters };
+
 		ItemRegistry m_ItemRegistry{ m_TextureLoader };
 
 		GameSaveManager m_GameSaveManager;

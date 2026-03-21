@@ -60,7 +60,7 @@ namespace Minecraft
 		bool Raycast(Vec3f origin, Vec3f direction, float maxDistance, WorldRaycastResult& result);
 
 		void SpawnItem(Vec3f position, ItemStack stack);
-		void AddItem(PhysicsBody body, ItemStack stack, float rotY);
+		void AddItem(PhysicsBody body, ItemStack stack, float rotY, Vec3f spawnForce = Vec3f());
 		void RemoveItem(ItemID id);
 		void AddToItemLookupTable(ItemID id, Vec3i chunkPos, size_t index)
 		{
@@ -125,6 +125,8 @@ namespace Minecraft
 		{
 			return m_ItemLookupTable.at(id);
 		}
+
+		ItemID GetCurrentItemID() const { return m_CurrentItemID; }
 
 		int GetSeaLevel() const { return m_ChunkLoader.GetSeaLevel(); }
 
@@ -210,5 +212,6 @@ namespace Minecraft
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 
 		ItemID m_CurrentItemID = 0;
+		float m_ItemBodyMass = 0.1f;
 	};
 }

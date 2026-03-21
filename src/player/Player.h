@@ -28,9 +28,9 @@ namespace Minecraft
 		~Player() = default;
 
 		void UpdatePhysics(float deltaTime);
-		void Update(float deltaTime);
+		void Update(float deltaTime, World& world);
 		void Render(Renderer& renderer, const ItemRegistry& itemRegistry);
-		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry);
+		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 
 		void HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime);
 		void RemoveItemAfterPlacing();
@@ -84,6 +84,8 @@ namespace Minecraft
 
 			SyncCamera();
 		}
+
+		void SetCameraFov(float fov) { m_Camera.fovY = fov; }
 
 		void SetHeadRotation(Vec3f rotation) { m_HeadRotation = rotation; }
 

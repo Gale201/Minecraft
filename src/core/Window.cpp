@@ -121,6 +121,16 @@ namespace Core
 				case SDLK_e: event.key = Key::E; break;
 				case SDLK_t: event.key = Key::T; break;
 				case SDLK_q: event.key = Key::Q; break;
+				case SDLK_0: event.key = Key::K_0; break;
+				case SDLK_1: event.key = Key::K_1; break;
+				case SDLK_2: event.key = Key::K_2; break;
+				case SDLK_3: event.key = Key::K_3; break;
+				case SDLK_4: event.key = Key::K_4; break;
+				case SDLK_5: event.key = Key::K_5; break;
+				case SDLK_6: event.key = Key::K_6; break;
+				case SDLK_7: event.key = Key::K_7; break;
+				case SDLK_8: event.key = Key::K_8; break;
+				case SDLK_9: event.key = Key::K_9; break;
 				default: event.key = Key::Unknown; break;
 				}
 				outEvents.push_back(event);

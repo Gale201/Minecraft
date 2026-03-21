@@ -18,5 +18,6 @@ namespace Minecraft
 		PhysicsBody* body;
 		Vec3f rotation;
 		Vec3i chunkPos;
+		int pickupCooldown = 0;
 	};
 }

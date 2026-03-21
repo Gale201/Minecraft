@@ -6,6 +6,8 @@
 #include "../items/ItemStack.h"
 #include "../items/ItemRegistry.h"
 #include "../render/Renderer.h"
+#include "../font/FontLoader.h"
+#include "../core/InputManager.h"
 
 namespace Minecraft
 {
@@ -20,8 +22,10 @@ namespace Minecraft
 	public:
 		Inventory() {}
 
-		void Render(Renderer& renderer, const ItemRegistry& itemRegistry);
-		void RenderHotbar(Renderer& renderer, const ItemRegistry& itemRegistry);
+		void Update(const Core::InputManager& inputManager);
+		void UpdateHotbar(const Core::InputManager& inputManager);
+		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
+		void RenderHotbar(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 
 		ItemStack AddItemStack(ItemStack stack);
 		int FindFirstEmptySlot() const;
@@ -45,6 +49,7 @@ namespace Minecraft
 		ItemStack& GetSelectedHotbarSlot() { return m_Slots[m_SelectedHotbarSlotIndex]; }
 		const ItemStack& GetSelectedHotbarSlot() const { return m_Slots[m_SelectedHotbarSlotIndex]; }
 		int GetSelectedHotbarSlotIndex() const { return m_SelectedHotbarSlotIndex; }
+		ItemStack GetItemToRemove() const { return m_ItemToRemove; }
 
 		void SetSlot(int slot, ItemStack stack)
 		{
@@ -66,15 +71,26 @@ namespace Minecraft
 		}
 
 	private:
+		void RenderItem(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader, const ItemStack& stack, int x, int y, float ratioX, float ratioY);
+
+	private:
 		std::array<ItemStack, s_Size> m_Slots;
 		std::array<ItemStack, s_CraftAreaSize> m_CraftingSlots;
 
 		Vec2f m_SlotsTopLeftPoint{ 7.f, 83.f };
 
 		int m_SelectedHotbarSlotIndex = 0;
+		ItemStack m_HoldingStack;
+		Vec2i m_HoldingStackPosition;
+		bool m_WaitForMouseRelease = false;
+
+		ItemStack m_ItemToRemove;
 
 		Texture* m_InventoryTexture = nullptr;
 		Texture* m_HotbarTexture = nullptr;
 		Texture* m_SelectedSlotTexture = nullptr;
+
+		int m_RendererWidth = 0;
+		int m_RendererHeight = 0;
 	};
 }

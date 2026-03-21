@@ -56,6 +56,11 @@ namespace Minecraft
 				chunk->state.store(ChunkState::Generated, std::memory_order_release);
 			}
 		}
+
+		for (Item& item : m_Items)
+		{
+			item.pickupCooldown = std::max(0, item.pickupCooldown - 1);
+		}
 	}
 
 	void World::LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem)
@@ -96,6 +101,8 @@ namespace Minecraft
 				for (size_t index : indices)
 				{
 					const Item& item = m_Items[index];
+					if (!item.body)
+						continue;
 
 					ItemDefinition definition = m_ItemRegistry.GetItemDefinition(item.stack.type);
 
@@ -207,15 +214,13 @@ namespace Minecraft
 			1.0f,
 			(static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f)
 		);
-		body.mass = 0.1f;
-		body.AddForce(spawnForce * 20.0f);
 
 		float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
 
-		AddItem(body, stack, rotY);
+		AddItem(body, stack, rotY, spawnForce * 20.0f);
 	}
 
-	void World::AddItem(PhysicsBody body, ItemStack stack, float rotY)
+	void World::AddItem(PhysicsBody body, ItemStack stack, float rotY, Vec3f spawnForce)
 	{
 		Vec3i chunkPosition = GetChunkPosition(Vec3i::floor(body.position));
 
@@ -239,6 +244,9 @@ namespace Minecraft
 
 		m_CurrentItemID++;
 
+		body.mass = m_ItemBodyMass;
+		body.size = m_ItemRegistry.GetItemHitboxSize();
+		body.AddForce(spawnForce);
 		m_PhysicsAddQueue.push(std::make_pair(index, body));
 	}
 
