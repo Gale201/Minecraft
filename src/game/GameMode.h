@@ -15,6 +15,7 @@ namespace Minecraft
 
 		bool CanInstantBreakBlocks() const;
 		bool BreakingBlocksDropsItems() const;
+		bool PlacingBlocksConsumesItems() const;
 		bool CanPlayerFly() const;
 
 		void SetGameModeType(GameModeType type) { m_Type = type; }

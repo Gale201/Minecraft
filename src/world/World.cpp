@@ -61,6 +61,8 @@ namespace Minecraft
 		{
 			item.pickupCooldown = std::max(0, item.pickupCooldown - 1);
 		}
+
+		m_BlockBreakingProgress.progress = 0.0f;
 	}
 
 	void World::LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem)
@@ -90,6 +92,31 @@ namespace Minecraft
 						*m_TextureAtlas
 						);
 				}
+			}
+
+			// Block breaking animation
+			Vec3i breakingBlockPos = m_BlockBreakingProgress.blockPos;
+			if (
+				GetChunkPosition(breakingBlockPos) == chunkPos && 
+				m_BlockBreakingProgress.progress > 0.0f &&
+				m_BlockBreakingProgress.block.IsBreakable() &&
+				m_BlockBreakingProgress.block.IsFullBlock()
+			)
+			{
+				int tileX = static_cast<int>(std::floorf(m_BlockBreakingProgress.progress * 9.f));
+				transform.SetPosition(breakingBlockPos.toVec3f());
+				m_BlockBreakingMesh = CreateBlockMesh(
+					CreateAtlasTileInfo(
+						tileX, 15, true, false
+					),
+					1.001f,
+					Vec3f(-0.0005f, -0.0005f, -0.0005f)
+				);
+				outCommands.emplace_back(
+					&m_BlockBreakingMesh,
+					transform,
+					*m_TextureAtlas
+				);
 			}
 
 			// Items
@@ -286,7 +313,8 @@ namespace Minecraft
 
 		m_ItemLookupTable.erase(id);
 
-		printf("World removed %d\n", id);
+		item.stack.size = 0;
+		item.body = nullptr;
 	}
 
 	Vec3i World::GetChunkPosition(Vec3i pos) const
@@ -298,7 +326,7 @@ namespace Minecraft
 		);
 	}
 
-	Vec3i World::GetBlockChunkPosition(Vec3i pos) const
+	Vec3i World::GetBlockPositionInChunk(Vec3i pos) const
 	{
 		return Vec3i(
 			FloorMod(pos.x, CHUNK_SIZE),
@@ -356,7 +384,7 @@ namespace Minecraft
 		if (chunk == nullptr) 
 			return Block(BlockType::Undefined);
 	
-		Vec3i blockPos = GetBlockChunkPosition(pos);
+		Vec3i blockPos = GetBlockPositionInChunk(pos);
 		return chunk->blocks[blockPos.x][blockPos.y][blockPos.z];
 	}
 
@@ -368,7 +396,7 @@ namespace Minecraft
 
 		// Get relative block position in the chunk
 		Block block(type);
-		Vec3i blockPos = GetBlockChunkPosition(pos);
+		Vec3i blockPos = GetBlockPositionInChunk(pos);
 		chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = block;
 
 		// Add the chunk and the block to the modified chunks
@@ -438,6 +466,10 @@ namespace Minecraft
 		return blocks;
 	}
 
+	/* 
+	 Private functions 
+	*/
+
 	void World::InitItems()
 	{
 		m_Items.resize(MAX_ITEMS);
@@ -446,9 +478,6 @@ namespace Minecraft
 			m_FreeItemSlots.push_back(i);
 	}
 
-	/* 
-	 Private functions 
-	*/
 
 	/* Chunk loading */
 
@@ -1108,7 +1137,7 @@ namespace Minecraft
 		int vWraps
 	)
 	{
-		int idx = mesh.vertices.size();
+		int idx = static_cast<int>(mesh.vertices.size());
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -1142,7 +1171,7 @@ namespace Minecraft
 		FaceDirection dir
 	)
 	{
-		int startIndex = mesh.vertices.size();
+		int startIndex = static_cast<int>(mesh.vertices.size());
 
 		for (int i = 0; i < 4; i++)
 		{

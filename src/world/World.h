@@ -26,6 +26,13 @@ namespace Minecraft
 	public:
 		static const size_t MAX_ITEMS = 10000;
 
+		struct BlockBreakingProgress
+		{
+			Block block;
+			Vec3i blockPos;
+			float progress = 0.0f;
+		};
+
 	public:
 		World(
 			const std::string& name,
@@ -70,7 +77,7 @@ namespace Minecraft
 		Block GetBlock(Vec3i pos) const;
 		Chunk* TryGetChunk(Vec3i pos) const;
 		Chunk& GetChunk(Vec3i pos);
-		Vec3i GetBlockChunkPosition(Vec3i pos) const;
+		Vec3i GetBlockPositionInChunk(Vec3i pos) const;
 		Vec3i GetChunkWorldPosition(Vec3i pos) const;
 		Vec3i GetChunkPosition(Vec3i pos) const;
 		inline Vec3i GetAbsoluteBlockPosition(Vec3i relPos, Chunk& chunk) const;
@@ -134,6 +141,10 @@ namespace Minecraft
 		void SetTextureAtlas(const Texture& texture)
 		{
 			m_TextureAtlas = &texture;
+		}
+		void SetBlockBreakingProgress(Block block, Vec3i pos, float progress)
+		{
+			m_BlockBreakingProgress = { block, pos, progress };
 		}
 
 	private:
@@ -213,5 +224,8 @@ namespace Minecraft
 
 		ItemID m_CurrentItemID = 0;
 		float m_ItemBodyMass = 0.1f;
+
+		BlockBreakingProgress m_BlockBreakingProgress;
+		Mesh m_BlockBreakingMesh;
 	};
 }

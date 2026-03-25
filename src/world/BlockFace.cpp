@@ -187,6 +187,7 @@ namespace Minecraft
 		else if (type == BlockType::Bookshelf) tileType = TileType::Bookshelf;
 		else if (type == BlockType::Glass) tileType = TileType::Glass;
 		else if (type == BlockType::Obsidian) tileType = TileType::Obsidian;
+
 		return tileType;
 	}
 

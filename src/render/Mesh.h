@@ -12,4 +12,7 @@ namespace Minecraft
 		std::vector<int> indices;
 		bool shade = true;
 	};
+
+	Mesh CreateBlockMesh(BlockType blockType, float scale, Vec3f centerOffset);
+	Mesh CreateBlockMesh(AtlasTileInfo tileInfo, float scale, Vec3f centerOffset);
 }

@@ -11,41 +11,7 @@ namespace Minecraft
 			{
 				BlockType blockType = GetBlockTypeFromItemType(type);
 
-				Mesh mesh;
-				for (int dir = 0; dir < 6; dir++)
-				{
-					int startIndex = mesh.vertices.size();
-
-					FaceDirection faceDir = static_cast<FaceDirection>(dir);
-					BlockFace face = GetBlockFace(blockType, faceDir);
-					
-					for (int i = 0; i < 4; i++)
-					{
-						Vertex v;
-						v.position = Vec3f(
-							face.vertices[i].x - 0.5f,
-							face.vertices[i].y - 0.5f,
-							face.vertices[i].z - 0.5f
-						) * m_BlockItemScaleFactor;
-						v.normal = face.normal;
-
-						v.u = face.uvs[i].x;
-						v.v = face.uvs[i].y;
-
-						TileType tileType = GetTileTypeFromDirection(blockType, faceDir);
-						v.tileInfo = GetAtlasTileInfo(tileType);
-
-						mesh.vertices.push_back(v);
-					}
-
-					mesh.indices.push_back(startIndex + 0);
-					mesh.indices.push_back(startIndex + 1);
-					mesh.indices.push_back(startIndex + 2);
-
-					mesh.indices.push_back(startIndex + 0);
-					mesh.indices.push_back(startIndex + 2);
-					mesh.indices.push_back(startIndex + 3);
-				}
+				Mesh mesh = CreateBlockMesh(blockType, m_BlockItemScaleFactor, Vec3f(-0.5f, -0.5f, -0.5f));
 				m_Meshes.emplace(type, std::move(mesh));
 			}
 			else
@@ -183,15 +149,15 @@ namespace Minecraft
 			atlasTexture = &m_TextureLoader.Get("block-item-atlas");
 
 		AtlasTileInfo tileInfo = GetAtlasTileInfoForItem(type);
-		int width = tileInfo.uScale * tileInfo.atlasWidth;
-		int height = tileInfo.vScale * tileInfo.atlasHeight;
+		int width = static_cast<int>(tileInfo.uScale * tileInfo.atlasWidth);
+		int height = static_cast<int>(tileInfo.vScale * tileInfo.atlasHeight);
 		for (int y = 0; y < ITEM_TEXTURE_SIZE; y++)
 		{
 			for (int x = 0; x < ITEM_TEXTURE_SIZE; x++)
 			{
 				uint32_t pixel = atlasTexture->GetPixel(
-					(int)(tileInfo.u0 * tileInfo.atlasWidth) + x * ((float)width / (float)ITEM_TEXTURE_SIZE),
-					(int)(tileInfo.v0 * tileInfo.atlasHeight) + y * ((float)height / (float)ITEM_TEXTURE_SIZE)
+					(int)((tileInfo.u0 * tileInfo.atlasWidth) + x * ((float)width / (float)ITEM_TEXTURE_SIZE)),
+					(int)((tileInfo.v0 * tileInfo.atlasHeight) + y * ((float)height / (float)ITEM_TEXTURE_SIZE))
 				);
 				texture.SetPixel(x, y, pixel);
 			}
@@ -353,7 +319,7 @@ namespace Minecraft
 		float faceX, float faceZ, float yScale, Vec3f offset
 	) const
 	{
-		int startIndex = mesh.vertices.size();
+		int startIndex = static_cast<int>(mesh.vertices.size());
 
 		BlockFace face = GetBlockFace(BlockType::Stone, dir);
 		for (int i = 0; i < 4; i++)

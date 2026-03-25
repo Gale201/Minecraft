@@ -33,11 +33,16 @@ namespace Minecraft
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxBreakBlockDistance(), raycast))
 		{
 			Vec3f itemPos = raycast.blockPosition.toVec3f() + Vec3f(0.4f, 0.4f, 0.4f);
+			if (m_World->GetBlock(raycast.blockPosition).type == BlockType::Air)
+				return false;
 			m_World->SetBlock(raycast.blockPosition, BlockType::Air);
-			m_World->SpawnItem(
-				itemPos,
-				{ ItemRegistry::GetItemTypeFromBlockType(raycast.blockType), 1 }
-			);
+			if (player.GetGameMode().BreakingBlocksDropsItems())
+			{
+				m_World->SpawnItem(
+					itemPos,
+					{ ItemRegistry::GetItemTypeFromBlockType(raycast.blockType), 1 }
+				);
+			}
 			return true;
 		}
 

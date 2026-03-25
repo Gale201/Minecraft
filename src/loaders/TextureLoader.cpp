@@ -72,6 +72,8 @@ namespace Minecraft
 			LOG_ERROR(("Texture '" + name + "' failed to load!").c_str());
 			return false;
 		}
+
+		return true;
 	}
 
 	void TextureLoader::SetOpacityForTexture(Texture& texture, float opacity)

@@ -17,19 +17,20 @@ namespace Minecraft
 		float startX = std::ceilf(m_RendererWidth / 2 - textureWidth / 2 + m_SlotsTopLeftPoint.x * ratioX);
 		float startY = std::ceilf(m_RendererHeight / 2 - textureHeight / 2 + m_SlotsTopLeftPoint.y * ratioY);
 
-		int mouseX = inputManager.GetMouseX();
-		int mouseY = inputManager.GetMouseY();
+		m_MouseX = inputManager.GetMouseX();
+		m_MouseY = inputManager.GetMouseY();
 
-		int selectedSlotX = static_cast<int>((mouseX - startX) / (s_SlotSize * ratioX));
-		int selectedSlotY = 1 + static_cast<int>((mouseY - startY) / (s_SlotSize * ratioY));
-		if (mouseY >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && mouseY < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
+		int selectedSlotX = static_cast<int>((m_MouseX - startX) / (s_SlotSize * ratioX));
+		int selectedSlotY = 1 + static_cast<int>((m_MouseY - startY) / (s_SlotSize * ratioY));
+		if (m_MouseY >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && m_MouseY < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
 			selectedSlotY = 0;
+
+		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
 
 		if (inputManager.IsMouseButtonJustPressed(Core::MouseButton::Left))
 		{
 			if (selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
 			{
-				int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
 				if (selectedSlotIndex < s_Size && m_Slots[selectedSlotIndex].size > 0)
 				{
 					if (m_HoldingStack.size == 0)
@@ -45,7 +46,6 @@ namespace Minecraft
 		{
 			if (!m_WaitForMouseRelease && selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
 			{
-				int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
 				if (selectedSlotIndex < s_Size)
 				{
 					ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
@@ -82,9 +82,42 @@ namespace Minecraft
 		}
 		else if (inputManager.IsMouseButtonJustReleased(Core::MouseButton::Right))
 		{
+			if (selectedSlotIndex < s_Size)
+			{
+				ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
+
+				if (m_HoldingStack.size == 0 && selectedSlot.size > 0)
+				{
+					m_HoldingStack.type = selectedSlot.type;
+					m_HoldingStack.size = (selectedSlot.size + 1) / 2;
+					selectedSlot.size -= m_HoldingStack.size;
+				}
+				else if (m_HoldingStack.size > 0 && selectedSlot.size > 0)
+				{
+					if (m_HoldingStack.type == selectedSlot.type && selectedSlot.size < ItemRegistry::GetStackSizeForItemType(selectedSlot.type))
+					{
+						selectedSlot.size++;
+						m_HoldingStack.size--;
+					}
+					else if (m_HoldingStack.type != selectedSlot.type)
+					{
+						ItemStack temp = m_HoldingStack;
+						m_HoldingStack = selectedSlot;
+						selectedSlot = temp;
+					}
+				}
+				else if (m_HoldingStack.size > 0 && selectedSlot.size == 0)
+				{
+					selectedSlot.type = m_HoldingStack.type;
+					selectedSlot.size = 1;
+					m_HoldingStack.size--;
+				}
+			}
+		}
+		else if (inputManager.IsMouseButtonJustReleased(Core::MouseButton::Right))
+		{
 			if (!m_WaitForMouseRelease && selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
 			{
-				int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
 				if (selectedSlotIndex < s_Size)
 				{
 					ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
@@ -121,8 +154,6 @@ namespace Minecraft
 		
 		if (inputManager.IsMouseButtonJustDoublePressed(Core::MouseButton::Left))
 		{
-			int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
-
 			if (
 				m_HoldingStack.size > 0 && 
 				m_HoldingStack.size < ItemRegistry::GetStackSizeForItemType(m_HoldingStack.type) &&
@@ -147,6 +178,7 @@ namespace Minecraft
 						}
 					}
 				}
+				m_WaitForMouseRelease = true;
 			}
 		}
 	}
@@ -219,6 +251,24 @@ namespace Minecraft
 			RenderItem(renderer, itemRegistry, fontLoader, stack, x, y + 1, ratioX, ratioY);
 		}
 
+		// Render hovered slot highlight
+		float selectedSlotX = std::floorf((m_MouseX - startX) / (s_SlotSize * ratioX));
+		float selectedSlotY = std::floorf((m_MouseY - startY) / (s_SlotSize * ratioY));
+		if (m_MouseY >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && m_MouseY < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
+			selectedSlotY = 3 + 4.f / s_SlotSize;
+		if (selectedSlotY > 2 && selectedSlotY < 3.1f) selectedSlotY = -1;
+		
+		if (selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
+			renderer.DrawTexture(
+				static_cast<int>(startX + selectedSlotX * s_SlotSize * ratioX + ratioX + 1),
+				static_cast<int>(startY + selectedSlotY * s_SlotSize * ratioY + ratioY + 1),
+				m_SlotHoverTexture,
+				static_cast<int>(16.0f * ratioX),
+				static_cast<int>(16.0f * ratioY),
+				true
+			);
+		
+		// Render the holding item stack
 		if (m_HoldingStack.size > 0)
 		{
 			Texture itemTexture = itemRegistry.GetTextureForItemType(m_HoldingStack.type);
@@ -252,7 +302,7 @@ namespace Minecraft
 		float ratioX = static_cast<float>(textureWidth) / static_cast<float>(m_HotbarTexture->GetWidth());
 		float ratioY = static_cast<float>(textureHeight) / static_cast<float>(m_HotbarTexture->GetHeight());
 
-		float startX = std::ceilf(renderer.GetWidth() / 2 - textureWidth / 2) + ratioY * 3;
+		float startX = std::ceilf(renderer.GetWidth() / 2.f - textureWidth / 2.f) + ratioY * 3;
 		float startY = ratioY * 3;
 
 		// Render selected slot
@@ -362,10 +412,10 @@ namespace Minecraft
 		if (stack.size > 1)
 		{
 			std::string itemCountStr = std::to_string(stack.size);
-			int charWidth = fontLoader.GetCharWidth() * ratioX;
-			int charHeight = fontLoader.GetCharHeight() * ratioY;
-			int textX = x + s_SlotSize * ratioX - charWidth * itemCountStr.size();
-			int textY = y + s_SlotSize * ratioY - charHeight - ratioY;
+			int charWidth = static_cast<int>(fontLoader.GetCharWidth() * ratioX);
+			int charHeight = static_cast<int>(fontLoader.GetCharHeight() * ratioY);
+			int textX = static_cast<int>(x + (s_SlotSize - 1) * ratioX - charWidth * itemCountStr.size());
+			int textY = static_cast<int>(y + s_SlotSize * ratioY - charHeight - ratioY);
 			renderer.DrawText(itemCountStr, textX, textY, charWidth, charHeight, fontLoader);
 		}
 	}

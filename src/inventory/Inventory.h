@@ -20,7 +20,10 @@ namespace Minecraft
 		static constexpr int s_HotbarSlotSize = 16;
 
 	public:
-		Inventory() {}
+		Inventory()
+		{
+			m_SlotHoverTexture.SetPixel(0, 0, 0x44FFFFFF);
+		}
 
 		void Update(const Core::InputManager& inputManager);
 		void UpdateHotbar(const Core::InputManager& inputManager);
@@ -89,8 +92,11 @@ namespace Minecraft
 		Texture* m_InventoryTexture = nullptr;
 		Texture* m_HotbarTexture = nullptr;
 		Texture* m_SelectedSlotTexture = nullptr;
+		Texture m_SlotHoverTexture{ 1, 1 };
 
 		int m_RendererWidth = 0;
 		int m_RendererHeight = 0;
+		int m_MouseX = 0;
+		int m_MouseY = 0;
 	};
 }

@@ -16,6 +16,7 @@ namespace Minecraft
 	void Player::Update(float deltaTime, World& world)
 	{
 		HandleInput();
+
 		if (m_InventoryOpen)
 		{
 			m_Inventory.Update(m_InputManager);
@@ -31,6 +32,49 @@ namespace Minecraft
 		}
 		else
 			m_Inventory.UpdateHotbar(m_InputManager);
+
+		// Block breaking mechanics
+		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+			m_StartedBreakingBlock = false;
+
+		WorldRaycastResult raycast;
+		if (
+			m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) &&
+			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast) &&
+			!m_GameMode.CanInstantBreakBlocks()
+			)
+		{
+			if (m_LastBlockBreakingPos != raycast.blockPosition)
+				m_StartedBreakingBlock = false;
+			else if (!m_StartedBreakingBlock)
+			{
+				m_StartedBreakingBlock = true;
+				m_BlockBreakingStartTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+			}
+
+			if (m_LastBlockBreakingPos == raycast.blockPosition)
+			{
+				Block block = world.GetBlock(raycast.blockPosition);
+				float breakTime = block.GetBreakTime();
+				if (block.IsBreakable())
+				{
+					long long currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+					float progress = (currentTime - m_BlockBreakingStartTime) / (breakTime * 1000.0f);
+					world.SetBlockBreakingProgress(block, raycast.blockPosition, progress);
+					if (progress >= 1.0f)
+					{
+						m_RequestedBlockBreakAction = true;
+						m_StartedBreakingBlock = false;
+					}
+				}
+				else
+					m_StartedBreakingBlock = false;
+			}
+
+			m_LastBlockBreakingPos = raycast.blockPosition;
+		}
+		else
+			m_StartedBreakingBlock = false;
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
@@ -55,9 +99,28 @@ namespace Minecraft
 		}
 	}
 
-	void Player::Render(Renderer& renderer, const ItemRegistry& itemRegistry)
+	void Player::Render(Renderer& renderer, const ItemRegistry& itemRegistry, int seaLevel)
 	{
-		
+		if (m_WaterScreenTexture.GetWidth() != renderer.GetWidth() ||
+			m_WaterScreenTexture.GetHeight() != renderer.GetHeight())
+		{
+			CreateWaterScreenTexture(renderer.GetWidth(), renderer.GetHeight());
+		}
+
+		if (IsInWater() && GetHeadPosition().y - 0.9f < seaLevel)
+			renderer.DrawTexture(0, 0, m_WaterScreenTexture, true);
+
+		renderer.DrawTexture(
+			renderer.GetWidth() / 2 - m_CrosshairTexture->GetWidth() / 2,
+			renderer.GetHeight() / 2 - m_CrosshairTexture->GetHeight() / 2,
+			*m_CrosshairTexture, true
+		);
+
+		// Debugging
+		Transform t1;
+		t1.SetPosition(m_PhysicsBody->position);
+		t1.SetScale(m_PhysicsBody->size);
+		//renderer.DrawCubeWireframe(t1, 0xAAFF0000, m_Camera, 4, true, false);
 	}
 
 	void Player::RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
@@ -129,7 +192,8 @@ namespace Minecraft
 
 	void Player::RemoveItemAfterPlacing()
 	{
-		m_Inventory.GetSelectedHotbarSlot().size--;
+		if (m_GameMode.PlacingBlocksConsumesItems())
+			m_Inventory.GetSelectedHotbarSlot().size--;
 	}
 	
 	void Player::HandleInput()
@@ -284,4 +348,12 @@ namespace Minecraft
 		return Block(ItemRegistry::GetBlockTypeFromItemType(stack.type));
 	}
 
+	void Player::CreateWaterScreenTexture(int width, int height)
+	{
+		m_WaterScreenTexture = Texture(width, height);
+		for (int i = 0; i < width; i++)
+			for (int j = 0; j < height; j++)
+				m_WaterScreenTexture.SetPixel(i, j, 0x334444FF);
+		m_WaterScreenTexture.SetDefaultColor(0x334444FF);
+	}
 }

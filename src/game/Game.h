@@ -25,8 +25,6 @@ namespace Minecraft
 
 		void Resize(int width, int height);
 
-		void RenderWaterMesh(Mesh& mesh);
-
 		void Save();
 
 		uint32_t* GetFrameBuffer() { return m_Renderer.GetFrameBuffer(); }
@@ -56,8 +54,6 @@ namespace Minecraft
 
 		float m_PhysicsAccumulator = 0.0f;
 		const float m_PhysicsFixedDelta = 1.0f / 40.0f;
-
-		Texture m_WaterScreenTexture;
 
 		Core::MouseMode m_MouseMode = Core::MouseMode::Captured;
 	};

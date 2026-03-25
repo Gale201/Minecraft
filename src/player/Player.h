@@ -29,7 +29,7 @@ namespace Minecraft
 
 		void UpdatePhysics(float deltaTime);
 		void Update(float deltaTime, World& world);
-		void Render(Renderer& renderer, const ItemRegistry& itemRegistry);
+		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, int seaLevel);
 		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 
 		void HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime);
@@ -92,9 +92,13 @@ namespace Minecraft
 		void SetInputBindings(InputBindings inputBindings) { m_InputBindings = inputBindings; }
 
 		void SetGameMode(GameMode mode) { m_GameMode = mode; }
+
+		void SetTextures(Texture& crosshair) { m_CrosshairTexture = &crosshair; }
+
 	private:
 		void HandleInput();
 		void HandleMovementInput();
+		void CreateWaterScreenTexture(int width, int height);
 
 	private:
 		Vec3f m_HeadRotation;
@@ -136,5 +140,13 @@ namespace Minecraft
 		float m_MaxPlaceBlockDistance = 8.0f;
 		bool m_RequestedBlockBreakAction = false;
 		bool m_RequestedBlockPlaceAction = false;
+
+		bool m_StartedBreakingBlock = false;
+		long long m_BlockBreakingStartTime = 0;
+		Vec3i m_LastBlockBreakingPos;
+
+		Texture* m_CrosshairTexture;
+		Texture m_WaterScreenTexture;
+		Mesh m_WaterMesh;
 	};
 }
