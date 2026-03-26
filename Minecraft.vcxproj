@@ -156,13 +156,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
-    <IncludePath>D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;C:\Users\jojog\Desktop\Lovro\Programming\Libraries\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\lib\x64;C:\Users\jojog\Desktop\Lovro\Programming\Libraries\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(PROJECTDIR)external\SDL2\include;C:\Users\jojog\Desktop\Lovro\Programming\Libraries\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(PROJECTDIR)external\SDL2\lib\x64;C:\Users\jojog\Desktop\Lovro\Programming\Libraries\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(PROJECTDIR)external\SDL2\include;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(ExternalIncludePath)</ExternalIncludePath>
-    <LibraryPath>D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\lib\x64;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(PROJECTDIR)external\SDL2\lib\x64;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -199,12 +199,12 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(PROJECTDIR)external;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(PROJECTDIR)external;$(PROJECTDIR)external\SDL2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;C:\Users\jojog\Desktop\Lovro\Programming\Libraries\SDL2-2.32.10\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(PROJECTDIR)external\SDL2\include;C:\Users\jojog\Desktop\Lovro\Programming\Libraries\SDL2-2.32.10\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -217,13 +217,13 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(PROJECTDIR)external;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(PROJECTDIR)external;$(PROJECTDIR)external\SDL2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\include;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(PROJECTDIR)external\SDL2\include;D:\Programming\Libraries\SDL2-devel-2.32.10-VC\SDL2-2.32.10\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

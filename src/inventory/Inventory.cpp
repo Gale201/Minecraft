@@ -331,6 +331,50 @@ namespace Minecraft
 			RenderItem(renderer, itemRegistry, fontLoader, stack, x, y, ratioX, ratioY);
 		}
 	}
+	
+	void Inventory::RenderHotbarIcons(Renderer& renderer, int health, int armor)
+	{
+		int textureHeight = renderer.GetHeight() * 1 / 11;
+		int textureWidth = textureHeight * m_HotbarTexture->GetWidth() / m_HotbarTexture->GetHeight();
+
+		int hotbarStartY = renderer.GetHeight() - textureHeight - 6;
+		
+		float ratioX = static_cast<float>(textureWidth) / static_cast<float>(m_HotbarTexture->GetWidth());
+		float ratioY = static_cast<float>(textureHeight) / static_cast<float>(m_HotbarTexture->GetHeight());
+
+		float startX = std::ceilf(renderer.GetWidth() / 2.f - textureWidth / 2.f) + ratioY * 3;
+		float startY = ratioY * 3;
+
+		// Render hearths
+		Texture borderTexture = m_IconsTexture->Crop(16, 0, 9, 9);
+		for (int i = 0; i < 20; i += 2)
+		{
+			int idx = 4;
+			if (health - 1 == i) idx = 5;
+			else if (health < i + 2) idx = 0;
+
+			Texture heartTexture = m_IconsTexture->Crop(16 + idx * 9, 0, 9, 9);
+
+			int x = static_cast<int>(std::floorf(startX - ratioX * 3 + ((i / 2) % 10) * 8.5f * ratioX));
+			int y = hotbarStartY - static_cast<int>(s_HotbarSlotSize * ratioY) + ratioY * 6;
+			renderer.DrawTexture(x, y, borderTexture, static_cast<int>(borderTexture.GetWidth() * ratioX - ratioX / 2.f), static_cast<int>(borderTexture.GetHeight() * ratioY - ratioX / 2.f), true);
+			renderer.DrawTexture(x, y, heartTexture, static_cast<int>(heartTexture.GetWidth() * ratioX - ratioX / 2.f), static_cast<int>(heartTexture.GetHeight() * ratioY - ratioY / 2.f), true);
+		}
+
+		// Render armor
+		for (int i = 0; i < 20; i += 2)
+		{
+			int idx = 0;
+			if (armor - 1 == i) idx = 1;
+			else if (armor < i + 2) idx = 2;
+
+			Texture armorTexture = m_IconsTexture->Crop(16 + idx * 9, 9, 9, 9);
+
+			int x = static_cast<int>(std::floorf(startX + s_HotbarSlotSize * ratioX * 10 - 66 * ratioX + ((i / 2) % 10) * 8.5f * ratioX));
+			int y = hotbarStartY - static_cast<int>(s_HotbarSlotSize * ratioY) + ratioY * 6;
+			renderer.DrawTexture(x, y, armorTexture, static_cast<int>(armorTexture.GetWidth() * ratioX - ratioX / 2.f), static_cast<int>(armorTexture.GetHeight() * ratioY - ratioY / 2.f), true);
+		}
+	}
 
 	ItemStack Inventory::AddItemStack(ItemStack stack)
 	{

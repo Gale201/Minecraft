@@ -126,6 +126,9 @@ namespace Minecraft
 	void Player::RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
 	{
 		m_Inventory.RenderHotbar(renderer, itemRegistry, fontLoader);
+		if (m_GameMode.HasHealth())
+			m_Inventory.RenderHotbarIcons(renderer, m_Health, m_Armor);
+
 		if (m_InventoryOpen)
 			m_Inventory.Render(renderer, itemRegistry, fontLoader);
 	}

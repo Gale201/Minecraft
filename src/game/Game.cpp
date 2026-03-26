@@ -107,7 +107,8 @@ namespace Minecraft
 		m_Player.GetInventory().SetTextures(
 			m_TextureLoader.Get("inventory"),
 			m_TextureLoader.Get("hotbar"),
-			m_TextureLoader.Get("selected-slot")
+			m_TextureLoader.Get("selected-slot"),
+			m_TextureLoader.Get("icons")
 		);
 	}
 

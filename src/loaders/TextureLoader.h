@@ -49,7 +49,8 @@ namespace Minecraft
 			{ "inventory", "inventory.png" },
 			{ "hotbar", "hotbar.png" },
 			{ "selected-slot", "selected-slot.png" },
-			{ "font", "font.png" }
+			{ "font", "font.png" },
+			{ "icons", "icons.png" }
 		};
 	};
 }

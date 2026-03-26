@@ -145,6 +145,9 @@ namespace Minecraft
 		long long m_BlockBreakingStartTime = 0;
 		Vec3i m_LastBlockBreakingPos;
 
+		int m_Health = 11;
+		int m_Armor = 15;
+
 		Texture* m_CrosshairTexture;
 		Texture m_WaterScreenTexture;
 		Mesh m_WaterMesh;

@@ -21,4 +21,9 @@ namespace Minecraft
 	{
 		return m_Type == GameModeType::Creative;
 	}
+
+	bool GameMode::HasHealth() const
+	{
+		return m_Type == GameModeType::Survival;
+	}
 }

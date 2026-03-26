@@ -29,6 +29,7 @@ namespace Minecraft
 		void UpdateHotbar(const Core::InputManager& inputManager);
 		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 		void RenderHotbar(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
+		void RenderHotbarIcons(Renderer& renderer, int health, int armor);
 
 		ItemStack AddItemStack(ItemStack stack);
 		int FindFirstEmptySlot() const;
@@ -66,11 +67,17 @@ namespace Minecraft
 			m_SelectedHotbarSlotIndex = slot;
 		}
 
-		void SetTextures(Texture& inventroyTexture, Texture& hotbarTexture, Texture& selectedTexture)
+		void SetTextures(
+			Texture& inventroyTexture, 
+			Texture& hotbarTexture, 
+			Texture& selectedTexture,
+			Texture& iconsTexture
+		)
 		{
 			m_InventoryTexture = &inventroyTexture;
 			m_HotbarTexture = &hotbarTexture;
 			m_SelectedSlotTexture = &selectedTexture;
+			m_IconsTexture = &iconsTexture;
 		}
 
 	private:
@@ -92,6 +99,7 @@ namespace Minecraft
 		Texture* m_InventoryTexture = nullptr;
 		Texture* m_HotbarTexture = nullptr;
 		Texture* m_SelectedSlotTexture = nullptr;
+		Texture* m_IconsTexture = nullptr;
 		Texture m_SlotHoverTexture{ 1, 1 };
 
 		int m_RendererWidth = 0;

@@ -17,6 +17,7 @@ namespace Minecraft
 		bool BreakingBlocksDropsItems() const;
 		bool PlacingBlocksConsumesItems() const;
 		bool CanPlayerFly() const;
+		bool HasHealth() const;
 
 		void SetGameModeType(GameModeType type) { m_Type = type; }
 
