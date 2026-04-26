@@ -22,7 +22,7 @@ namespace Minecraft
 		ModelLoader(std::string objFolderPath);
 		~ModelLoader() = default;
 
-		std::optional<Model> LoadModelFromObj(const std::string fileName);
+		std::optional<Model> LoadModelFromObj(const std::string fileName) const;
 
 		std::string GetModelFolderPath() const { return m_ModelFolderPath; }
 
@@ -33,8 +33,9 @@ namespace Minecraft
 			Mesh& mesh,
 			std::vector<IndexData>& indices,
 			std::vector<Vec3f>& positions,
-			std::vector<Vec3f> normals,
-			std::vector<Vec2f> uvs
-		);
+			std::vector<Vec3f>& normals,
+			std::vector<Vec2f>& uvs,
+			int lastMeshStartIndex
+		) const;
 	};
 }

@@ -388,8 +388,10 @@ namespace Minecraft
 		return chunk->blocks[blockPos.x][blockPos.y][blockPos.z];
 	}
 
-	void World::SetBlock(Vec3i pos, BlockType type)
+	bool World::SetBlock(Vec3i pos, BlockType type)
 	{
+		if (pos.y >= CHUNK_HEIGHT) return false;
+
 		// Get the chunk that the block is in
 		Vec3i chunkPos = GetChunkPosition(pos);
 		Chunk& chunk = GetChunk(chunkPos);
@@ -426,6 +428,8 @@ namespace Minecraft
 			Chunk& neighbor = GetChunk({ chunkPos.x, chunkPos.y, chunkPos.z + 1 });
 			AddChunkToMeshingQueue(neighbor);
 		}
+
+		return true;
 	}
 
 	const std::vector<const Chunk*> World::GetFrustumVisibleChunks(const Camera& camera) const

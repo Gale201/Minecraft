@@ -226,15 +226,7 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 				}
 				else
 				{
-					u -= (int)u;
-					v -= (int)v;
-
-					constexpr float inset = 0.01f / 160.f;
-
-					float atlasU = tileInfo.u0 + inset + u * (tileInfo.uScale - 2.0f * inset);
-					float atlasV = tileInfo.v0 + inset + v * (tileInfo.vScale - 2.0f * inset);
-
-					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(atlasU, atlasV), triangle.lightIntensity));
+					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u, v), triangle.lightIntensity));
 				}
 			}
 		}
@@ -429,7 +421,7 @@ void Renderer::DrawMesh(
 	Vec3f transformedDirectionalLight = (
 		viewMatrix * Vec4f::FromVec3f(m_DirectionalLight, 0.0f)
 		).ToVec3f(); // Add .normalized() for a classic directional light
-	
+
 	Triangle triangle;
 	AtlasTileInfo tileInfo;
 	for (size_t i = 0; i < mesh.indices.size(); i += 3)
@@ -447,7 +439,7 @@ void Renderer::DrawMesh(
 			// Transform world vertex to camera space
 			Vec4f cameraVertex = viewMatrix * worldVertex;
 
-			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });	
+			triangle.SetVertexByIndex(j, { cameraVertex.ToVec3f(), v.normal, v.u, v.v, 0.0f, v.tileInfo });
 		}
 
 		// Back face culling (happening in camera space)
@@ -475,14 +467,15 @@ void Renderer::DrawMesh(
 
 				// Transform the clipped vertex to clip space
 				Vec4f perspectiveVertex = perspectiveMatrix * Vec4f::FromVec3f(clippedVertex.position, 1.0f);
+				float invW = 1.0f / perspectiveVertex.w;
 
 				// Perspective divide
-				perspectiveVertex.x /= perspectiveVertex.w;
-				perspectiveVertex.y /= perspectiveVertex.w;
-				perspectiveVertex.z /= perspectiveVertex.w;
+				perspectiveVertex.x *= invW;
+				perspectiveVertex.y *= invW;
+				perspectiveVertex.z *= invW;
 
-				clippedVertex.u /= perspectiveVertex.w;
-				clippedVertex.v /= perspectiveVertex.w;
+				clippedVertex.u *= invW;
+				clippedVertex.v *= invW;
 
 				Vertex screenVertex{ {}, clippedVertex.normal, clippedVertex.u, clippedVertex.v };
 
@@ -490,13 +483,14 @@ void Renderer::DrawMesh(
 				screenVertex.position.x = (perspectiveVertex.x * 0.5f + 0.5f) * m_Width;
 				screenVertex.position.y = (1.0f - (perspectiveVertex.y * 0.5f + 0.5f)) * m_Height;
 				screenVertex.position.z = perspectiveVertex.z;
-				screenVertex.invW = 1.0f / perspectiveVertex.w;
+				screenVertex.invW = invW;
 
 				triangle.SetVertexByIndex(j, screenVertex);
 			}
 
 			// Screen space back face culling
-			if (CalculateTriangleArea(triangle) <= 0) continue;
+			if (CalculateTriangleArea(triangle) <= 0) 
+				continue;
 
 			DrawTriangleBarycentric(triangle, texture, tileInfo);
 		}
@@ -582,6 +576,21 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 
 				DrawTriangleBarycentric(triangle, renderObject.texture, {});
 			}
+		}
+	}
+}
+
+void Renderer::DrawPixelBuffer(int x, int y, const uint32_t* pixelBuffer, int bufferWidth, int bufferHeight, bool alphaBlend)
+{
+	for (int i = 0; i < bufferHeight; i++)
+	{
+		for (int j = 0; j < bufferWidth; j++)
+		{
+			uint32_t color = pixelBuffer[i * bufferWidth + j];
+			if (alphaBlend)
+				DrawPixelAlphaBlend(x + j, y + i, color);
+			else
+				DrawPixel(x + j, y + i, color);
 		}
 	}
 }

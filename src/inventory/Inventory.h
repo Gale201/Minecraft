@@ -8,6 +8,7 @@
 #include "../render/Renderer.h"
 #include "../font/FontLoader.h"
 #include "../core/InputManager.h"
+#include "../entities/EntityModel.h"
 
 namespace Minecraft
 {
@@ -27,9 +28,17 @@ namespace Minecraft
 
 		void Update(const Core::InputManager& inputManager);
 		void UpdateHotbar(const Core::InputManager& inputManager);
+		void UpdatePlayerModel(const Core::InputManager& inputManager);
+
 		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 		void RenderHotbar(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 		void RenderHotbarIcons(Renderer& renderer, int health, int armor);
+		void RenderPlayerModel(Renderer& renderer, float ratioX, float ratioY);
+
+		void GrabItemStack(int selectedSlotX, int selectedSlotY);
+		void ReleaseItemStack(int selectedSlotX, int selectedSlotY);
+		void ReleaseOneItem(int selectedSlotX, int selectedSlotY);
+		void CollectAllItems(int selectedSlotX, int selectedSlotY);
 
 		ItemStack AddItemStack(ItemStack stack);
 		int FindFirstEmptySlot() const;
@@ -71,13 +80,21 @@ namespace Minecraft
 			Texture& inventroyTexture, 
 			Texture& hotbarTexture, 
 			Texture& selectedTexture,
-			Texture& iconsTexture
+			Texture& iconsTexture,
+			Texture& steveSkinTexture
 		)
 		{
 			m_InventoryTexture = &inventroyTexture;
 			m_HotbarTexture = &hotbarTexture;
 			m_SelectedSlotTexture = &selectedTexture;
 			m_IconsTexture = &iconsTexture;
+			m_SkinTexture = &steveSkinTexture;
+		}
+
+		void SetPlayerModel(std::unique_ptr<EntityModel>& playerModel)
+		{
+			m_PlayerModel = std::make_unique<EntityModel>(*playerModel);
+			m_PlayerModel->SetTexture(*m_SkinTexture);
 		}
 
 	private:
@@ -88,6 +105,7 @@ namespace Minecraft
 		std::array<ItemStack, s_CraftAreaSize> m_CraftingSlots;
 
 		Vec2f m_SlotsTopLeftPoint{ 7.f, 83.f };
+		Vec2f m_PlayerModelTopLeftPoint{ 25.f, 8.f };
 
 		int m_SelectedHotbarSlotIndex = 0;
 		ItemStack m_HoldingStack;
@@ -100,7 +118,10 @@ namespace Minecraft
 		Texture* m_HotbarTexture = nullptr;
 		Texture* m_SelectedSlotTexture = nullptr;
 		Texture* m_IconsTexture = nullptr;
+		Texture* m_SkinTexture = nullptr;
 		Texture m_SlotHoverTexture{ 1, 1 };
+
+		std::unique_ptr<EntityModel> m_PlayerModel = nullptr;
 
 		int m_RendererWidth = 0;
 		int m_RendererHeight = 0;

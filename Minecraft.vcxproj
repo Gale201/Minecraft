@@ -23,6 +23,8 @@
     <ClCompile Include="src\core\InputManager.cpp" />
     <ClCompile Include="src\core\Application.cpp" />
     <ClCompile Include="src\core\Window.cpp" />
+    <ClCompile Include="src\entities\EntityModel.cpp" />
+    <ClCompile Include="src\entities\EntityModelManager.cpp" />
     <ClCompile Include="src\game\Game.cpp" />
     <ClCompile Include="src\game\GameMode.cpp" />
     <ClCompile Include="src\inventory\Inventory.cpp" />
@@ -53,6 +55,9 @@
     <ClInclude Include="src\core\Log.h" />
     <ClInclude Include="src\core\Application.h" />
     <ClInclude Include="src\core\Window.h" />
+    <ClInclude Include="src\entities\EntityModel.h" />
+    <ClInclude Include="src\entities\EntityModelManager.h" />
+    <ClInclude Include="src\entities\EntityModelPart.h" />
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\game\GameMode.h" />
     <ClInclude Include="src\inventory\Inventory.h" />

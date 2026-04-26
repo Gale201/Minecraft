@@ -21,12 +21,12 @@ namespace Minecraft
 		{
 			m_Inventory.Update(m_InputManager);
 			
-			ItemStack holdingStack = m_Inventory.GetItemToRemove();
-			if (holdingStack.size > 0)
+			ItemStack itemStackToRemove = m_Inventory.GetItemToRemove();
+			if (itemStackToRemove.size > 0)
 			{
 				Vec3f spawnPos = GetHeadPosition() + m_Camera.GetForward() * 0.5f;
 				float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
-				world.AddItem(PhysicsBody(spawnPos), holdingStack, rotY, m_Camera.GetForward() * 30.0f);
+				world.AddItem(PhysicsBody(spawnPos), itemStackToRemove, rotY, m_Camera.GetForward() * 30.0f);
 				world.GetItems()[world.GetItemIndex(world.GetCurrentItemID() - 1)].pickupCooldown = 120;
 			}
 		}
@@ -131,6 +131,18 @@ namespace Minecraft
 
 		if (m_InventoryOpen)
 			m_Inventory.Render(renderer, itemRegistry, fontLoader);
+
+		// Temp
+		Camera camera;
+		camera.fovY = 1.0f;
+		camera.aspect = static_cast<float>(renderer.GetWidth()) / static_cast<float>(renderer.GetHeight());
+		camera.nearPlane = 0.1f;
+		camera.farPlane = 100.0f;
+		m_Model->SetPosition(Vec3f(0.0f));
+		m_Model->GetPart("RightArm")->position = Vec3f(-1.6f, -0.4f, -2.f);
+		m_Model->GetPart("RightArm")->scale = Vec3f(0.1f);
+		m_Model->GetPart("RightArm")->rotation = Vec3f(2.0f, 2.2f, 0.0f);
+		m_Model->RenderPart(renderer, camera, "RightArm");
 	}
 
 	void Player::HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime)

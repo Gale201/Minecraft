@@ -22,6 +22,7 @@ namespace Minecraft
 		float y;
 
 		Vec2f() : x(0), y(0) {}
+		Vec2f(float v) : x(v), y(v) {}
 		Vec2f(float xx, float yy) : x(xx), y(yy) {}
 
 		inline static Vec2f zero() { return Vec2f(0.0f, 0.0f); }
@@ -70,6 +71,7 @@ namespace Minecraft
 		float z;
 
 		Vec3f() : x(0), y(0), z(0) {}
+		Vec3f(float v) : x(v), y(v), z(v) {}
 		Vec3f(float xx, float yy, float zz) : x(xx), y(yy), z(zz) {}
 		Vec3f(int xx, int yy, int zz) : x(static_cast<float>(xx)), y(static_cast<float>(yy)), z(static_cast<float>(zz)) {}
 
@@ -156,6 +158,7 @@ namespace Minecraft
 		float w;
 
 		Vec4f() : x(0), y(0), z(0), w(0) {}
+		Vec4f(float v) : x(v), y(v), z(v), w(v) {}
 		Vec4f(float xx, float yy, float zz, float ww) : x(xx), y(yy), z(zz), w(ww) {}
 
 		inline static Vec4f zero() { return Vec4f(0.0f, 0.0f, 0.0f, 0.0f); }

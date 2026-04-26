@@ -18,7 +18,7 @@ namespace Minecraft
 		}
 	}
 
-	std::optional<Model> ModelLoader::LoadModelFromObj(const std::string fileName)
+	std::optional<Model> ModelLoader::LoadModelFromObj(const std::string fileName) const
 	{
 		// Open file and check if it opened successfully
 		std::ifstream file(m_ModelFolderPath + fileName);
@@ -31,7 +31,10 @@ namespace Minecraft
 		std::vector<Vec2f> uvs;
 		std::vector<Vec3f> normals;
 
+		std::vector<std::string> meshNames;
 		std::vector<Mesh> meshes;
+
+		int lastMeshStartIndex = 0;
 
 		std::string line;
 		while (std::getline(file, line))
@@ -112,9 +115,13 @@ namespace Minecraft
 						indices,
 						positions,
 						normals,
-						uvs
+						uvs,
+						lastMeshStartIndex
 					);
+
+					lastMeshStartIndex = indices.size();
 				}
+				meshNames.push_back(line.substr(2, line.size() - 2));
 				meshes.emplace_back();
 			}
 		}
@@ -124,10 +131,12 @@ namespace Minecraft
 			indices,
 			positions,
 			normals,
-			uvs
+			uvs,
+			lastMeshStartIndex
 		);
 
 		Model model;
+		model.meshNames = meshNames;
 		model.meshes = meshes;
 
 		return model;
@@ -137,26 +146,27 @@ namespace Minecraft
 		Mesh& mesh,
 		std::vector<IndexData>& indices,
 		std::vector<Vec3f>& positions,
-		std::vector<Vec3f> normals,
-		std::vector<Vec2f> uvs
-	)
+		std::vector<Vec3f>& normals,
+		std::vector<Vec2f>& uvs,
+		int lastMeshStartIndex
+	) const
 	{
 		std::vector<Vertex> vertices;
 		std::vector<int> combinedIndices;
 
 		// Combine the parsed data into vertices and indices
-		for (int i = 0; i < indices.size(); i++)
+		for (int i = lastMeshStartIndex; i < indices.size(); i++)
 		{
 			IndexData indexData = indices[i];
 			Vertex vertex;
 
 			vertex.position = positions[indexData.vertexIndex - 1];
 			vertex.u = uvs[indexData.uvIndex - 1].x;
-			vertex.v = uvs[indexData.uvIndex - 1].y;
+			vertex.v = 1.0f - uvs[indexData.uvIndex - 1].y;
 			vertex.normal = normals[indexData.normalIndex - 1];
 
 			vertices.push_back(vertex);
-			combinedIndices.push_back(i);
+			combinedIndices.push_back(i - lastMeshStartIndex);
 		}
 
 		mesh.vertices = vertices;

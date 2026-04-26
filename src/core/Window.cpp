@@ -175,11 +175,22 @@ namespace Core
 		}
 	}
 
+	void Window::ResetMousePosition()
+	{
+		SDL_WarpMouseInWindow(static_cast<SDL_Window*>(m_WindowHandle), m_Width / 2, m_Height / 2);
+	}
+
 	void Window::SetMouseMode(MouseMode state)
 	{
 		if (state == MouseMode::Captured)
+		{
 			SDL_SetRelativeMouseMode(SDL_TRUE);
+			m_IsMouseRelative = true;
+		}
 		else
+		{
 			SDL_SetRelativeMouseMode(SDL_FALSE);
+			m_IsMouseRelative = false;
+		}
 	}
 }

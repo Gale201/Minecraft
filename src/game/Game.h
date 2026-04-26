@@ -7,6 +7,8 @@
 #include "../physics/PhysicsSystem.h"
 #include "../items/ItemRegistry.h"
 #include "../../font/FontLoader.h"
+#include "../loaders/ModelLoader.h"
+#include "../entities/EntityModelManager.h"
 
 #define SKY_COLOR 0xFF99BBFF
 
@@ -42,6 +44,9 @@ namespace Minecraft
 		TextureLoader m_TextureLoader{ "res/textures/" };
 		std::string m_FontCharacters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_´abcdefghijklmnopqrstuvwxyz{|}~";
 		FontLoader m_FontLoader{ m_FontCharacters };
+		ModelLoader m_ModelLoader{ "res/models/" };
+
+		EntityModelManager m_EntityModelManager{ m_ModelLoader };
 
 		ItemRegistry m_ItemRegistry{ m_TextureLoader };
 

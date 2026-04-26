@@ -25,162 +25,33 @@ namespace Minecraft
 		if (m_MouseY >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && m_MouseY < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
 			selectedSlotY = 0;
 
+		if (m_MouseX < startX || m_MouseX >= startX + 9 * s_SlotSize * ratioX || m_MouseY < startY || m_MouseY >= startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
+		{
+			selectedSlotX = -1;
+			selectedSlotY = -1;
+		}
+
 		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
 
 		if (inputManager.IsMouseButtonJustPressed(Core::MouseButton::Left))
 		{
-			if (selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
-			{
-				if (selectedSlotIndex < s_Size && m_Slots[selectedSlotIndex].size > 0)
-				{
-					if (m_HoldingStack.size == 0)
-					{
-						m_HoldingStack = m_Slots[selectedSlotIndex];
-						m_Slots[selectedSlotIndex].size = 0;
-						m_WaitForMouseRelease = true;
-					}
-				}
-			}
+			GrabItemStack(selectedSlotX, selectedSlotY);
 		}
 		else if (inputManager.IsMouseButtonJustReleased(Core::MouseButton::Left))
 		{
-			if (!m_WaitForMouseRelease && selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
-			{
-				if (selectedSlotIndex < s_Size)
-				{
-					ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
-
-					if (selectedSlot.type == m_HoldingStack.type)
-					{
-						if (selectedSlot.size + m_HoldingStack.size <= ItemRegistry::GetStackSizeForItemType(selectedSlot.type))
-						{
-							selectedSlot.size += m_HoldingStack.size;
-							m_HoldingStack.size = 0;
-						}
-						else
-						{
-							int spaceLeft = ItemRegistry::GetStackSizeForItemType(selectedSlot.type) - selectedSlot.size;
-							selectedSlot.size += spaceLeft;
-							m_HoldingStack.size -= spaceLeft;
-						}
-					}
-					else
-					{
-						ItemStack temp = m_HoldingStack;
-						m_HoldingStack = selectedSlot;
-						selectedSlot = temp;
-					}
-				}
-			}
-			else if (!m_WaitForMouseRelease)
-			{
-				m_ItemToRemove = m_HoldingStack;
-				m_HoldingStack.size = 0;
-			}
-
-			m_WaitForMouseRelease = false;
+			ReleaseItemStack(selectedSlotX, selectedSlotY);
 		}
 		else if (inputManager.IsMouseButtonJustReleased(Core::MouseButton::Right))
 		{
-			if (selectedSlotIndex < s_Size)
-			{
-				ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
-
-				if (m_HoldingStack.size == 0 && selectedSlot.size > 0)
-				{
-					m_HoldingStack.type = selectedSlot.type;
-					m_HoldingStack.size = (selectedSlot.size + 1) / 2;
-					selectedSlot.size -= m_HoldingStack.size;
-				}
-				else if (m_HoldingStack.size > 0 && selectedSlot.size > 0)
-				{
-					if (m_HoldingStack.type == selectedSlot.type && selectedSlot.size < ItemRegistry::GetStackSizeForItemType(selectedSlot.type))
-					{
-						selectedSlot.size++;
-						m_HoldingStack.size--;
-					}
-					else if (m_HoldingStack.type != selectedSlot.type)
-					{
-						ItemStack temp = m_HoldingStack;
-						m_HoldingStack = selectedSlot;
-						selectedSlot = temp;
-					}
-				}
-				else if (m_HoldingStack.size > 0 && selectedSlot.size == 0)
-				{
-					selectedSlot.type = m_HoldingStack.type;
-					selectedSlot.size = 1;
-					m_HoldingStack.size--;
-				}
-			}
-		}
-		else if (inputManager.IsMouseButtonJustReleased(Core::MouseButton::Right))
-		{
-			if (!m_WaitForMouseRelease && selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
-			{
-				if (selectedSlotIndex < s_Size)
-				{
-					ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
-
-					if (
-						m_HoldingStack.size > 1 &&
-						(selectedSlot.size == 0 ||
-						(
-							selectedSlot.type == m_HoldingStack.type &&
-							selectedSlot.size < ItemRegistry::GetStackSizeForItemType(selectedSlot.type)
-						))
-					)
-					{
-						selectedSlot.type = m_HoldingStack.type;
-						selectedSlot.size++;
-						m_HoldingStack.size--;
-					}
-					else if (m_HoldingStack.size == 1 && selectedSlot.type == m_HoldingStack.type)
-					{
-						selectedSlot.size++;
-						m_HoldingStack.size = 0;
-					}
-					else
-					{
-						ItemStack temp = m_HoldingStack;
-						m_HoldingStack = selectedSlot;
-						selectedSlot = temp;
-					}
-				}
-			}
-
-			m_WaitForMouseRelease = false;
+			ReleaseOneItem(selectedSlotX, selectedSlotY);
 		}
 		
 		if (inputManager.IsMouseButtonJustDoublePressed(Core::MouseButton::Left))
 		{
-			if (
-				m_HoldingStack.size > 0 && 
-				m_HoldingStack.size < ItemRegistry::GetStackSizeForItemType(m_HoldingStack.type) &&
-				selectedSlotIndex < s_Size &&
-				m_Slots[selectedSlotIndex].size == 0
-			)
-			{
-				for (int i = 0; i < s_Size; i++)
-				{
-					if (m_Slots[i].type == m_HoldingStack.type && m_Slots[i].size < ItemRegistry::GetStackSizeForItemType(m_Slots[i].type))
-					{
-						int spaceLeft = ItemRegistry::GetStackSizeForItemType(m_Slots[i].type) - m_HoldingStack.size;
-						if (spaceLeft >= m_Slots[i].size)
-						{
-							m_HoldingStack.size += m_Slots[i].size;
-							m_Slots[i].size = 0;
-						}
-						else
-						{
-							m_HoldingStack.size += spaceLeft;
-							m_Slots[i].size -= spaceLeft;
-						}
-					}
-				}
-				m_WaitForMouseRelease = true;
-			}
+			CollectAllItems(selectedSlotX, selectedSlotY);
 		}
+
+		UpdatePlayerModel(inputManager);
 	}
 
 	void Inventory::UpdateHotbar(const Core::InputManager& inputManager)
@@ -202,12 +73,41 @@ namespace Minecraft
 			m_SelectedHotbarSlotIndex = (m_SelectedHotbarSlotIndex + 1) % 9;
 	}
 
+	void Inventory::UpdatePlayerModel(const Core::InputManager& inputManager)
+	{
+		if (!m_PlayerModel) return;
+		
+		float mouseX = (inputManager.GetMouseX() - m_RendererWidth / 2) / static_cast<float>(m_RendererWidth);
+		float mouseY = (inputManager.GetMouseY() - m_RendererHeight / 3) / static_cast<float>(m_RendererHeight);
+
+		Vec3f absoluteHeadPos = m_PlayerModel->GetPosition() + m_PlayerModel->GetPart("Head")->position;
+	
+		float dx = mouseX - absoluteHeadPos.x;
+		float dy = mouseY - absoluteHeadPos.y;
+
+		float yaw = -std::atan2(dx, 45.0f);
+		float pitch = std::atan2(dy, 45.0f);
+
+		float yawDeg = yaw * (180.0f / PI);
+		float pitchDeg = pitch * (180.0f / PI);
+
+		m_PlayerModel->GetPart("LeftArm")->position = Vec3f(0.016f, 0.0f, 0.0f);
+		m_PlayerModel->GetPart("RightArm")->position = Vec3f(-0.016f, 0.0f, 0.0f);
+
+		m_PlayerModel->GetPart("Head")->rotation = Vec3f(pitchDeg, yawDeg, 0.0f);
+		m_PlayerModel->GetPart("Body")->rotation = Vec3f(pitchDeg * 0.5f, yawDeg * 0.5f, 0.0f);
+		m_PlayerModel->GetPart("LeftArm")->rotation = Vec3f(pitchDeg * 0.8f, yawDeg * 0.8f, 0.1f);
+		m_PlayerModel->GetPart("RightArm")->rotation = Vec3f(pitchDeg * 0.8f, yawDeg * 0.8f, -0.1f);
+		m_PlayerModel->GetPart("LeftLeg")->rotation = Vec3f(pitchDeg * 0.2f, yawDeg * 0.2f, 0.0f);
+		m_PlayerModel->GetPart("RightLeg")->rotation = Vec3f(pitchDeg * 0.2f, yawDeg * 0.2f, 0.0f);
+	}
+
 	void Inventory::Render(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
 	{
 		if (!m_InventoryTexture) return;
 
 		// Render the inventory background
-		int textureHeight = renderer.GetHeight() * 11 / 16;
+		int textureHeight = (renderer.GetHeight() * 11) / 16;
 		int textureWidth = textureHeight * m_InventoryTexture->GetWidth() / m_InventoryTexture->GetHeight();
 
 		renderer.DrawTexture(
@@ -278,6 +178,9 @@ namespace Minecraft
 
 			RenderItem(renderer, itemRegistry, fontLoader, m_HoldingStack, m_HoldingStackPosition.x - width / 2, m_HoldingStackPosition.y - height / 2, ratioX, ratioY);
 		}
+
+		// Render the player model
+		RenderPlayerModel(renderer, ratioX, ratioY);
 	}
 
 	void Inventory::RenderHotbar(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
@@ -376,6 +279,172 @@ namespace Minecraft
 		}
 	}
 
+	void Inventory::RenderPlayerModel(Renderer& renderer, float ratioX, float ratioY)
+	{
+		if (m_PlayerModel)
+		{
+			int tempRendererHeight = static_cast<int>(renderer.GetHeight() * 0.29f);
+			int tempRendererWidth = (tempRendererHeight * 200) / 275;
+
+			Camera camera;
+			camera.fovY = 1.0f;
+			camera.aspect = static_cast<float>(tempRendererWidth) / static_cast<float>(tempRendererHeight);
+			camera.nearPlane = 0.1f;
+			camera.farPlane = 100.0f;
+
+			Renderer tempRenderer;
+			tempRenderer.Initialize(tempRendererWidth, tempRendererHeight);
+			tempRenderer.Clear(0x0);
+			tempRenderer.SetDirectionalLight(Vec3f(0.0f, 0.0f, -1.0f));
+			m_PlayerModel->SetPosition(Vec3f(0.0f, -0.08f, -1.0f));
+			m_PlayerModel->SetScale(Vec3f(0.026f));
+			m_PlayerModel->Render(tempRenderer, camera);
+			uint32_t* frameBuffer = tempRenderer.GetFrameBuffer();
+
+			int textureHeight = (renderer.GetHeight() * 11) / 16;
+			int textureWidth = textureHeight * m_InventoryTexture->GetWidth() / m_InventoryTexture->GetHeight();
+
+			int startX = static_cast<int>(std::ceilf(renderer.GetWidth() / 2 - textureWidth / 2 + m_PlayerModelTopLeftPoint.x * ratioX));
+			int startY = static_cast<int>(std::ceilf(renderer.GetHeight() / 2 - textureHeight / 2 + m_PlayerModelTopLeftPoint.y * ratioY));
+
+			renderer.DrawPixelBuffer(startX, startY, frameBuffer, tempRendererWidth, tempRendererHeight, true);
+		}
+	}
+
+	void Inventory::GrabItemStack(int selectedSlotX, int selectedSlotY)
+	{
+		if (selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
+		{
+			int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+			if (selectedSlotIndex < s_Size && m_Slots[selectedSlotIndex].size > 0)
+			{
+				if (m_HoldingStack.size == 0)
+				{
+					m_HoldingStack = m_Slots[selectedSlotIndex];
+					m_Slots[selectedSlotIndex].size = 0;
+					m_WaitForMouseRelease = true;
+				}
+			}
+		}
+	}
+
+	void Inventory::ReleaseItemStack(int selectedSlotX, int selectedSlotY)
+	{
+		if (!m_WaitForMouseRelease && selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
+		{
+			int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+			if (selectedSlotIndex < s_Size)
+			{
+				ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
+
+				if (selectedSlot.type == m_HoldingStack.type)
+				{
+					if (selectedSlot.size + m_HoldingStack.size <= ItemRegistry::GetStackSizeForItemType(selectedSlot.type))
+					{
+						selectedSlot.size += m_HoldingStack.size;
+						m_HoldingStack.size = 0;
+					}
+					else
+					{
+						int spaceLeft = ItemRegistry::GetStackSizeForItemType(selectedSlot.type) - selectedSlot.size;
+						selectedSlot.size += spaceLeft;
+						m_HoldingStack.size -= spaceLeft;
+					}
+				}
+				else
+				{
+					ItemStack temp = m_HoldingStack;
+					m_HoldingStack = selectedSlot;
+					selectedSlot = temp;
+				}
+			}
+		}
+		else if (!m_WaitForMouseRelease)
+		{
+			m_ItemToRemove = m_HoldingStack;
+			m_HoldingStack.size = 0;
+		}
+
+		m_WaitForMouseRelease = false;
+	}
+
+	void Inventory::ReleaseOneItem(int selectedSlotX, int selectedSlotY)
+	{
+		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+		if (selectedSlotIndex >= 0 && selectedSlotIndex < s_Size)
+		{
+			ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
+
+			if (m_HoldingStack.size == 0 && selectedSlot.size > 0)
+			{
+				m_HoldingStack.type = selectedSlot.type;
+				m_HoldingStack.size = (selectedSlot.size + 1) / 2;
+				selectedSlot.size -= m_HoldingStack.size;
+			}
+			else if (m_HoldingStack.size > 0 && selectedSlot.size > 0)
+			{
+				if (m_HoldingStack.type == selectedSlot.type && selectedSlot.size < ItemRegistry::GetStackSizeForItemType(selectedSlot.type))
+				{
+					selectedSlot.size++;
+					m_HoldingStack.size--;
+				}
+				else if (m_HoldingStack.type != selectedSlot.type)
+				{
+					ItemStack temp = m_HoldingStack;
+					m_HoldingStack = selectedSlot;
+					selectedSlot = temp;
+				}
+			}
+			else if (m_HoldingStack.size > 0 && selectedSlot.size == 0)
+			{
+				selectedSlot.type = m_HoldingStack.type;
+				selectedSlot.size = 1;
+				m_HoldingStack.size--;
+			}
+		}
+		else
+		{
+			if (m_HoldingStack.size > 0)
+			{
+				m_ItemToRemove.type = m_HoldingStack.type;
+				m_ItemToRemove.size = 1;
+				m_HoldingStack.size--;
+			}
+		}
+	}
+
+	void Inventory::CollectAllItems(int selectedSlotX, int selectedSlotY)
+	{
+		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+		if (
+			m_HoldingStack.size > 0 &&
+			m_HoldingStack.size < ItemRegistry::GetStackSizeForItemType(m_HoldingStack.type) &&
+			selectedSlotIndex >= 0 &&
+			selectedSlotIndex < s_Size &&
+			m_Slots[selectedSlotIndex].size == 0
+			)
+		{
+			for (int i = 0; i < s_Size; i++)
+			{
+				if (m_Slots[i].type == m_HoldingStack.type && m_Slots[i].size < ItemRegistry::GetStackSizeForItemType(m_Slots[i].type))
+				{
+					int spaceLeft = ItemRegistry::GetStackSizeForItemType(m_Slots[i].type) - m_HoldingStack.size;
+					if (spaceLeft >= m_Slots[i].size)
+					{
+						m_HoldingStack.size += m_Slots[i].size;
+						m_Slots[i].size = 0;
+					}
+					else
+					{
+						m_HoldingStack.size += spaceLeft;
+						m_Slots[i].size -= spaceLeft;
+					}
+				}
+			}
+			m_WaitForMouseRelease = true;
+		}
+	}
+
 	ItemStack Inventory::AddItemStack(ItemStack stack)
 	{
 		for (int i = 0; i < s_Size; i++)
@@ -442,7 +511,7 @@ namespace Minecraft
 		return false;
 	}
 	
-	/* Privatr functions */
+	/* Private functions */
 
 	void Inventory::RenderItem(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader, const ItemStack& stack, int x, int y, float ratioX, float ratioY)
 	{

@@ -137,7 +137,7 @@ namespace Minecraft
 
 		int GetSeaLevel() const { return m_ChunkLoader.GetSeaLevel(); }
 
-		void SetBlock(Vec3i pos, BlockType type);
+		bool SetBlock(Vec3i pos, BlockType type);
 		void SetTextureAtlas(const Texture& texture)
 		{
 			m_TextureAtlas = &texture;

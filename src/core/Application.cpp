@@ -67,6 +67,8 @@ namespace Core
 
 		m_Game->Update(deltaTime);
 
+		if (m_Window.isMouseRelative() != (m_Game->GetMouseMode() == MouseMode::Captured))
+			m_Window.ResetMousePosition();
 		m_Window.SetMouseMode(m_Game->GetMouseMode());
 	}
 

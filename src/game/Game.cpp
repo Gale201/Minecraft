@@ -71,7 +71,12 @@ namespace Minecraft
 			m_World->GetPhysicsAddQueue().pop();
 		}
 
-		m_Player.SetGameMode(GameModeType::Survival);
+		bool successLoadingModels = m_EntityModelManager.LoadAllModels();
+		if (!successLoadingModels)
+		{
+			LOG_ERROR("Error loading models. Exiting...");
+			exit(1);
+		}
 	}
 
 	void Game::Setup()
@@ -103,13 +108,22 @@ namespace Minecraft
 		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 1000.0f };
 		m_Player.SetCameraConfig(cameraConfig);
 
-		m_Player.SetTextures(m_TextureLoader.Get("crosshair"));
+		m_Player.SetTextures(
+			m_TextureLoader.Get("crosshair"),
+			m_TextureLoader.Get("steve-skin")
+		);
 		m_Player.GetInventory().SetTextures(
 			m_TextureLoader.Get("inventory"),
 			m_TextureLoader.Get("hotbar"),
 			m_TextureLoader.Get("selected-slot"),
-			m_TextureLoader.Get("icons")
+			m_TextureLoader.Get("icons"),
+			m_TextureLoader.Get("steve-skin")
 		);
+
+		EntityModel playerModel = m_EntityModelManager.CreateEntityModel("player");
+		m_Player.SetModel(playerModel);
+
+		m_Player.SetGameMode(GameModeType::Survival);
 	}
 
 	void Game::Update(float deltaTime)

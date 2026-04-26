@@ -27,7 +27,9 @@ namespace Core
 		int GetWidth() const { return m_Width; }
 		int GetHeight() const { return m_Height; }
 
+		void ResetMousePosition();
 		void SetMouseMode(MouseMode state);
+		bool isMouseRelative() const { return m_IsMouseRelative; }
 
 	private:
 		int m_Width = 0;
@@ -36,5 +38,7 @@ namespace Core
 		void* m_WindowHandle = nullptr;
 		void* m_Renderer = nullptr;
 		void* m_Texture = nullptr;
+
+		bool m_IsMouseRelative = false;
 	};
 }

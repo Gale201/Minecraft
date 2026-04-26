@@ -13,6 +13,11 @@ namespace Minecraft
         {
         }
 
+        Texture(int width, int height, uint32_t* pixelBuffer)
+            : m_Width(width), m_Height(height), m_Pixels(pixelBuffer, pixelBuffer + width * height)
+        {
+		}
+
         void UpdateSize(int width, int height)
         {
             m_Width = width;

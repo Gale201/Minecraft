@@ -62,7 +62,10 @@ namespace Minecraft
 
 			if (type == BlockType::Undefined)
 				return false;
-			m_World->SetBlock(raycast.blockPosition + normal, type);
+
+			if (!m_World->SetBlock(raycast.blockPosition + normal, type))
+				return false;
+
 			player.RemoveItemAfterPlacing();
 			return true;
 		}

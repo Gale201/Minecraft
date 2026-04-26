@@ -48,6 +48,8 @@ namespace Minecraft
 		);
 		void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
+		void DrawPixelBuffer(int x, int y, const uint32_t* pixelBuffer, int bufferWidth, int bufferHeight, bool alphaBlend = false);
+
 		void DrawTexture(int x, int y, const Texture& texture, bool alphaBlend = false);
 
 		void DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend = false, bool cutoff = false, uint32_t maskColor = 0);

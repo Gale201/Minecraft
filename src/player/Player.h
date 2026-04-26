@@ -93,7 +93,18 @@ namespace Minecraft
 
 		void SetGameMode(GameMode mode) { m_GameMode = mode; }
 
-		void SetTextures(Texture& crosshair) { m_CrosshairTexture = &crosshair; }
+		void SetTextures(Texture& crosshair, Texture& skinTexture) 
+		{
+			m_CrosshairTexture = &crosshair;
+			m_SkinTexture = &skinTexture;
+		}
+
+		void SetModel(EntityModel& model) 
+		{ 
+			m_Model = std::make_unique<EntityModel>(model);
+			m_Model->SetTexture(*m_SkinTexture);
+			m_Inventory.SetPlayerModel(m_Model);
+		}
 
 	private:
 		void HandleInput();
@@ -149,7 +160,10 @@ namespace Minecraft
 		int m_Armor = 15;
 
 		Texture* m_CrosshairTexture;
+		Texture* m_SkinTexture;
 		Texture m_WaterScreenTexture;
 		Mesh m_WaterMesh;
+
+		std::unique_ptr<EntityModel> m_Model = nullptr;
 	};
 }
