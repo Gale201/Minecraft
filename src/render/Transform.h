@@ -74,6 +74,13 @@ namespace Minecraft
 			m_Update = true;
 		}
 
+		void SetParentMatrix(const Mat4& parent)
+		{
+			m_ParentMatrix = parent;
+			m_HasParent = true;
+			m_Update = true;
+		}
+
 		Vec3f GetPosition() const { return m_Position; }
 		Vec3f GetRotation() const { return m_Rotation; }
 		Vec3f GetScale() const { return m_Scale; }
@@ -84,7 +91,13 @@ namespace Minecraft
 			Mat4 translate = Mat4::Translate(m_Position);
 			Mat4 rotate = Mat4::RotateXYZ(m_Rotation);
 			Mat4 scale = Mat4::Scale(m_Scale);
-			m_Matrix = scale * rotate * translate;
+			
+			Mat4 localMatrix = scale * rotate * translate;
+
+			if (m_HasParent)
+				m_Matrix = localMatrix * m_ParentMatrix;
+			else
+				m_Matrix = localMatrix;
 		}
 
 	private:
@@ -92,7 +105,9 @@ namespace Minecraft
 		Vec3f m_Rotation;
 		Vec3f m_Scale;
 		mutable Mat4 m_Matrix;
+		Mat4 m_ParentMatrix;
+		bool m_HasParent = false;
 
-		mutable bool m_Update = false;
+		mutable bool m_Update = true;
 	};
 }

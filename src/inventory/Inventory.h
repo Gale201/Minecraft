@@ -9,6 +9,7 @@
 #include "../font/FontLoader.h"
 #include "../core/InputManager.h"
 #include "../entities/EntityModel.h"
+#include "../animations/ValueAnimation.h"
 
 namespace Minecraft
 {
@@ -24,11 +25,13 @@ namespace Minecraft
 		Inventory()
 		{
 			m_SlotHoverTexture.SetPixel(0, 0, 0x44FFFFFF);
+
+			m_PlayerModelHandRotationAnimation.SetInterpolator(ValueAnimation::s_CubicEaseOutInterpolator);
 		}
 
-		void Update(const Core::InputManager& inputManager);
+		void Update(float deltaTime, const Core::InputManager& inputManager);
 		void UpdateHotbar(const Core::InputManager& inputManager);
-		void UpdatePlayerModel(const Core::InputManager& inputManager);
+		void UpdatePlayerModel(float deltaTime, const Core::InputManager& inputManager);
 
 		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 		void RenderHotbar(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
@@ -91,10 +94,13 @@ namespace Minecraft
 			m_SkinTexture = &steveSkinTexture;
 		}
 
-		void SetPlayerModel(std::unique_ptr<EntityModel>& playerModel)
+		void SetPlayerModel(EntityModel& playerModel)
 		{
-			m_PlayerModel = std::make_unique<EntityModel>(*playerModel);
+			m_PlayerModel = std::make_unique<EntityModel>(playerModel);
 			m_PlayerModel->SetTexture(*m_SkinTexture);
+			m_PlayerModel->SetPosition(Vec3f(0.0f, -0.08f, -1.0f));
+			m_PlayerModel->SetScale(Vec3f(0.026f));
+			m_PlayerModel->SetPivot(Vec3f(0.0f, 0.6f, 0.0f));
 		}
 
 	private:
@@ -127,5 +133,7 @@ namespace Minecraft
 		int m_RendererHeight = 0;
 		int m_MouseX = 0;
 		int m_MouseY = 0;
+
+		ValueAnimation m_PlayerModelHandRotationAnimation{ 0.07f, 0.13f, 3.0f, true, true };
 	};
 }

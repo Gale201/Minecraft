@@ -28,11 +28,12 @@ namespace Minecraft
 
 		EntityModel entityModel;
 		const Model& model = m_Models.at(name);
-		for (size_t i = 0; i < model.meshes.size(); i++)
+		for (size_t i = 0; i < model.parts.size(); i++)
 		{
 			EntityModelPart part;
-			part.mesh = &model.meshes[i];
-			entityModel.AddPart(model.meshNames[i], part);
+			part.mesh = &model.parts[i].mesh;
+			part.pivot = model.parts[i].pivot;
+			entityModel.AddPart(model.parts[i].name, part);
 		}
 		return entityModel;
 	}

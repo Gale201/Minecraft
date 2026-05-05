@@ -35,6 +35,7 @@ namespace Minecraft
 			std::vector<Vec3f>& positions,
 			std::vector<Vec3f>& normals,
 			std::vector<Vec2f>& uvs,
+			Vec3f pivot,
 			int lastMeshStartIndex
 		) const;
 	};

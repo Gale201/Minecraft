@@ -14,7 +14,7 @@ namespace Minecraft
 	struct ItemDefinition
 	{
 		ItemType type;
-		Mesh* mesh;
+		const Mesh* mesh;
 		Texture* texture;
 	};
 
@@ -28,7 +28,7 @@ namespace Minecraft
 
 		void Initialize();
 
-		ItemDefinition GetItemDefinition(ItemType type);
+		ItemDefinition GetItemDefinition(ItemType type) const;
 		Texture GetTextureForItemType(ItemType type) const;
 		
 		std::unordered_map<ItemType, Mesh>& GetMeshes() { return m_Meshes; }

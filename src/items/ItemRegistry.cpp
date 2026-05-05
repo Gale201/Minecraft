@@ -124,7 +124,7 @@ namespace Minecraft
 		}
 	}
 
-	ItemDefinition ItemRegistry::GetItemDefinition(ItemType type)
+	ItemDefinition ItemRegistry::GetItemDefinition(ItemType type) const
 	{
 		Texture* texture;
 		if (IsItemFullBlock(type))

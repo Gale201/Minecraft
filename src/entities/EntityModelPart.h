@@ -9,6 +9,7 @@ namespace Minecraft
 		Vec3f position;
 		Vec3f scale{ 1.0f, 1.0f, 1.0f };
 		Vec3f rotation;
+		Vec3f pivot;
 		const Mesh* mesh;
 	};
 }

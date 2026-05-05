@@ -34,7 +34,8 @@ namespace Minecraft
 
 		void DrawLine(Vec3f start, Vec3f end, uint32_t color, int width, bool alphaBlend = false);
 
-		void DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
+		void DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, bool isTransparent, bool isCutout);
+		void DrawTriangleBarycentricWithTileInfo(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 		void DrawTriangleScanline(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo);
 		void DrawTriangleWireframe(const Triangle& triangle, uint32_t color);
 
@@ -44,8 +45,11 @@ namespace Minecraft
 			const Mesh& mesh,
 			const Transform& transform,
 			const Texture& texture,
-			const Camera& camera
+			const Camera& camera,
+			AtlasTileInfo tileInfo,
+			bool useTileInfo = true
 		);
+
 		void DrawRenderObject(const RenderObject& renderObject, const Camera& camera);
 
 		void DrawPixelBuffer(int x, int y, const uint32_t* pixelBuffer, int bufferWidth, int bufferHeight, bool alphaBlend = false);

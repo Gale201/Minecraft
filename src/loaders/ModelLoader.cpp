@@ -30,9 +30,9 @@ namespace Minecraft
 		std::vector<IndexData> indices;
 		std::vector<Vec2f> uvs;
 		std::vector<Vec3f> normals;
+		Vec3f pivot;
 
-		std::vector<std::string> meshNames;
-		std::vector<Mesh> meshes;
+		std::vector<ModelPart> modelParts;
 
 		int lastMeshStartIndex = 0;
 
@@ -105,39 +105,51 @@ namespace Minecraft
 			{
 				normals.push_back(normal);
 			}
+			// Parsing pivots
+			else if (
+				line.starts_with("pivot ") &&
+				std::sscanf(line.c_str(), "pivot %f %f %f", &pivot.x, &pivot.y, &pivot.z) == 3
+				)
+			{
+				if (!modelParts.empty())
+				{
+					modelParts.back().pivot = pivot;
+				}
+			}
 			// Handle object/group lines
 			else if (line.starts_with("o ") || line.starts_with("g "))
 			{
-				if (!meshes.empty())
+				if (!modelParts.empty())
 				{
 					CombineParsedDataForMesh(
-						meshes.back(),
+						modelParts.back().mesh,
 						indices,
 						positions,
 						normals,
 						uvs,
+						modelParts.back().pivot,
 						lastMeshStartIndex
 					);
 
 					lastMeshStartIndex = indices.size();
 				}
-				meshNames.push_back(line.substr(2, line.size() - 2));
-				meshes.emplace_back();
+				modelParts.emplace_back();
+				modelParts.back().name = line.substr(2, line.size() - 2);
 			}
 		}
 
 		CombineParsedDataForMesh(
-			meshes.back(),
+			modelParts.back().mesh,
 			indices,
 			positions,
 			normals,
 			uvs,
+			modelParts.back().pivot,
 			lastMeshStartIndex
 		);
 
 		Model model;
-		model.meshNames = meshNames;
-		model.meshes = meshes;
+		model.parts = modelParts;
 
 		return model;
 	}
@@ -148,6 +160,7 @@ namespace Minecraft
 		std::vector<Vec3f>& positions,
 		std::vector<Vec3f>& normals,
 		std::vector<Vec2f>& uvs,
+		Vec3f pivot,
 		int lastMeshStartIndex
 	) const
 	{
@@ -160,7 +173,7 @@ namespace Minecraft
 			IndexData indexData = indices[i];
 			Vertex vertex;
 
-			vertex.position = positions[indexData.vertexIndex - 1];
+			vertex.position = positions[indexData.vertexIndex - 1] - pivot;
 			vertex.u = uvs[indexData.uvIndex - 1].x;
 			vertex.v = 1.0f - uvs[indexData.uvIndex - 1].y;
 			vertex.normal = normals[indexData.normalIndex - 1];

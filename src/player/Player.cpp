@@ -17,64 +17,21 @@ namespace Minecraft
 	{
 		HandleInput();
 
-		if (m_InventoryOpen)
-		{
-			m_Inventory.Update(m_InputManager);
-			
-			ItemStack itemStackToRemove = m_Inventory.GetItemToRemove();
-			if (itemStackToRemove.size > 0)
-			{
-				Vec3f spawnPos = GetHeadPosition() + m_Camera.GetForward() * 0.5f;
-				float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
-				world.AddItem(PhysicsBody(spawnPos), itemStackToRemove, rotY, m_Camera.GetForward() * 30.0f);
-				world.GetItems()[world.GetItemIndex(world.GetCurrentItemID() - 1)].pickupCooldown = 120;
-			}
-		}
+		UpdateInventory(deltaTime, world);
+
+		HandleBlockInteractions(world);
+
+		UpdateAnimations(deltaTime);
+
+		UpdateFirstPersonModel();
+
+		// Sprinting FOV effect
+		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
+			m_Camera.fovY = std::fminf(m_Camera.fovY + 0.04f, m_CameraSprintFovY);
 		else
-			m_Inventory.UpdateHotbar(m_InputManager);
+			m_Camera.fovY = std::fmaxf(m_Camera.fovY - 0.04f, m_CameraFovY);
 
-		// Block breaking mechanics
-		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
-			m_StartedBreakingBlock = false;
-
-		WorldRaycastResult raycast;
-		if (
-			m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) &&
-			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast) &&
-			!m_GameMode.CanInstantBreakBlocks()
-			)
-		{
-			if (m_LastBlockBreakingPos != raycast.blockPosition)
-				m_StartedBreakingBlock = false;
-			else if (!m_StartedBreakingBlock)
-			{
-				m_StartedBreakingBlock = true;
-				m_BlockBreakingStartTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-			}
-
-			if (m_LastBlockBreakingPos == raycast.blockPosition)
-			{
-				Block block = world.GetBlock(raycast.blockPosition);
-				float breakTime = block.GetBreakTime();
-				if (block.IsBreakable())
-				{
-					long long currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-					float progress = (currentTime - m_BlockBreakingStartTime) / (breakTime * 1000.0f);
-					world.SetBlockBreakingProgress(block, raycast.blockPosition, progress);
-					if (progress >= 1.0f)
-					{
-						m_RequestedBlockBreakAction = true;
-						m_StartedBreakingBlock = false;
-					}
-				}
-				else
-					m_StartedBreakingBlock = false;
-			}
-
-			m_LastBlockBreakingPos = raycast.blockPosition;
-		}
-		else
-			m_StartedBreakingBlock = false;
+		m_JustPlacedBlock = false;
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
@@ -125,24 +82,138 @@ namespace Minecraft
 
 	void Player::RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
 	{
+		Camera camera;
+		camera.fovY = 1.0f;
+		camera.aspect = static_cast<float>(renderer.GetWidth()) / static_cast<float>(renderer.GetHeight());
+		camera.nearPlane = 0.1f;
+		camera.farPlane = 100.0f;
+		if (m_Inventory.GetSelectedHotbarSlot().size <= 0)
+			m_Model->RenderPart(renderer, camera, "RightArmUI");
+		else
+		{
+			ItemDefinition itemDef = itemRegistry.GetItemDefinition(m_Inventory.GetSelectedHotbarSlot().type);
+			AtlasTileInfo tileInfo = itemRegistry.GetAtlasTileInfoForItem(itemDef.type);
+			
+			Transform transform;
+			if (itemRegistry.IsItemFullBlock(itemDef.type))
+			{
+				EntityModelPart* rightArmUI = m_Model->GetPart("RightArmUI");
+				transform.SetPosition(rightArmUI->position + Vec3f(-0.016f, 0.01f, -0.05f));
+				transform.SetRotation(rightArmUI->rotation + Vec3f(-2.0f + 0.1f, -3.7f - 0.8f, 0.0f));
+				transform.SetScale(Vec3f(
+					rightArmUI->scale.x * 1.5f,
+					rightArmUI->scale.y * 1.5f,
+					rightArmUI->scale.z * 1.5f
+				));
+			}
+			renderer.DrawMesh(*itemDef.mesh, transform, *itemDef.texture, camera, tileInfo);
+		}
+
 		m_Inventory.RenderHotbar(renderer, itemRegistry, fontLoader);
 		if (m_GameMode.HasHealth())
 			m_Inventory.RenderHotbarIcons(renderer, m_Health, m_Armor);
 
 		if (m_InventoryOpen)
 			m_Inventory.Render(renderer, itemRegistry, fontLoader);
+	}
 
-		// Temp
-		Camera camera;
-		camera.fovY = 1.0f;
-		camera.aspect = static_cast<float>(renderer.GetWidth()) / static_cast<float>(renderer.GetHeight());
-		camera.nearPlane = 0.1f;
-		camera.farPlane = 100.0f;
-		m_Model->SetPosition(Vec3f(0.0f));
-		m_Model->GetPart("RightArm")->position = Vec3f(-1.6f, -0.4f, -2.f);
-		m_Model->GetPart("RightArm")->scale = Vec3f(0.1f);
-		m_Model->GetPart("RightArm")->rotation = Vec3f(2.0f, 2.2f, 0.0f);
-		m_Model->RenderPart(renderer, camera, "RightArm");
+	void Player::UpdateInventory(float deltaTime, World& world)
+	{
+		if (m_InventoryOpen)
+		{
+			m_Inventory.Update(deltaTime, m_InputManager);
+
+			ItemStack itemStackToRemove = m_Inventory.GetItemToRemove();
+			if (itemStackToRemove.size > 0)
+			{
+				Vec3f spawnPos = GetHeadPosition() + m_Camera.GetForward() * 0.5f;
+				float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
+				world.AddItem(PhysicsBody(spawnPos), itemStackToRemove, rotY, m_Camera.GetForward() * 30.0f);
+				world.GetItems()[world.GetItemIndex(world.GetCurrentItemID() - 1)].pickupCooldown = 120;
+			}
+		}
+		else
+			m_Inventory.UpdateHotbar(m_InputManager);
+	}
+
+	void Player::HandleBlockInteractions(World& world)
+	{
+		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+			m_StartedBreakingBlock = false;
+
+		WorldRaycastResult raycast;
+		if (
+			m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) &&
+			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast) &&
+			!m_GameMode.CanInstantBreakBlocks()
+			)
+		{
+			if (m_LastBlockBreakingPos != raycast.blockPosition)
+				m_StartedBreakingBlock = false;
+			else if (!m_StartedBreakingBlock)
+			{
+				m_StartedBreakingBlock = true;
+				m_IsPunching = false;
+				m_BlockBreakingStartTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+			}
+
+			if (m_LastBlockBreakingPos == raycast.blockPosition)
+			{
+				Block block = world.GetBlock(raycast.blockPosition);
+				float breakTime = block.GetBreakTime();
+				if (block.IsBreakable())
+				{
+					long long currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+					float progress = (currentTime - m_BlockBreakingStartTime) / (breakTime * 1000.0f);
+					world.SetBlockBreakingProgress(block, raycast.blockPosition, progress);
+					if (progress >= 1.0f)
+					{
+						m_RequestedBlockBreakAction = true;
+						m_StartedBreakingBlock = false;
+					}
+				}
+				else
+					m_StartedBreakingBlock = false;
+			}
+
+			m_LastBlockBreakingPos = raycast.blockPosition;
+		}
+		else
+			m_StartedBreakingBlock = false;
+	}
+
+	void Player::UpdateAnimations(float deltaTime)
+	{
+		// Punching animation
+		if (!m_InventoryOpen && (m_IsPunching || m_JustPlacedBlock))
+			m_StartedPunchingAnimation = true;
+
+		if (m_StartedPunchingAnimation)
+			m_PunchingAnimation.Update(deltaTime);
+
+		if (m_PunchingAnimation.JustFinishedCycle())
+		{
+			m_StartedPunchingAnimation = false;
+			m_PunchingAnimation.Reset();
+		}
+
+		// Breaking animation
+		if (!m_InventoryOpen && m_StartedBreakingBlock)
+			m_StartedBreakingBlockAnimation = true;
+		
+		if (m_StartedBreakingBlockAnimation)
+			m_BreakingBlockAnimation.Update(deltaTime);
+
+		if (m_BreakingBlockAnimation.JustFinishedCycle())
+		{
+			//m_BreakingBlockAnimation.Reset();
+		}
+
+		if (!m_StartedBreakingBlock && m_BreakingBlockAnimation.JustFinishedCycle())
+		{
+			m_StartedBreakingBlockAnimation = false;
+			m_BreakingBlockAnimation.Reset();
+		}
 	}
 
 	void Player::HandleItemPickup(World& world, PhysicsSystem& physicsSystem, float deltaTime)
@@ -209,8 +280,68 @@ namespace Minecraft
 	{
 		if (m_GameMode.PlacingBlocksConsumesItems())
 			m_Inventory.GetSelectedHotbarSlot().size--;
+
+		m_JustPlacedBlock = true;
 	}
 	
+	void Player::SyncCamera(float alpha)
+	{
+		Vec3f interpolated = m_PhysicsBody->GetPreviousPosition() * (1.0f - alpha) + m_PhysicsBody->position * alpha;
+
+		m_Camera.position = interpolated + GetRelativeCameraPos();
+		m_Camera.pitch = m_HeadRotation.x;
+		m_Camera.yaw = m_HeadRotation.y;
+		m_Camera.roll = m_HeadRotation.z;
+	}
+
+	bool Player::IsInBlock(Vec3i blockPos) const
+	{
+		for (int i = -1; i <= 1; i++)
+			for (int j = -1; j <= 1; j++)
+			{
+				Vec3f feetPos = GetFeetPosition() + Vec3f(i * m_Size.x / 2.0f, 0.0f, j * m_Size.z / 2.0f);
+				Vec3f headPos = GetHeadPosition() + Vec3f(i * m_Size.x / 2.0f, 0.0f, j * m_Size.z / 2.0f);
+				if (Vec3i::floor(feetPos) == blockPos || Vec3i::floor(headPos) == blockPos) return true;
+			}
+		return false;
+	}
+
+	bool Player::RequestedBlockBreakAction() const
+	{
+		return m_RequestedBlockBreakAction;
+	}
+
+	bool Player::RequestedBlockPlaceAction() const
+	{
+		return m_RequestedBlockPlaceAction;
+	}
+
+	Block Player::GetRequestedBlockToPlace() const
+	{
+		const ItemStack& stack = m_Inventory.GetSelectedHotbarSlot();
+		if (stack.size == 0 || !ItemRegistry::IsItemPlacable(stack.type))
+			return Block(BlockType::Undefined);
+		return Block(ItemRegistry::GetBlockTypeFromItemType(stack.type));
+	}
+
+	void Player::SetModel(EntityModel& model)
+	{
+		m_Model = std::make_unique<EntityModel>(model);
+		m_Model->SetTexture(*m_SkinTexture);
+		EntityModelPart rightArmUI;
+		EntityModelPart* rightArm = m_Model->GetPart("RightArm");
+		rightArmUI.position = rightArm->position;
+		rightArmUI.rotation = rightArm->rotation;
+		rightArmUI.scale = rightArm->scale;
+		rightArmUI.mesh = rightArm->mesh;
+		m_Model->AddPart("RightArmUI", rightArmUI);
+
+		UpdateFirstPersonModel();
+		m_Inventory.SetPlayerModel(model);
+	}
+
+	/* Private functions */
+
 	void Player::HandleInput()
 	{
 		// Inventory
@@ -235,6 +366,12 @@ namespace Minecraft
 
 		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
 			m_RequestedBlockPlaceAction = true;
+
+		// Punching
+		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+			m_IsPunching = true;
+		else
+			m_IsPunching = false;
 
 		// Sprinting & sneaking
 		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
@@ -318,49 +455,21 @@ namespace Minecraft
 		m_PhysicsBody->AddForce(force * forceMultiplier);
 	}
 
-	void Player::SyncCamera(float alpha)
+	void Player::UpdateFirstPersonModel()
 	{
-		Vec3f interpolated = m_PhysicsBody->GetPreviousPosition() * (1.0f - alpha) + m_PhysicsBody->position * alpha;
+		Transform rightArmTransform;
+		if (m_StartedPunchingAnimation)
+			rightArmTransform = m_PunchingAnimationFrames[m_PunchingAnimation.GetCurrentFrame()];
+		else if (m_StartedBreakingBlockAnimation)
+			rightArmTransform = m_BreakingBlockAnimationFrames[m_BreakingBlockAnimation.GetCurrentFrame()];
+		else
+			rightArmTransform = m_FirstPersonRightArmTransform;
 
-		m_Camera.position = interpolated + GetRelativeCameraPos();
-		m_Camera.pitch = m_HeadRotation.x;
-		m_Camera.yaw = m_HeadRotation.y;
-		m_Camera.roll = m_HeadRotation.z;
-	}
-
-	void Player::UpdateCameraAspectRatio(float ratio)
-	{
-		m_Camera.aspect = ratio;
-	}
-
-	bool Player::IsInBlock(Vec3i blockPos) const
-	{
-		for (int i = -1; i <= 1; i++)
-			for (int j = -1; j <= 1; j++)
-			{
-				Vec3f feetPos = GetFeetPosition() + Vec3f(i * m_Size.x / 2.0f, 0.0f, j * m_Size.z / 2.0f);
-				Vec3f headPos = GetHeadPosition() + Vec3f(i * m_Size.x / 2.0f, 0.0f, j * m_Size.z / 2.0f);
-				if (Vec3i::floor(feetPos) == blockPos || Vec3i::floor(headPos) == blockPos) return true;
-			}
-		return false;
-	}
-
-	bool Player::RequestedBlockBreakAction() const
-	{
-		return m_RequestedBlockBreakAction;
-	}
-
-	bool Player::RequestedBlockPlaceAction() const
-	{
-		return m_RequestedBlockPlaceAction;
-	}
-
-	Block Player::GetRequestedBlockToPlace() const
-	{
-		const ItemStack& stack = m_Inventory.GetSelectedHotbarSlot();
-		if (stack.size == 0 || !ItemRegistry::IsItemPlacable(stack.type)) 
-			return Block(BlockType::Undefined);
-		return Block(ItemRegistry::GetBlockTypeFromItemType(stack.type));
+		m_Model->GetPart("RightArmUI")->position = rightArmTransform.GetPosition() - m_Model->GetPosition();
+		m_Model->GetPart("RightArmUI")->rotation = rightArmTransform.GetRotation() - m_Model->GetRotation();
+		m_Model->GetPart("RightArmUI")->scale.x = rightArmTransform.GetScale().x / m_Model->GetScale().x;
+		m_Model->GetPart("RightArmUI")->scale.y = rightArmTransform.GetScale().y / m_Model->GetScale().y;
+		m_Model->GetPart("RightArmUI")->scale.z = rightArmTransform.GetScale().z / m_Model->GetScale().z;
 	}
 
 	void Player::CreateWaterScreenTexture(int width, int height)

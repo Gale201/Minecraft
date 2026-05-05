@@ -121,6 +121,7 @@ namespace Minecraft
 		);
 
 		EntityModel playerModel = m_EntityModelManager.CreateEntityModel("player");
+		playerModel.SetScale(1.f / 20.f);
 		m_Player.SetModel(playerModel);
 
 		m_Player.SetGameMode(GameModeType::Survival);
@@ -207,7 +208,7 @@ namespace Minecraft
 		m_Height = height;
 		m_Renderer.Initialize(m_Width, m_Height);
 		m_Renderer.CreateTiles();
-		m_Player.UpdateCameraAspectRatio(static_cast<float>(m_Width) / static_cast<float>(m_Height));
+		m_Player.SetCameraAspectRatio(static_cast<float>(m_Width) / static_cast<float>(m_Height));
 	}
 
 	void Game::Save()

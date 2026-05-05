@@ -164,7 +164,7 @@ void Renderer::DrawLine(Vec3f start, Vec3f end, uint32_t color, int width, bool 
 	}
 }
 
-void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo)
+void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& texture, bool isTransparent, bool isCutout)
 {
 	// Calculate the bound box
 	int left, right, top, bottom;
@@ -218,16 +218,104 @@ void Renderer::DrawTriangleBarycentric(const Triangle& triangle, const Texture& 
 				float u = (w0 * triangle.v0.u + w1 * triangle.v1.u + w2 * triangle.v2.u) / invW;
 				float v = (w0 * triangle.v0.v + w1 * triangle.v1.v + w2 * triangle.v2.v) / invW;
 
+				uint32_t color = texture.GetPixelAtUV(u, v);
+
 				if (m_PerPixelLighting)
 				{
 					Vec3f normal = (triangle.v0.normal * w0 + triangle.v1.normal * w1 + triangle.v2.normal * w2).normalized();
-					uint32_t textureColor = texture.GetPixelAtUV(u, v);
-					DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, textureColor));
+					DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, color));
 				}
-				else
+				else if (isTransparent && ((color >> 24) & 0xFF) != 0xFF)
 				{
-					DrawDepthPixel(x, y, z, ShadeColor(texture.GetPixelAtUV(u, v), triangle.lightIntensity));
+					DrawDepthPixelAlphaBlend(x, y, z, ShadeColor(color, triangle.lightIntensity), false);
 				}
+				else if (isCutout && ((color >> 24) & 0xFF) == 0x00)
+					continue;
+				else
+					DrawDepthPixel(x, y, z, ShadeColor(color, triangle.lightIntensity));
+			}
+		}
+	}
+}
+
+void Renderer::DrawTriangleBarycentricWithTileInfo(const Triangle& triangle, const Texture& texture, AtlasTileInfo tileInfo)
+{
+	// Calculate the bound box
+	int left, right, top, bottom;
+	ComputeTriangleBoundingBox(triangle, left, right, top, bottom);
+
+	// Clamp to screen bounds
+	left = std::max(left, 0);
+	right = std::min(right, m_Width - 1);
+	top = std::max(top, 0);
+	bottom = std::min(bottom, m_Height - 1);
+
+	float divisor = (
+		(triangle.v1.position.y - triangle.v2.position.y) * (triangle.v0.position.x - triangle.v2.position.x) +
+		(triangle.v2.position.x - triangle.v1.position.x) * (triangle.v0.position.y - triangle.v2.position.y)
+		);
+
+	if (divisor == 0.0f) return;
+
+	// Rasterize the triangle
+	for (int y = top; y <= bottom; y++)
+	{
+		for (int x = left; x <= right; x++)
+		{
+			float px = x + 0.5f;
+			float py = y + 0.5f;
+
+			// Barycentric coordinates
+			float w0 = (
+				(triangle.v1.position.y - triangle.v2.position.y) * (px - triangle.v2.position.x) +
+				(triangle.v2.position.x - triangle.v1.position.x) * (py - triangle.v2.position.y)
+				) / divisor;
+
+			float w1 = (
+				(triangle.v2.position.y - triangle.v0.position.y) * (px - triangle.v2.position.x) +
+				(triangle.v0.position.x - triangle.v2.position.x) * (py - triangle.v2.position.y)
+				) / divisor;
+
+			float w2 = 1.0f - w0 - w1;
+
+			// If the pixel is inside the triangle
+			float eps = 0.0f;
+			if (w0 >= eps && w1 >= eps && w2 >= eps)
+			{
+				float z = w0 * triangle.v0.position.z + w1 * triangle.v1.position.z + w2 * triangle.v2.position.z;
+
+				// Early depth rejection
+				if (z >= m_DepthBuffer[y * m_Width + x])
+					continue;
+
+				float invW = w0 * triangle.v0.invW + w1 * triangle.v1.invW + w2 * triangle.v2.invW;
+				float u = (w0 * triangle.v0.u + w1 * triangle.v1.u + w2 * triangle.v2.u) / invW;
+				float v = (w0 * triangle.v0.v + w1 * triangle.v1.v + w2 * triangle.v2.v) / invW;
+
+				u -= static_cast<int>(u);
+				v -= static_cast<int>(v);
+
+				float insetU = 0.01f / static_cast<float>(tileInfo.atlasWidth);
+				float insetV = 0.01f / static_cast<float>(tileInfo.atlasHeight);
+
+				float atlasU = tileInfo.u0 + insetU + u * (tileInfo.uScale - 2.0f * insetU);
+				float atlasV = tileInfo.v0 + insetV + v * (tileInfo.vScale - 2.0f * insetV);
+
+				uint32_t color = texture.GetPixelAtUV(atlasU, atlasV);
+
+				if (m_PerPixelLighting)
+				{
+					Vec3f normal = (triangle.v0.normal * w0 + triangle.v1.normal * w1 + triangle.v2.normal * w2).normalized();
+					DrawDepthPixel(x, y, z, ComputeShadedColorForNormal(normal, m_DirectionalLight, m_AmbientLight, color));
+				}
+				else if (tileInfo.isTransparent && ((color >> 24) & 0xFF) != 0xFF)
+				{
+					DrawDepthPixelAlphaBlend(x, y, z, ShadeColor(color, triangle.lightIntensity), false);
+				}
+				else if (tileInfo.isCutout && ((color >> 24) & 0xFF) == 0x00)
+					continue;
+				else
+					DrawDepthPixel(x, y, z, ShadeColor(color, triangle.lightIntensity));
 			}
 		}
 	}
@@ -411,7 +499,9 @@ void Renderer::DrawMesh(
 	const Mesh& mesh,
 	const Transform& transform,
 	const Texture& texture,
-	const Camera& camera
+	const Camera& camera,
+	AtlasTileInfo tileInfo,
+	bool useTileInfo
 )
 {
 	Mat4 modelMatrix = transform.GetMatrix();
@@ -423,7 +513,6 @@ void Renderer::DrawMesh(
 		).ToVec3f(); // Add .normalized() for a classic directional light
 
 	Triangle triangle;
-	AtlasTileInfo tileInfo;
 	for (size_t i = 0; i < mesh.indices.size(); i += 3)
 	{
 		for (size_t j = 0; j < 3; j++)
@@ -491,8 +580,11 @@ void Renderer::DrawMesh(
 			// Screen space back face culling
 			if (CalculateTriangleArea(triangle) <= 0) 
 				continue;
-
-			DrawTriangleBarycentric(triangle, texture, tileInfo);
+			
+			if (useTileInfo)
+				DrawTriangleBarycentricWithTileInfo(triangle, texture, tileInfo);
+			else
+				DrawTriangleBarycentric(triangle, texture, tileInfo.isTransparent, tileInfo.isCutout);
 		}
 	}
 }
@@ -507,15 +599,15 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 		viewMatrix * Vec4f::FromVec3f(m_DirectionalLight, 0.0f)
 	).ToVec3f(); // Add .normalized() for a classic directional light
 
-	for (const Mesh& mesh : renderObject.model.meshes)
+	for (const ModelPart& part : renderObject.model.parts)
 	{
 		Triangle triangle;
-		for (size_t i = 0; i < mesh.indices.size(); i += 3)
+		for (size_t i = 0; i < part.mesh.indices.size(); i += 3)
 		{
 			for (size_t j = 0; j < 3; j++)
 			{
 				// Get the model vertex from the mesh
-				const Vertex& v = mesh.vertices[mesh.indices[i + j]];
+				const Vertex& v = part.mesh.vertices[part.mesh.indices[i + j]];
 
 				// Transform vertex from model space to world space
 				Vec4f worldVertex = modelMatrix * Vec4f(v.position.x, v.position.y, v.position.z, 1.0f);
@@ -574,7 +666,7 @@ void Renderer::DrawRenderObject(const RenderObject& renderObject, const Camera& 
 				// Screen space back face culling
 				if (CalculateTriangleArea(triangle) <= 0) continue;
 
-				DrawTriangleBarycentric(triangle, renderObject.texture, {});
+				DrawTriangleBarycentric(triangle, renderObject.texture, false, false);
 			}
 		}
 	}

@@ -1,12 +1,12 @@
 #pragma once
 #include <vector>
 #include "Mesh.h"
+#include "ModelPart.h"
 
 namespace Minecraft
 {
 	struct Model
 	{
-		std::vector<std::string> meshNames;
-		std::vector<Mesh> meshes;
+		std::vector<ModelPart> parts;
 	};
 }

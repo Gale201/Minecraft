@@ -49,6 +49,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="font\FontLoader.h" />
+    <ClInclude Include="src\animations\FrameAnimation.h" />
+    <ClInclude Include="src\animations\ValueAnimation.h" />
     <ClInclude Include="src\core\Clock.h" />
     <ClInclude Include="src\core\Event.h" />
     <ClInclude Include="src\core\InputManager.h" />
@@ -78,6 +80,7 @@
     <ClInclude Include="src\render\Frustum.h" />
     <ClInclude Include="src\render\Mesh.h" />
     <ClInclude Include="src\render\Model.h" />
+    <ClInclude Include="src\render\ModelPart.h" />
     <ClInclude Include="src\render\RenderCommand.h" />
     <ClInclude Include="src\render\Renderer.h" />
     <ClInclude Include="src\render\RenderObject.h" />

@@ -2,7 +2,7 @@
 
 namespace Minecraft
 {
-	void Inventory::Update(const Core::InputManager& inputManager)
+	void Inventory::Update(float deltaTime, const Core::InputManager& inputManager)
 	{
 		m_ItemToRemove.size = 0;
 
@@ -51,7 +51,7 @@ namespace Minecraft
 			CollectAllItems(selectedSlotX, selectedSlotY);
 		}
 
-		UpdatePlayerModel(inputManager);
+		UpdatePlayerModel(deltaTime, inputManager);
 	}
 
 	void Inventory::UpdateHotbar(const Core::InputManager& inputManager)
@@ -73,7 +73,7 @@ namespace Minecraft
 			m_SelectedHotbarSlotIndex = (m_SelectedHotbarSlotIndex + 1) % 9;
 	}
 
-	void Inventory::UpdatePlayerModel(const Core::InputManager& inputManager)
+	void Inventory::UpdatePlayerModel(float deltaTime, const Core::InputManager& inputManager)
 	{
 		if (!m_PlayerModel) return;
 		
@@ -91,15 +91,13 @@ namespace Minecraft
 		float yawDeg = yaw * (180.0f / PI);
 		float pitchDeg = pitch * (180.0f / PI);
 
-		m_PlayerModel->GetPart("LeftArm")->position = Vec3f(0.016f, 0.0f, 0.0f);
-		m_PlayerModel->GetPart("RightArm")->position = Vec3f(-0.016f, 0.0f, 0.0f);
+		m_PlayerModelHandRotationAnimation.Update(deltaTime);
+		float handRotation = m_PlayerModelHandRotationAnimation.GetValue();
 
-		m_PlayerModel->GetPart("Head")->rotation = Vec3f(pitchDeg, yawDeg, 0.0f);
-		m_PlayerModel->GetPart("Body")->rotation = Vec3f(pitchDeg * 0.5f, yawDeg * 0.5f, 0.0f);
-		m_PlayerModel->GetPart("LeftArm")->rotation = Vec3f(pitchDeg * 0.8f, yawDeg * 0.8f, 0.1f);
-		m_PlayerModel->GetPart("RightArm")->rotation = Vec3f(pitchDeg * 0.8f, yawDeg * 0.8f, -0.1f);
-		m_PlayerModel->GetPart("LeftLeg")->rotation = Vec3f(pitchDeg * 0.2f, yawDeg * 0.2f, 0.0f);
-		m_PlayerModel->GetPart("RightLeg")->rotation = Vec3f(pitchDeg * 0.2f, yawDeg * 0.2f, 0.0f);
+		m_PlayerModel->SetRotation(Vec3f(pitchDeg * 0.1f, yawDeg * 0.8f, 0.0f));
+		m_PlayerModel->GetPart("Head")->rotation = Vec3f(pitchDeg * 1.0f, yawDeg * 1.0f, 0.0f);
+		m_PlayerModel->GetPart("LeftArm")->rotation.z = -handRotation;
+		m_PlayerModel->GetPart("RightArm")->rotation.z = handRotation;
 	}
 
 	void Inventory::Render(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader)
@@ -292,12 +290,16 @@ namespace Minecraft
 			camera.nearPlane = 0.1f;
 			camera.farPlane = 100.0f;
 
+			if (m_PlayerModel->GetRotation().x > 0.03f)
+			{
+				camera.position = Vec3f(0.0f, m_PlayerModel->GetRotation().x * 2.0f, 0.0f);
+				camera.pitch = m_PlayerModel->GetRotation().x * 2.0f;
+			}
+
 			Renderer tempRenderer;
 			tempRenderer.Initialize(tempRendererWidth, tempRendererHeight);
 			tempRenderer.Clear(0x0);
 			tempRenderer.SetDirectionalLight(Vec3f(0.0f, 0.0f, -1.0f));
-			m_PlayerModel->SetPosition(Vec3f(0.0f, -0.08f, -1.0f));
-			m_PlayerModel->SetScale(Vec3f(0.026f));
 			m_PlayerModel->Render(tempRenderer, camera);
 			uint32_t* frameBuffer = tempRenderer.GetFrameBuffer();
 
