@@ -31,7 +31,11 @@ namespace Minecraft
 		else
 			m_Camera.fovY = std::fmaxf(m_Camera.fovY - 0.04f, m_CameraFovY);
 
+		m_PlaceBlockTimer += deltaTime;
+		m_BreakBlockTimer += deltaTime;
+
 		m_JustPlacedBlock = false;
+		m_JustBrokeBlock = false;
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
@@ -106,6 +110,18 @@ namespace Minecraft
 					rightArmUI->scale.z * 1.5f
 				));
 			}
+			else
+			{
+				EntityModelPart* rightArmUI = m_Model->GetPart("RightArmUI");
+				Vec3f rot = m_FirstPersonRightArmTransform.GetRotation();
+				transform.SetPosition(rightArmUI->position + Vec3f(-0.075f, 0.03f, -0.1f));
+				transform.SetRotation(rightArmUI->rotation + Vec3f(-1.4f - rot.x, -rot.y, 1.4f - rot.z));
+				transform.SetScale(Vec3f(
+					rightArmUI->scale.x * 1.5f,
+					rightArmUI->scale.y * 1.5f,
+					rightArmUI->scale.z * 1.5f
+				));
+			}
 			renderer.DrawMesh(*itemDef.mesh, transform, *itemDef.texture, camera, tileInfo);
 		}
 
@@ -141,11 +157,13 @@ namespace Minecraft
 		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
 			m_StartedBreakingBlock = false;
 
+		if (m_GameMode.CanInstantBreakBlocks())
+			return;
+
 		WorldRaycastResult raycast;
 		if (
 			m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) &&
-			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast) &&
-			!m_GameMode.CanInstantBreakBlocks()
+			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast)
 			)
 		{
 			if (m_LastBlockBreakingPos != raycast.blockPosition)
@@ -184,9 +202,48 @@ namespace Minecraft
 
 	void Player::UpdateAnimations(float deltaTime)
 	{
+		// Breaking animation
+		if (!m_InventoryOpen && m_StartedBreakingBlock)
+		{
+			m_StartedBreakingBlockAnimation = true;
+			m_StartedPunchingAnimation = false;
+			m_StartedPlacingBlockAnimation = false;
+		}
+
+		if (m_StartedBreakingBlockAnimation)
+			m_BreakingBlockAnimation.Update(deltaTime);
+
+		if (!m_StartedBreakingBlock && m_BreakingBlockAnimation.JustFinishedCycle())
+		{
+			m_StartedBreakingBlockAnimation = false;
+			m_BreakingBlockAnimation.Reset();
+		}
+
+		// Placing animation
+		if (!m_InventoryOpen && m_JustPlacedBlock)
+		{
+			m_PlacingBlockAnimation.Reset();
+			m_StartedPlacingBlockAnimation = true;
+			m_StartedPunchingAnimation = false;
+			m_StartedBreakingBlockAnimation = false;
+		}
+
+		if (m_StartedPlacingBlockAnimation)
+			m_PlacingBlockAnimation.Update(deltaTime);
+
+		if (m_PlacingBlockAnimation.JustFinishedCycle())
+		{
+			m_StartedPlacingBlockAnimation = false;
+			m_PlacingBlockAnimation.Reset();
+		}
+
 		// Punching animation
-		if (!m_InventoryOpen && (m_IsPunching || m_JustPlacedBlock))
+		if (!m_InventoryOpen && m_IsPunching)
+		{
 			m_StartedPunchingAnimation = true;
+			m_StartedBreakingBlockAnimation = false;
+			m_StartedPlacingBlockAnimation = false;
+		}
 
 		if (m_StartedPunchingAnimation)
 			m_PunchingAnimation.Update(deltaTime);
@@ -195,24 +252,6 @@ namespace Minecraft
 		{
 			m_StartedPunchingAnimation = false;
 			m_PunchingAnimation.Reset();
-		}
-
-		// Breaking animation
-		if (!m_InventoryOpen && m_StartedBreakingBlock)
-			m_StartedBreakingBlockAnimation = true;
-		
-		if (m_StartedBreakingBlockAnimation)
-			m_BreakingBlockAnimation.Update(deltaTime);
-
-		if (m_BreakingBlockAnimation.JustFinishedCycle())
-		{
-			//m_BreakingBlockAnimation.Reset();
-		}
-
-		if (!m_StartedBreakingBlock && m_BreakingBlockAnimation.JustFinishedCycle())
-		{
-			m_StartedBreakingBlockAnimation = false;
-			m_BreakingBlockAnimation.Reset();
 		}
 	}
 
@@ -361,14 +400,34 @@ namespace Minecraft
 		m_RequestedBlockBreakAction = false;
 		m_RequestedBlockPlaceAction = false;
 
-		if (m_GameMode.CanInstantBreakBlocks() && m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+		if (
+			m_GameMode.CanInstantBreakBlocks() &&
+			m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) &&
+			m_BreakBlockTimer > m_BlockBreakingInterval
+			)
+		{
 			m_RequestedBlockBreakAction = true;
+			m_BreakBlockTimer = 0.0f;
+		}
 
 		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)))
+		{
 			m_RequestedBlockPlaceAction = true;
+			m_PlaceBlockTimer = 0.0f;
+		}
+
+		if (m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::PlaceBlock)) &&
+			m_PlaceBlockTimer > m_BlockPlacingInterval)
+		{
+			m_RequestedBlockPlaceAction = true;
+			m_PlaceBlockTimer = 0.0f;
+		}
+
+		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+			m_StartedBreakingBlock = false;
 
 		// Punching
-		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
+		if (m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) && !m_StartedBreakingBlock)
 			m_IsPunching = true;
 		else
 			m_IsPunching = false;
@@ -462,6 +521,8 @@ namespace Minecraft
 			rightArmTransform = m_PunchingAnimationFrames[m_PunchingAnimation.GetCurrentFrame()];
 		else if (m_StartedBreakingBlockAnimation)
 			rightArmTransform = m_BreakingBlockAnimationFrames[m_BreakingBlockAnimation.GetCurrentFrame()];
+		else if (m_StartedPlacingBlockAnimation)
+			rightArmTransform = m_PlacingBlockAnimationFrames[m_PlacingBlockAnimation.GetCurrentFrame()];
 		else
 			rightArmTransform = m_FirstPersonRightArmTransform;
 

@@ -102,6 +102,10 @@ namespace Minecraft
 
 		void SetGameMode(GameMode mode) { m_GameMode = mode; }
 
+		void SetJustBrokeBlock(bool value) { m_JustBrokeBlock = value; }
+
+		void SetStartedBreakingBlock(bool value) { m_StartedBreakingBlock = value; }
+
 		void SetTextures(Texture& crosshair, Texture& skinTexture) 
 		{
 			m_CrosshairTexture = &crosshair;
@@ -148,7 +152,7 @@ namespace Minecraft
 		bool m_IsPunching = false;
 
 		float m_CameraFovY = 1.0f;
-		float m_CameraSprintFovY = 1.15f;
+		float m_CameraSprintFovY = 1.1f;
 
 		bool m_InventoryOpen = false;
 
@@ -157,16 +161,22 @@ namespace Minecraft
 		float m_ItemPickupDistance = 2.5f;
 		std::vector<ItemID> m_ItemsToRemove;
 
-		float m_MaxBreakBlockDistance = 8.0f;
-		float m_MaxPlaceBlockDistance = 8.0f;
+		float m_MaxBreakBlockDistance = 6.0f;
+		float m_MaxPlaceBlockDistance = 6.0f;
 		bool m_RequestedBlockBreakAction = false;
 		bool m_RequestedBlockPlaceAction = false;
 
 		bool m_JustPlacedBlock = false;
+		bool m_JustBrokeBlock = false;
 
 		bool m_StartedBreakingBlock = false;
 		long long m_BlockBreakingStartTime = 0;
 		Vec3i m_LastBlockBreakingPos;
+
+		float m_BlockBreakingInterval = 0.2f;
+		float m_BreakBlockTimer = 0.0f;
+		float m_BlockPlacingInterval = 0.2f;
+		float m_PlaceBlockTimer = 0.0f;
 
 		int m_Health = 11;
 		int m_Armor = 15;
@@ -229,5 +239,28 @@ namespace Minecraft
 			Transform(Vec3f(-0.084f, -0.10f, -0.125f), Vec3f(2.0f, 3.7f, 0.0f), Vec3f(1.f / 128.f))
 		};
 		bool m_StartedBreakingBlockAnimation = false;
+
+		constexpr static int s_PlacingBlockAnimationFrameCount = 12;
+		constexpr static float s_PlacingBlockAnimationFrameDuration = 0.02f;
+		FrameAnimation m_PlacingBlockAnimation{
+			s_PlacingBlockAnimationFrameCount,
+			s_PlacingBlockAnimationFrameDuration
+		};
+		std::array<Transform, s_PlacingBlockAnimationFrameCount> m_PlacingBlockAnimationFrames =
+		{
+			Transform(Vec3f(-0.084f, -0.10f, -0.125f), Vec3f(2.0f, 3.7f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.090f, -0.11f, -0.115f), Vec3f(2.2f, 3.8f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.095f, -0.12f, -0.110f), Vec3f(2.4f, 3.9f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.080f, -0.10f, -0.140f), Vec3f(1.9f, 3.7f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.060f, -0.10f, -0.165f), Vec3f(1.6f, 3.5f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.040f, -0.11f, -0.185f), Vec3f(1.3f, 3.3f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.020f, -0.13f, -0.200f), Vec3f(1.1f, 3.2f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.035f, -0.15f, -0.175f), Vec3f(1.4f, 3.3f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.060f, -0.16f, -0.150f), Vec3f(1.7f, 3.5f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.075f, -0.14f, -0.135f), Vec3f(1.9f, 3.6f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.084f, -0.12f, -0.125f), Vec3f(2.0f, 3.7f, 0.0f), Vec3f(1.f / 128.f)),
+			Transform(Vec3f(-0.084f, -0.10f, -0.125f), Vec3f(2.0f, 3.7f, 0.0f), Vec3f(1.f / 128.f)),
+		};
+		bool m_StartedPlacingBlockAnimation = false;
 	};
 }

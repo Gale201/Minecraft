@@ -856,7 +856,7 @@ void Renderer::RasterizeTile(ScreenTile& tile)
 	for (const ScreenTriangle& triangle : tile.opaqueTriangles)
 	{
 		DrawTriangleBarycentricToTile(triangle.triangle, *triangle.texture, triangle.tileInfo, tile);
-		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
+		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0xffff00000);
 	}
 
 	std::sort(tile.transparentTriangles.begin(), tile.transparentTriangles.end(), 
@@ -868,7 +868,7 @@ void Renderer::RasterizeTile(ScreenTile& tile)
 	for (const ScreenTriangle& triangle : tile.transparentTriangles)
 	{
 		DrawTriangleBarycentricToTile(triangle.triangle, *(triangle.texture), triangle.tileInfo, tile);
-		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0);
+		//DrawTriangleWireframeToTile(triangle.triangle, tile, 0xff0000ff);
 	}
 }
 
@@ -1226,9 +1226,9 @@ void Renderer::DrawTriangleWireframeToTile(
 			return;
 	}
 
-	DrawLine(triangle.v0.position, triangle.v1.position, color, 1);
-	DrawLine(triangle.v1.position, triangle.v2.position, color, 1);
-	DrawLine(triangle.v2.position, triangle.v0.position, color, 1);
+	DrawLine(triangle.v0.position, triangle.v1.position, color, 2);
+	DrawLine(triangle.v1.position, triangle.v2.position, color, 2);
+	DrawLine(triangle.v2.position, triangle.v0.position, color, 2);
 }
 
 // Triangle math

@@ -27,15 +27,22 @@ namespace Minecraft
 		}
 	}
 
-	bool BlockInteractionSystem::BreakBlock(const Player& player)
+	bool BlockInteractionSystem::BreakBlock(Player& player)
 	{
 		WorldRaycastResult raycast;
 		if (m_World->Raycast(player.GetCamera().position, player.GetCamera().GetForward(), player.GetMaxBreakBlockDistance(), raycast))
 		{
 			Vec3f itemPos = raycast.blockPosition.toVec3f() + Vec3f(0.4f, 0.4f, 0.4f);
-			if (m_World->GetBlock(raycast.blockPosition).type == BlockType::Air)
+			Block block = m_World->GetBlock(raycast.blockPosition);
+			if (block.type == BlockType::Air)
 				return false;
+
+			player.SetStartedBreakingBlock(true);
+			if (!block.IsBreakable())
+				return false;
+
 			m_World->SetBlock(raycast.blockPosition, BlockType::Air);
+			
 			if (player.GetGameMode().BreakingBlocksDropsItems())
 			{
 				m_World->SpawnItem(
@@ -43,6 +50,7 @@ namespace Minecraft
 					{ ItemRegistry::GetItemTypeFromBlockType(raycast.blockType), 1 }
 				);
 			}
+			player.SetJustBrokeBlock(true);
 			return true;
 		}
 

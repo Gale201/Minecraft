@@ -120,8 +120,8 @@ namespace Minecraft
 			switch (type)
 			{
 			case BlockType::Air:
-				return false;
 			case BlockType::Water:
+			case BlockType::Bedrock:
 				return false;
 			default:
 				return true;

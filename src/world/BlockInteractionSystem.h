@@ -14,7 +14,7 @@ namespace Minecraft
 		void Update(float deltaTime, const Player& player);
 		void Render(const Player& player, Renderer& renderer);
 
-		bool BreakBlock(const Player& player);
+		bool BreakBlock(Player& player);
 		bool PlaceBlock(Player& player, Block block);
 
 	private:
