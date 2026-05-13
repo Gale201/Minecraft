@@ -25,6 +25,9 @@ namespace Minecraft
 		bool isGrounded = false;
 		bool inWater = false;
 		bool pausePhysics = false;
+		int collidingX = 0;
+		int collidingY = 0;
+		int collidingZ = 0;
 
 		void ClearTotalForce()
 		{

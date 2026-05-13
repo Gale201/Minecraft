@@ -55,7 +55,7 @@ namespace Minecraft
 		World(const World&) = delete;
 		~World() = default;
 
-		void Update(Core::ThreadSystem& threadSystem);
+		void Update(Core::ThreadSystem& threadSystem, float deltaTime);
 
 		void LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem);
 
@@ -69,12 +69,10 @@ namespace Minecraft
 		void SpawnItem(Vec3f position, ItemStack stack);
 		void AddItem(PhysicsBody body, ItemStack stack, float rotY, Vec3f spawnForce = Vec3f());
 		void RemoveItem(ItemID id);
-		void AddToItemLookupTable(ItemID id, Vec3i chunkPos, size_t index)
-		{
-			m_ItemLookupTable.emplace(id, index);
-		}
 
 		Block GetBlock(Vec3i pos) const;
+		Block* GetBlockPtr(Vec3i pos);
+		bool SetBlock(Vec3i pos, BlockType type);
 		Chunk* TryGetChunk(Vec3i pos) const;
 		Chunk& GetChunk(Vec3i pos);
 		Vec3i GetBlockPositionInChunk(Vec3i pos) const;
@@ -137,7 +135,8 @@ namespace Minecraft
 
 		int GetSeaLevel() const { return m_ChunkLoader.GetSeaLevel(); }
 
-		bool SetBlock(Vec3i pos, BlockType type);
+		float GetItemPickupCooldown() const { return m_ItemPickupCooldown; }
+
 		void SetTextureAtlas(const Texture& texture)
 		{
 			m_TextureAtlas = &texture;
@@ -149,6 +148,12 @@ namespace Minecraft
 
 	private:
 		void InitItems();
+
+		void AddToFluidFlow(Vec3i pos);
+		void UpdateWaterBlockFlow();
+
+		void SetWaterBlockFlowLevel(Vec3i pos, uint8_t level);
+		uint8_t GetWaterBlockFlowLevel(Vec3i pos) const;
 
 		/* Chunk loading functions */
 		void LoadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem);
@@ -224,8 +229,14 @@ namespace Minecraft
 
 		ItemID m_CurrentItemID = 0;
 		float m_ItemBodyMass = 0.1f;
+		float m_ItemPickupCooldown = 0.8f;
 
 		BlockBreakingProgress m_BlockBreakingProgress;
 		Mesh m_BlockBreakingMesh;
+
+		std::queue<Vec3i> m_WaterBlockUpdateQueue;
+		float m_WaterFlowUpdateInterval = 0.5f;
+		float m_WaterFlowUpdateTimer = 0.0f;
+		uint8_t m_MaxWaterFlowLevel = 7;
 	};
 }

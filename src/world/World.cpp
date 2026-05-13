@@ -10,8 +10,20 @@
 
 namespace Minecraft
 {
-	void World::Update(Core::ThreadSystem& threadSystem)
+	void World::Update(Core::ThreadSystem& threadSystem, float deltaTime)
 	{
+		// Update water flow
+		m_WaterFlowUpdateTimer += deltaTime;
+		while (m_WaterFlowUpdateTimer >= m_WaterFlowUpdateInterval)
+		{
+			UpdateWaterBlockFlow();
+
+			m_WaterFlowUpdateTimer -= m_WaterFlowUpdateInterval;
+		}
+
+		/*
+		 Chunk meshing 
+		*/
 		std::vector<Chunk*> chunksToBuild;
 		chunksToBuild.reserve(m_MaxMeshedChunksPerFrame);
 
@@ -31,9 +43,6 @@ namespace Minecraft
 			// Submit the BuildChunkMesh job to the thread system
 			Chunk* chunk = it->second.get();
 			chunksToBuild.push_back(chunk);
-			/*threadSystem.Submit([this, chunk]() {
-				BuildChunkMesh(*chunk);
-			});*/
 			m_ChunkMeshingQueue.pop();
 			meshedChunks++;
 		}
@@ -58,9 +67,7 @@ namespace Minecraft
 		}
 
 		for (Item& item : m_Items)
-		{
-			item.pickupCooldown = std::max(0, item.pickupCooldown - 1);
-		}
+			item.pickupCooldown = std::fmaxf(0.0f, item.pickupCooldown - deltaTime);
 
 		m_BlockBreakingProgress.progress = 0.0f;
 	}
@@ -388,6 +395,17 @@ namespace Minecraft
 		return chunk->blocks[blockPos.x][blockPos.y][blockPos.z];
 	}
 
+	Block* World::GetBlockPtr(Vec3i pos)
+	{
+		Vec3i chunkPos = GetChunkPosition(pos);
+		Chunk* chunk = TryGetChunk(chunkPos);
+		if (chunk == nullptr)
+			return nullptr;
+
+		Vec3i blockPos = GetBlockPositionInChunk(pos);
+		return &chunk->blocks[blockPos.x][blockPos.y][blockPos.z];
+	}
+
 	bool World::SetBlock(Vec3i pos, BlockType type)
 	{
 		if (pos.y >= CHUNK_HEIGHT) return false;
@@ -402,7 +420,7 @@ namespace Minecraft
 		chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = block;
 
 		// Add the chunk and the block to the modified chunks
-		m_ModifiedChunks[chunkPos].blocks[blockPos] = type;
+		m_ModifiedChunks[chunkPos].blocks[blockPos] = block;
 
 		// Add chunk and any neighbor chunks that would need remeshing to the meshing queue
 
@@ -428,6 +446,8 @@ namespace Minecraft
 			Chunk& neighbor = GetChunk({ chunkPos.x, chunkPos.y, chunkPos.z + 1 });
 			AddChunkToMeshingQueue(neighbor);
 		}
+
+		AddToFluidFlow(pos);
 
 		return true;
 	}
@@ -470,9 +490,7 @@ namespace Minecraft
 		return blocks;
 	}
 
-	/* 
-	 Private functions 
-	*/
+	/* Private functions */
 
 	void World::InitItems()
 	{
@@ -482,6 +500,137 @@ namespace Minecraft
 			m_FreeItemSlots.push_back(i);
 	}
 
+	void World::AddToFluidFlow(Vec3i pos)
+	{
+		Block block = GetBlock(pos);
+		Block blockPosY = GetBlock(pos + Vec3i(0, 1, 0));
+		Block blockPosX = GetBlock(pos + Vec3i(1, 0, 0));
+		Block blockNegX = GetBlock(pos + Vec3i(-1, 0, 0));
+		Block blockPosZ = GetBlock(pos + Vec3i(0, 0, 1));
+		Block blockNegZ = GetBlock(pos + Vec3i(0, 0, -1));
+
+		if (
+			block.type == BlockType::Water ||
+			blockPosY.type == BlockType::Water ||
+			blockPosX.type == BlockType::Water ||
+			blockNegX.type == BlockType::Water ||
+			blockPosZ.type == BlockType::Water ||
+			blockNegZ.type == BlockType::Water
+			)
+		{
+			m_WaterBlockUpdateQueue.push(pos);
+		}
+	}
+
+	void World::UpdateWaterBlockFlow()
+	{
+		struct WaterUpdate
+		{
+			Vec3i pos;
+			uint8_t flowLevel;
+		};
+
+		std::vector<WaterUpdate> blocksToUpdate;
+		while (!m_WaterBlockUpdateQueue.empty())
+		{
+			Vec3i pos = m_WaterBlockUpdateQueue.front();
+			m_WaterBlockUpdateQueue.pop();
+
+			PRINT_VEC3(pos);
+
+			uint8_t blockFlowLevel = GetWaterBlockFlowLevel(pos);
+			if (blockFlowLevel >= m_MaxWaterFlowLevel)
+				continue;
+
+			Block block = GetBlock(pos);
+			if (block.type != BlockType::Water)
+				continue;
+
+			Vec3i belowPos = pos + Vec3i(0, -1, 0);
+			Block blockBelow = GetBlock(belowPos);
+			if (blockBelow.type == BlockType::Air || (blockBelow.type == BlockType::Water && blockBelow.fluidLevel > 1))
+			{
+				blocksToUpdate.push_back({ belowPos, 1 });
+				if (blockFlowLevel > 0)
+					continue;
+			}
+			
+			std::array<Vec3i, 4> directions = { Vec3i(1, 0, 0), Vec3i(-1, 0, 0), Vec3i(0, 0, 1), Vec3i(0, 0, -1) };
+			int minDistanceToWhole = m_MaxWaterFlowLevel;
+			int dirValues[4];
+			for (int i = 0; i < 4; i++)
+			{
+				dirValues[i] = m_MaxWaterFlowLevel;
+				for (int j = 1; j < 5; j++)
+				{
+					if (GetBlock(pos + directions[i] * j).type != BlockType::Air)
+						break;
+					Block tempBlock = GetBlock(pos + directions[i] * j + Vec3i(0, -1, 0));
+					if (tempBlock.type == BlockType::Air || tempBlock.IsFluid() || tempBlock.IsWaterBreakable())
+					{
+						minDistanceToWhole = std::min(minDistanceToWhole, j);
+						dirValues[i] = j;
+						break;
+					}
+				}
+			}
+
+			uint8_t validDirections = 0;
+			for (int i = 0; i < 4; i++)
+			{
+				if (dirValues[i] == minDistanceToWhole)
+					validDirections |= (1 << i);
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				if (((validDirections >> i) & 1) == 0)
+					continue;
+
+				Vec3i& dir = directions[i];
+				Vec3i neighborPos = pos + dir;
+				Block neighborBlock = GetBlock(neighborPos);
+
+				uint8_t newFlowLevel = blockFlowLevel + 1;
+				if (neighborBlock.type == BlockType::Air || (neighborBlock.type == BlockType::Water && neighborBlock.fluidLevel > newFlowLevel))
+				{
+					if (newFlowLevel < m_MaxWaterFlowLevel)
+						blocksToUpdate.push_back({ neighborPos, newFlowLevel });
+				}
+			}
+		}
+
+		printf("Blocks to set: %d\n", (int)blocksToUpdate.size());
+		for (const WaterUpdate& update : blocksToUpdate)
+		{
+			Block currentBlock = GetBlock(update.pos);
+			if (currentBlock.type == BlockType::Air || (currentBlock.type == BlockType::Water && currentBlock.fluidLevel > update.flowLevel))
+			{
+				printf("%d\n", currentBlock.fluidLevel);
+				PRINT_VEC3(update.pos);
+
+				SetBlock(update.pos, BlockType::Water);
+				SetWaterBlockFlowLevel(update.pos, update.flowLevel);
+
+				m_WaterBlockUpdateQueue.push(update.pos);
+			}
+		}
+	}
+
+	void World::SetWaterBlockFlowLevel(Vec3i pos, uint8_t level)
+	{
+		Block* block = GetBlockPtr(pos);
+		block->fluidLevel = level;
+		m_ModifiedChunks[GetChunkPosition(pos)].blocks[GetBlockPositionInChunk(pos)] = *block;
+	}
+
+	uint8_t World::GetWaterBlockFlowLevel(Vec3i pos) const
+	{
+		Block block = GetBlock(pos);
+		if (block.type != BlockType::Water)
+			return 0;
+		return block.fluidLevel;
+	}
 
 	/* Chunk loading */
 
@@ -676,17 +825,17 @@ namespace Minecraft
 						if (IsFaceVisible(block, neighborPos, chunk, chunkPosX, chunkNegX, chunkPosZ, chunkNegZ))
 						{
 							if (dir == FaceDirection::PosY)
-								gridPosY(y, x, z).type = block.type;
+								gridPosY(y, x, z) = block;
 							else if (dir == FaceDirection::PosX)
-								gridPosX(x, y, z).type = block.type;
+								gridPosX(x, y, z) = block;
 							else if (dir == FaceDirection::PosZ)
-								gridPosZ(z, y, x).type = block.type;
+								gridPosZ(z, y, x) = block;
 							else if (dir == FaceDirection::NegX)
-								gridNegX(x, z, y).type = block.type;
+								gridNegX(x, z, y) = block;
 							else if (dir == FaceDirection::NegY)
-								gridNegY(y, z, x).type = block.type;
+								gridNegY(y, z, x) = block;
 							else if (dir == FaceDirection::NegZ)
-								gridNegZ(z, x, y).type = block.type;
+								gridNegZ(z, x, y) = block;
 						}
 						else
 						{
@@ -729,9 +878,10 @@ namespace Minecraft
 				{
 					BlockType type = grid(x, y, z).type;
 					bool isTop = false;
+					uint8_t fluidLevel = grid(x, y, z).fluidLevel;
 					if (y < CHUNK_HEIGHT - 1 && grid(x, y + 1, z).type != type) isTop = true;
-					BlockFace face = GetBlockFace(type, FaceDirection::PosX, isTop);
-
+					BlockFace face = GetBlockFace(type, FaceDirection::PosX, isTop, fluidLevel);
+					
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
 
@@ -799,7 +949,7 @@ namespace Minecraft
 					BlockType type = grid(y, x, z).type;
 					bool isTop = false;
 					if (y < CHUNK_HEIGHT - 1 && grid(y + 1, x, z).type != type) isTop = true;
-					BlockFace face = GetBlockFace(type, FaceDirection::PosY, isTop);
+					BlockFace face = GetBlockFace(type, FaceDirection::PosY, isTop, grid(y, x, z).fluidLevel);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -868,7 +1018,7 @@ namespace Minecraft
 					BlockType type = grid(z, y, x).type;
 					bool isTop = false;
 					if (y < CHUNK_HEIGHT - 1 && grid(z, y + 1, x).type != type) isTop = true;
-					BlockFace face = GetBlockFace(type, FaceDirection::PosZ, isTop);
+					BlockFace face = GetBlockFace(type, FaceDirection::PosZ, isTop, grid(z, y, x).fluidLevel);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -937,7 +1087,7 @@ namespace Minecraft
 					BlockType type = grid(x, z, y).type;
 					bool isTop = false;
 					if (y < CHUNK_HEIGHT - 1 && grid(x, z, y + 1).type != type) isTop = true;
-					BlockFace face = GetBlockFace(type, FaceDirection::NegX, isTop);
+					BlockFace face = GetBlockFace(type, FaceDirection::NegX, isTop, grid(x, z, y).fluidLevel);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -1006,7 +1156,7 @@ namespace Minecraft
 					BlockType type = grid(y, z, x).type;
 					bool isTop = false;
 					if (y < CHUNK_HEIGHT - 1 && grid(y + 1, z, x).type != type) isTop = true;
-					BlockFace face = GetBlockFace(type, FaceDirection::NegY, isTop);
+					BlockFace face = GetBlockFace(type, FaceDirection::NegY, isTop, grid(y, z, x).fluidLevel);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;
@@ -1075,7 +1225,7 @@ namespace Minecraft
 					BlockType type = grid(z, x, y).type;
 					bool isTop = false;
 					if (y < CHUNK_HEIGHT - 1 && grid(z, x, y + 1).type != type) isTop = true;
-					BlockFace face = GetBlockFace(type, FaceDirection::NegZ, isTop);
+					BlockFace face = GetBlockFace(type, FaceDirection::NegZ, isTop, grid(z, x, y).fluidLevel);
 
 					if (type == BlockType::Air || type == BlockType::Undefined)
 						continue;

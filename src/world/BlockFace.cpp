@@ -191,29 +191,33 @@ namespace Minecraft
 		return tileType;
 	}
 
-	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop)
+	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop, uint8_t fluidLevel)
 	{
 		size_t direction = static_cast<size_t>(dir);
 
 		if (type == BlockType::Water && isTop)
 		{
+			float yHeight = 0.9f;
+			if (fluidLevel > 0)
+				yHeight = 0.9f - (fluidLevel / 10.0f);
+
 			switch (dir)
 			{
 			case FaceDirection::PosX:
 				return {
-					{ {1,0,0}, {1.0f,0.9f,0.0f}, {1.0f,0.9f,1.0f}, {1,0,1} },
+					{ {1,0,0}, {1.0f,yHeight,0.0f}, {1.0f,yHeight,1.0f}, {1,0,1} },
 					{1,0,0},
-					{ {1.0f, 0.9f}, {1, 0}, {0, 0}, {0.0f, 1.0f} }
+					{ {1.0f, yHeight}, {1, 0}, {0, 0}, {0.0f, 1.0f} }
 				};
 			case FaceDirection::NegX:
 				return {
-					{ {0,0,1}, {0.0f,0.9f,1.0f}, {0.0f,0.9f,0.0f}, {0,0,0} },
+					{ {0,0,1}, {0.0f,yHeight,1.0f}, {0.0f,yHeight,0.0f}, {0,0,0} },
 					{-1,0,0},
-					{ {1.0f,0.9f},{1,0},{0,0},{0.0f,0.9f} }
+					{ {1.0f,yHeight},{1,0},{0,0},{0.0f,yHeight} }
 				};
 			case FaceDirection::PosY:
 				return {
-					{ {0.f,0.9f,0.f}, {0.f,0.9f,1.f}, {1.f,0.9f,1.f}, {1.f,0.9f,0.f} }, 
+					{ {0.f,yHeight,0.f}, {0.f,yHeight,1.f}, {1.f,yHeight,1.f}, {1.f,yHeight,0.f} }, 
 					{0,1,0},
 					{ {1,1},{1,0},{0,0},{0,1} } 
 				};
@@ -225,15 +229,15 @@ namespace Minecraft
 				};
 			case FaceDirection::PosZ:
 				return { 
-					{ {1,0,1}, {1.f,0.9f,1.f}, {0.f,0.9f,1.f}, {0,0,1} }, 
+					{ {1,0,1}, {1.f,yHeight,1.f}, {0.f,yHeight,1.f}, {0,0,1} }, 
 					{0,0,1}, 
-					{ {1.f,0.9f},{1,0},{0,0},{0.f,0.9f} }
+					{ {1.f,yHeight},{1,0},{0,0},{0.f,yHeight} }
 				};
 			case FaceDirection::NegZ:
 				return {
-					{ {0,0,0}, {0.f,0.9f,0.f}, {1.f,0.9f,0.f}, {1,0,0} },
+					{ {0,0,0}, {0.f,yHeight,0.f}, {1.f,yHeight,0.f}, {1,0,0} },
 					{0,0,-1},
-					{ {1.f,0.9f},{1,0},{0,0},{0.f,0.9f} }
+					{ {1.f,yHeight},{1,0},{0,0},{0.f,yHeight} }
 				};
 			}
 		}
@@ -245,8 +249,12 @@ namespace Minecraft
 		return {};
 	}
 
-	BlockBoundingBox GetBlockBoundingBox(BlockType type)
+	BlockBoundingBox GetBlockBoundingBox(BlockType type, uint8_t fluidLevel)
 	{
+		float yHeight = 0.9f;
+		if (fluidLevel > 0)
+			yHeight = 0.9f - (fluidLevel / 10.0f);
+
 		switch (type)
 		{
 		case BlockType::Rose:
@@ -255,7 +263,7 @@ namespace Minecraft
 		case BlockType::OakSapling:
 			return {};
 		case BlockType::Water:
-			return { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.9f, 1.0f } };
+			return { { 0.0f, 0.0f, 0.0f }, { 1.0f, yHeight, 1.0f } };
 		default:
 			return { { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } };
 		}

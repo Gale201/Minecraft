@@ -125,9 +125,9 @@ namespace Minecraft
 
 		if (modifiedChunk)
 		{
-			for (const auto& [blockPos, blockType] : modifiedChunk->blocks)
+			for (const auto& [blockPos, block] : modifiedChunk->blocks)
 			{
-				chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = { blockType };
+				chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = block;
 			}
 		}
 	}

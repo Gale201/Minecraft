@@ -95,6 +95,10 @@ namespace Minecraft
 
 	void PhysicsSystem::MoveBody(PhysicsBody& body, float deltaTime)
 	{
+		body.collidingX = 0;
+		body.collidingY = 0;
+		body.collidingZ = 0;
+
 		if (!body.collidable)
 		{
 			body.position += body.velocity * deltaTime;
@@ -117,7 +121,11 @@ namespace Minecraft
 		}
 		bodyCollider.Move({ displacement.x, 0.0f, 0.0f });
 
-		if (displacement.x != velocity.x * deltaTime) velocity.x = 0;
+		if (displacement.x != velocity.x * deltaTime)
+		{
+			body.collidingX = body.velocity.x < 0.0f ? -1 : 1;
+			velocity.x = 0;
+		}
 
 		// Move on y axis
 		for (Vec3i& blockPos : surroundingBlocks)
@@ -131,6 +139,7 @@ namespace Minecraft
 		{
 			velocity.y = 0;
 			if (body.velocity.y < 0.0f) body.isGrounded = true;
+			body.collidingY = body.velocity.y < 0.0f ? -1 : 1;
 		}
 
 		// Move on z axis
@@ -141,7 +150,11 @@ namespace Minecraft
 		}
 		bodyCollider.Move({ 0.0f, 0.0f, displacement.z });
 
-		if (displacement.z != velocity.z * deltaTime) velocity.z = 0;
+		if (displacement.z != velocity.z * deltaTime)
+		{
+			velocity.z = 0;
+			body.collidingZ = body.velocity.z < 0.0f ? -1 : 1;
+		}
 
 		body.position = bodyCollider.GetPosition();
 		body.velocity = velocity;

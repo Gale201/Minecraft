@@ -24,7 +24,8 @@ namespace Minecraft
 		PlaceBlock,
 		DropItem,
 		OpenInventory,
-		OpenChat
+		OpenChat,
+		PickBlock
 	};
 
 	struct InputBindings

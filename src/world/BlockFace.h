@@ -102,9 +102,9 @@ namespace Minecraft
 
 	TileType GetTileTypeFromDirection(BlockType type, FaceDirection dir);
 
-	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop = false);
+	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop = false, uint8_t fluidLevel = 0);
 
-	BlockBoundingBox GetBlockBoundingBox(BlockType type);
+	BlockBoundingBox GetBlockBoundingBox(BlockType type, uint8_t fluidLevel = 0);
 
 	Vec3i GetCubeNeighborOffset(FaceDirection dir);
 

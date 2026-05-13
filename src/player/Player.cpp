@@ -26,7 +26,11 @@ namespace Minecraft
 		UpdateFirstPersonModel();
 
 		// Sprinting FOV effect
-		if (m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Sprint)))
+		if (!m_InventoryOpen &&
+			m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::Sprint)) &&
+			m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveForward)) &&
+			m_PhysicsBody->collidingX == 0 &&
+			m_PhysicsBody->collidingZ == 0)
 			m_Camera.fovY = std::fminf(m_Camera.fovY + 0.04f, m_CameraSprintFovY);
 		else
 			m_Camera.fovY = std::fmaxf(m_Camera.fovY - 0.04f, m_CameraFovY);
@@ -36,6 +40,8 @@ namespace Minecraft
 
 		m_JustPlacedBlock = false;
 		m_JustBrokeBlock = false;
+
+		m_DropItemStack = false;
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
@@ -91,6 +97,7 @@ namespace Minecraft
 		camera.aspect = static_cast<float>(renderer.GetWidth()) / static_cast<float>(renderer.GetHeight());
 		camera.nearPlane = 0.1f;
 		camera.farPlane = 100.0f;
+
 		if (m_Inventory.GetSelectedHotbarSlot().size <= 0)
 			m_Model->RenderPart(renderer, camera, "RightArmUI");
 		else
@@ -136,20 +143,47 @@ namespace Minecraft
 	void Player::UpdateInventory(float deltaTime, World& world)
 	{
 		if (m_InventoryOpen)
-		{
 			m_Inventory.Update(deltaTime, m_InputManager);
-
-			ItemStack itemStackToRemove = m_Inventory.GetItemToRemove();
-			if (itemStackToRemove.size > 0)
-			{
-				Vec3f spawnPos = GetHeadPosition() + m_Camera.GetForward() * 0.5f;
-				float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
-				world.AddItem(PhysicsBody(spawnPos), itemStackToRemove, rotY, m_Camera.GetForward() * 30.0f);
-				world.GetItems()[world.GetItemIndex(world.GetCurrentItemID() - 1)].pickupCooldown = 120;
-			}
-		}
 		else
 			m_Inventory.UpdateHotbar(m_InputManager);
+
+		int slotX, slotY;
+		if (m_InventoryOpen)
+		{
+			int mouseX = m_InputManager.GetMouseX();
+			int mouseY = m_InputManager.GetMouseY();
+			const auto slotCoords = m_Inventory.GetSlotCoordinatesFromScreenPosition(mouseX, mouseY);
+			slotX = slotCoords.first;
+			slotY = slotCoords.second;
+		}
+		else
+		{
+			slotX = m_Inventory.GetSelectedHotbarSlotIndex();
+			slotY = 0;
+		}
+
+		if (m_DropItemStack)
+		{
+			m_Inventory.DropItemStack(slotX, slotY);
+		}
+		else if (m_StartedDroppingItem)
+		{
+			m_DropItemTimer += deltaTime;
+			if (m_DropItemTimer >= m_DropItemInterval)
+			{
+				m_DropItemTimer = 0.0f;
+				m_Inventory.DropOneItem(slotX, slotY);
+			}
+		}
+
+		ItemStack itemStackToRemove = m_Inventory.GetItemToRemove();
+		if (itemStackToRemove.size > 0)
+		{
+			Vec3f spawnPos = GetHeadPosition() + m_Camera.GetForward() * 0.5f;
+			float rotY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * PI;
+			world.AddItem(PhysicsBody(spawnPos), itemStackToRemove, rotY, m_Camera.GetForward() * 30.0f);
+			world.GetItems()[world.GetItemIndex(world.GetCurrentItemID() - 1)].pickupCooldown = world.GetItemPickupCooldown();
+		}
 	}
 
 	void Player::HandleBlockInteractions(World& world)
@@ -157,10 +191,21 @@ namespace Minecraft
 		if (m_InputManager.IsMouseButtonJustReleased(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)))
 			m_StartedBreakingBlock = false;
 
+		// Picking blocks
+		WorldRaycastResult raycast;
+		if (!m_InventoryOpen &&
+			!m_GameMode.PlacingBlocksConsumesItems() &&
+			m_Inventory.GetSelectedHotbarSlot().size == 0 &&
+			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast) &&
+			m_InputManager.IsMouseButtonJustPressed(m_InputBindings.GetMouseButtonForAction(InputAction::PickBlock)))
+		{
+			m_Inventory.SetSlot(m_Inventory.GetSelectedHotbarSlotIndex(), { ItemRegistry::GetItemTypeFromBlockType(raycast.blockType), 1 });
+		}
+
 		if (m_GameMode.CanInstantBreakBlocks())
 			return;
 
-		WorldRaycastResult raycast;
+		// Breaking blocks
 		if (
 			m_InputManager.IsMouseButtonDown(m_InputBindings.GetMouseButtonForAction(InputAction::BreakBlock)) &&
 			world.Raycast(m_Camera.position, m_Camera.GetForward(), m_MaxBreakBlockDistance, raycast)
@@ -280,7 +325,7 @@ namespace Minecraft
 					if (std::find(m_ItemsToRemove.begin(), m_ItemsToRemove.end(), item.id) != m_ItemsToRemove.end())
 						continue;
 
-					if (item.pickupCooldown == 0 && item.body && (item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance && m_Inventory.CanAddItemStack(item.stack))
+					if (item.pickupCooldown <= 0.0f && item.body && (item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() < m_ItemPickupDistance && m_Inventory.CanAddItemStack(item.stack))
 					{
 						m_ItemsToRemove.push_back(item.id);
 						physicsSystem.RemoveBody(item.body);
@@ -296,7 +341,7 @@ namespace Minecraft
 			Item& item = items[index];
 
 			Vec3f direction = (m_PhysicsBody->GetCenter() - item.body->GetCenter()).normalized();
-			item.body->position += direction * 15.f * deltaTime;
+			item.body->position += direction * 10.f * deltaTime;
 
 			if ((item.body->GetCenter() - m_PhysicsBody->GetCenter()).length() <= 0.5f)
 			{
@@ -360,6 +405,8 @@ namespace Minecraft
 		const ItemStack& stack = m_Inventory.GetSelectedHotbarSlot();
 		if (stack.size == 0 || !ItemRegistry::IsItemPlacable(stack.type))
 			return Block(BlockType::Undefined);
+		if (ItemRegistry::GetBlockTypeFromItemType(stack.type) == BlockType::Gravel)
+			return Block(BlockType::Water);
 		return Block(ItemRegistry::GetBlockTypeFromItemType(stack.type));
 	}
 
@@ -386,6 +433,24 @@ namespace Minecraft
 		// Inventory
 		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenInventory)))
 			m_InventoryOpen = !m_InventoryOpen;
+
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::DropItem)))
+		{
+			m_StartedDroppingItem = true;
+			m_DropItemTimer = 0.1f;
+		}
+		else if (m_InputManager.IsKeyJustReleased(m_InputBindings.GetKeyForAction(InputAction::DropItem)))
+		{
+			m_StartedDroppingItem = false;
+			m_DropItemTimer = 0.0f;
+		}
+
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::DropItem)) &&
+			m_InputManager.IsKeyDown(Key::LeftCtrl))
+		{
+			m_DropItemStack = true;
+			m_StartedDroppingItem = false;
+		}
 
 		if (m_InventoryOpen)
 			return;

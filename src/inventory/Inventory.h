@@ -42,10 +42,14 @@ namespace Minecraft
 		void ReleaseItemStack(int selectedSlotX, int selectedSlotY);
 		void ReleaseOneItem(int selectedSlotX, int selectedSlotY);
 		void CollectAllItems(int selectedSlotX, int selectedSlotY);
+		void DropOneItem(int selectedSlotX, int selectedSlotY);
+		void DropItemStack(int selectedSlotX, int selectedSlotY);
 
 		ItemStack AddItemStack(ItemStack stack);
 		int FindFirstEmptySlot() const;
 		bool CanAddItemStack(const ItemStack& stack) const;
+
+		std::pair<int, int> GetSlotCoordinatesFromScreenPosition(float x, float y) const;
 
 		ItemStack& GetSlot(int slot)
 		{

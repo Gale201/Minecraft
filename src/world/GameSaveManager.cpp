@@ -68,10 +68,12 @@ namespace Minecraft
 				// Reading block position and type
 				Vec3i pos;
 				BlockType type;
+				uint8_t fluidLevel;
 				in.read(reinterpret_cast<char*>(&pos), sizeof(pos));
 				in.read(reinterpret_cast<char*>(&type), sizeof(type));
+				in.read(reinterpret_cast<char*>(&fluidLevel), sizeof(fluidLevel));
 
-				modifiedChunks.at(chunkPos).blocks.emplace(pos, type);
+				modifiedChunks.at(chunkPos).blocks.emplace(pos, Block(type, fluidLevel));
 			}
 		}
 
@@ -104,11 +106,12 @@ namespace Minecraft
 			int blockCount = static_cast<int>(modifiedChunk.blocks.size());
 			out.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
 
-			for (const auto& [blockPos, blockType] : modifiedChunk.blocks)
+			for (const auto& [blockPos, block] : modifiedChunk.blocks)
 			{
 				// Writing block position and type
 				out.write(reinterpret_cast<const char*>(&blockPos), sizeof(blockPos));
-				out.write(reinterpret_cast<const char*>(&blockType), sizeof(blockType));
+				out.write(reinterpret_cast<const char*>(&block.type), sizeof(block.type));
+				out.write(reinterpret_cast<const char*>(&block.fluidLevel), sizeof(block.fluidLevel));
 			}
 		}
 	}

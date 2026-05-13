@@ -87,7 +87,7 @@ namespace Minecraft
 			m_Camera.nearPlane = cameraConfig.nearPlane;
 			m_Camera.farPlane = cameraConfig.farPlane;
 			m_CameraFovY = cameraConfig.fov;
-			m_CameraSprintFovY = cameraConfig.fov * 1.15f;
+			m_CameraSprintFovY = cameraConfig.fov * 1.1f;
 
 			SyncCamera();
 		}
@@ -150,6 +150,11 @@ namespace Minecraft
 		bool m_StartSprint = false;
 
 		bool m_IsPunching = false;
+
+		bool m_DropItemStack = false;
+		bool m_StartedDroppingItem = false;
+		float m_DropItemTimer = 0.0f;
+		float m_DropItemInterval = 0.1f;
 
 		float m_CameraFovY = 1.0f;
 		float m_CameraSprintFovY = 1.1f;

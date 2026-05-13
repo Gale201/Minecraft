@@ -42,6 +42,7 @@ namespace Minecraft
 	struct Block
 	{
 		BlockType type = BlockType::Air;
+		uint8_t fluidLevel = 0;
 
 		bool IsTransparent() const
 		{
@@ -125,6 +126,30 @@ namespace Minecraft
 				return false;
 			default:
 				return true;
+			}
+		}
+
+		bool IsFluid() const
+		{
+			switch (type)
+			{
+			case BlockType::Water:
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		bool IsWaterBreakable() const
+		{
+			switch (type)
+			{
+			case BlockType::Rose:
+			case BlockType::YellowFlower:
+			case BlockType::OakSapling:
+				return true;
+			default:
+				return false;
 			}
 		}
 

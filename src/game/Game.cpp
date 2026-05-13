@@ -99,6 +99,8 @@ namespace Minecraft
 		inputBindings.AddMouseButtonBinding(InputAction::BreakBlock, MouseButton::Left);
 		inputBindings.AddMouseButtonBinding(InputAction::PlaceBlock, MouseButton::Right);
 		inputBindings.AddKeyBinding(InputAction::OpenInventory, Key::E);
+		inputBindings.AddKeyBinding(InputAction::DropItem, Key::Q);
+		inputBindings.AddMouseButtonBinding(InputAction::PickBlock, MouseButton::Middle);
 		m_Player.SetInputBindings(inputBindings);
 
 		m_Player.SetPhysicsBodyPtr(m_PhysicsSystem.AddBody(
@@ -124,7 +126,7 @@ namespace Minecraft
 		playerModel.SetScale(1.f / 20.f);
 		m_Player.SetModel(playerModel);
 
-		m_Player.SetGameMode(GameModeType::Survival);
+		m_Player.SetGameMode(GameModeType::Creative);
 	}
 
 	void Game::Update(float deltaTime)
@@ -133,13 +135,14 @@ namespace Minecraft
 
 		// Updating world
 		m_World->LoadAndUnloadChunks(m_Player.GetCamera().position, m_ThreadSystem);
-		m_World->Update(m_ThreadSystem);
 
 		if (m_Player.RequestedBlockBreakAction())
 			m_BlockInteractionSystem.BreakBlock(m_Player);
 
 		if (m_Player.RequestedBlockPlaceAction())
 			m_BlockInteractionSystem.PlaceBlock(m_Player, m_Player.GetRequestedBlockToPlace());
+
+		m_World->Update(m_ThreadSystem, deltaTime);
 
 		while (!m_World->GetPhysicsAddQueue().empty())
 		{
@@ -168,7 +171,7 @@ namespace Minecraft
 			m_PhysicsAccumulator -= m_PhysicsFixedDelta;
 		}
 
-		m_Player.HandleItemPickup(*m_World, m_PhysicsSystem, deltaTime);
+		m_Player.HandleItemPickup(*m_World, m_PhysicsSystem, m_PhysicsFixedDelta);
 		m_Player.SyncCamera(m_PhysicsAccumulator / m_PhysicsFixedDelta);
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);

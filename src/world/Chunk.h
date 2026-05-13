@@ -34,6 +34,6 @@ namespace Minecraft
 
 	struct ModifiedChunk
 	{
-		std::unordered_map<Vec3i, BlockType, Vec3iHash> blocks;
+		std::unordered_map<Vec3i, Block, Vec3iHash> blocks;
 	};
 }

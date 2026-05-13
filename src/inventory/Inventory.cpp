@@ -8,30 +8,10 @@ namespace Minecraft
 
 		m_HoldingStackPosition = Vec2i(inputManager.GetMouseX(), inputManager.GetMouseY());
 
-		int textureHeight = m_RendererHeight * 11 / 16;
-		int textureWidth = textureHeight * m_InventoryTexture->GetWidth() / m_InventoryTexture->GetHeight();
-
-		float ratioX = static_cast<float>(textureWidth) / static_cast<float>(m_InventoryTexture->GetWidth());
-		float ratioY = static_cast<float>(textureHeight) / static_cast<float>(m_InventoryTexture->GetHeight());
-
-		float startX = std::ceilf(m_RendererWidth / 2 - textureWidth / 2 + m_SlotsTopLeftPoint.x * ratioX);
-		float startY = std::ceilf(m_RendererHeight / 2 - textureHeight / 2 + m_SlotsTopLeftPoint.y * ratioY);
-
 		m_MouseX = inputManager.GetMouseX();
 		m_MouseY = inputManager.GetMouseY();
 
-		int selectedSlotX = static_cast<int>((m_MouseX - startX) / (s_SlotSize * ratioX));
-		int selectedSlotY = 1 + static_cast<int>((m_MouseY - startY) / (s_SlotSize * ratioY));
-		if (m_MouseY >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && m_MouseY < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
-			selectedSlotY = 0;
-
-		if (m_MouseX < startX || m_MouseX >= startX + 9 * s_SlotSize * ratioX || m_MouseY < startY || m_MouseY >= startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
-		{
-			selectedSlotX = -1;
-			selectedSlotY = -1;
-		}
-
-		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+		const auto [selectedSlotX, selectedSlotY] = GetSlotCoordinatesFromScreenPosition(m_MouseX, m_MouseY);
 
 		if (inputManager.IsMouseButtonJustPressed(Core::MouseButton::Left))
 		{
@@ -56,6 +36,8 @@ namespace Minecraft
 
 	void Inventory::UpdateHotbar(const Core::InputManager& inputManager)
 	{
+		m_ItemToRemove.size = 0;
+
 		// Handle hotbar selection input
 		for (int i = 1; i < 10; i++)
 		{
@@ -447,6 +429,36 @@ namespace Minecraft
 		}
 	}
 
+	void Inventory::DropOneItem(int selectedSlotX, int selectedSlotY)
+	{
+		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+		if (selectedSlotIndex >= 0 && selectedSlotIndex < s_Size)
+		{
+			ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
+
+			if (selectedSlot.size > 0)
+			{
+				selectedSlot.size--;
+				m_ItemToRemove.type = selectedSlot.type;
+				m_ItemToRemove.size = 1;
+			}
+		}
+	}
+
+	void Inventory::DropItemStack(int selectedSlotX, int selectedSlotY)
+	{
+		int selectedSlotIndex = selectedSlotY * 9 + selectedSlotX;
+		if (selectedSlotIndex >= 0 && selectedSlotIndex < s_Size)
+		{
+			ItemStack& selectedSlot = m_Slots[selectedSlotIndex];
+			if (selectedSlot.size > 0)
+			{
+				m_ItemToRemove = selectedSlot;
+				selectedSlot.size = 0;
+			}
+		}
+	}
+
 	ItemStack Inventory::AddItemStack(ItemStack stack)
 	{
 		for (int i = 0; i < s_Size; i++)
@@ -513,6 +525,31 @@ namespace Minecraft
 		return false;
 	}
 	
+	std::pair<int, int> Inventory::GetSlotCoordinatesFromScreenPosition(float x, float y) const
+	{
+		int textureHeight = m_RendererHeight * 11 / 16;
+		int textureWidth = textureHeight * m_InventoryTexture->GetWidth() / m_InventoryTexture->GetHeight();
+
+		float ratioX = static_cast<float>(textureWidth) / static_cast<float>(m_InventoryTexture->GetWidth());
+		float ratioY = static_cast<float>(textureHeight) / static_cast<float>(m_InventoryTexture->GetHeight());
+
+		float startX = std::ceilf(m_RendererWidth / 2 - textureWidth / 2 + m_SlotsTopLeftPoint.x * ratioX);
+		float startY = std::ceilf(m_RendererHeight / 2 - textureHeight / 2 + m_SlotsTopLeftPoint.y * ratioY);
+
+		int selectedSlotX = static_cast<int>((x - startX) / (s_SlotSize * ratioX));
+		int selectedSlotY = 1 + static_cast<int>((y - startY) / (s_SlotSize * ratioY));
+		if (y >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && y < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
+			selectedSlotY = 0;
+
+		if (x < startX || x >= startX + 9 * s_SlotSize * ratioX || y < startY || y >= startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
+		{
+			selectedSlotX = -1;
+			selectedSlotY = -1;
+		}
+
+		return std::make_pair(selectedSlotX, selectedSlotY);
+	}
+
 	/* Private functions */
 
 	void Inventory::RenderItem(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader, const ItemStack& stack, int x, int y, float ratioX, float ratioY)
