@@ -191,7 +191,7 @@ namespace Minecraft
 		return tileType;
 	}
 
-	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop, uint8_t fluidLevel)
+	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop, uint8_t fluidLevel, NeighbourFluidData neighbourFluidData)
 	{
 		size_t direction = static_cast<size_t>(dir);
 
@@ -201,25 +201,57 @@ namespace Minecraft
 			if (fluidLevel > 0)
 				yHeight = 0.9f - (fluidLevel / 10.0f);
 
+			float posXposZHeight = yHeight;
+			if (neighbourFluidData.posXposZFluidLevel != GetFluidLevelNone())
+				posXposZHeight = std::max(posXposZHeight, 0.9f - static_cast<float>(neighbourFluidData.posXposZFluidLevel) / 10.0f);
+			if (neighbourFluidData.posXFluidLevel != GetFluidLevelNone())
+				posXposZHeight = std::max(posXposZHeight, 0.9f - static_cast<float>(neighbourFluidData.posXFluidLevel) / 10.0f);
+			if (neighbourFluidData.posZFluidLevel != GetFluidLevelNone())
+				posXposZHeight = std::max(posXposZHeight, 0.9f - static_cast<float>(neighbourFluidData.posZFluidLevel) / 10.0f);
+
+			float posXnegZHeight = yHeight;
+			if (neighbourFluidData.posXnegZFluidLevel != GetFluidLevelNone())
+				posXnegZHeight = std::max(posXnegZHeight, 0.9f - static_cast<float>(neighbourFluidData.posXnegZFluidLevel) / 10.0f);
+			if (neighbourFluidData.posXFluidLevel != GetFluidLevelNone())
+				posXnegZHeight = std::max(posXnegZHeight, 0.9f - static_cast<float>(neighbourFluidData.posXFluidLevel) / 10.0f);
+			if (neighbourFluidData.negZFluidLevel != GetFluidLevelNone())
+				posXnegZHeight = std::max(posXnegZHeight, 0.9f - static_cast<float>(neighbourFluidData.negZFluidLevel) / 10.0f);
+
+			float negXposZHeight = yHeight;
+			if (neighbourFluidData.negXposZFluidLevel != GetFluidLevelNone())
+				negXposZHeight = std::max(negXposZHeight, 0.9f - static_cast<float>(neighbourFluidData.negXposZFluidLevel) / 10.0f);
+			if (neighbourFluidData.negXFluidLevel != GetFluidLevelNone())
+				negXposZHeight = std::max(negXposZHeight, 0.9f - static_cast<float>(neighbourFluidData.negXFluidLevel) / 10.0f);
+			if (neighbourFluidData.posZFluidLevel != GetFluidLevelNone())
+				negXposZHeight = std::max(negXposZHeight, 0.9f - static_cast<float>(neighbourFluidData.posZFluidLevel) / 10.0f);
+
+			float negXnegZHeight = yHeight;
+			if (neighbourFluidData.negXnegZFluidLevel != GetFluidLevelNone())
+				negXnegZHeight = std::max(negXnegZHeight, 0.9f - static_cast<float>(neighbourFluidData.negXnegZFluidLevel) / 10.0f);
+			if (neighbourFluidData.negXFluidLevel != GetFluidLevelNone())
+				negXnegZHeight = std::max(negXnegZHeight, 0.9f - static_cast<float>(neighbourFluidData.negXFluidLevel) / 10.0f);
+			if (neighbourFluidData.negZFluidLevel != GetFluidLevelNone())
+				negXnegZHeight = std::max(negXnegZHeight, 0.9f - static_cast<float>(neighbourFluidData.negZFluidLevel) / 10.0f);
+
 			switch (dir)
 			{
 			case FaceDirection::PosX:
 				return {
-					{ {1,0,0}, {1.0f,yHeight,0.0f}, {1.0f,yHeight,1.0f}, {1,0,1} },
+					{ {1,0,0}, {1.0f,posXnegZHeight,0.0f}, {1.0f,posXposZHeight,1.0f}, {1,0,1} },
 					{1,0,0},
-					{ {1.0f, yHeight}, {1, 0}, {0, 0}, {0.0f, 1.0f} }
+					{ {1.0f,1.0f}, {1.f,1.0f - posXnegZHeight}, {0.f,1.0f - posXposZHeight}, {0.0f,1.0f} }
 				};
 			case FaceDirection::NegX:
 				return {
-					{ {0,0,1}, {0.0f,yHeight,1.0f}, {0.0f,yHeight,0.0f}, {0,0,0} },
+					{ {0,0,1}, {0.0f,negXposZHeight,1.0f}, {0.0f,negXnegZHeight,0.0f}, {0,0,0} },
 					{-1,0,0},
-					{ {1.0f,yHeight},{1,0},{0,0},{0.0f,yHeight} }
+					{ {1.0f,1.0f},{1.f,1.f - negXposZHeight}, {0.f,1.f - negXnegZHeight},{0.0f,1.0f} }
 				};
 			case FaceDirection::PosY:
 				return {
-					{ {0.f,yHeight,0.f}, {0.f,yHeight,1.f}, {1.f,yHeight,1.f}, {1.f,yHeight,0.f} }, 
+					{ {0.f,negXnegZHeight,0.f}, {0.f,negXposZHeight,1.f}, {1.f,posXposZHeight,1.f}, {1.f,posXnegZHeight,0.f} }, 
 					{0,1,0},
-					{ {1,1},{1,0},{0,0},{0,1} } 
+					{ {0,0},{0,1},{1,1},{1,0}}
 				};
 			case FaceDirection::NegY:
 				return { 
@@ -229,15 +261,15 @@ namespace Minecraft
 				};
 			case FaceDirection::PosZ:
 				return { 
-					{ {1,0,1}, {1.f,yHeight,1.f}, {0.f,yHeight,1.f}, {0,0,1} }, 
+					{ {1,0,1}, {1.f,posXposZHeight,1.f}, {0.f,negXposZHeight,1.f}, {0,0,1} }, 
 					{0,0,1}, 
-					{ {1.f,yHeight},{1,0},{0,0},{0.f,yHeight} }
+					{ {1.f,1.f},{1,1.f - posXposZHeight},{0,1.f - negXposZHeight},{0.f,1.f} }
 				};
 			case FaceDirection::NegZ:
 				return {
-					{ {0,0,0}, {0.f,yHeight,0.f}, {1.f,yHeight,0.f}, {1,0,0} },
+					{ {0,0,0}, {0.f,negXnegZHeight,0.f}, {1.f,posXnegZHeight,0.f}, {1,0,0} },
 					{0,0,-1},
-					{ {1.f,yHeight},{1,0},{0,0},{0.f,yHeight} }
+					{ {1.f,1.f},{1.f,1.f - negXnegZHeight},{0.f,1.f - posXnegZHeight},{0.f,1.f} }
 				};
 			}
 		}

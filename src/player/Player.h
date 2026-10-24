@@ -163,7 +163,7 @@ namespace Minecraft
 
 		float m_SneakHeight = 1.4f;
 
-		float m_ItemPickupDistance = 2.5f;
+		float m_ItemPickupDistance = 1.5f;
 		std::vector<ItemID> m_ItemsToRemove;
 
 		float m_MaxBreakBlockDistance = 6.0f;

@@ -39,10 +39,16 @@ namespace Minecraft
 		Obsidian
 	};
 
+	inline uint8_t GetFluidLevelNone() { return 0xFF; }
+
 	struct Block
 	{
 		BlockType type = BlockType::Air;
 		uint8_t fluidLevel = 0;
+		uint8_t posXposZFluidLevel = GetFluidLevelNone();
+		uint8_t negXposZFluidLevel = GetFluidLevelNone();
+		uint8_t posXnegZFluidLevel = GetFluidLevelNone();
+		uint8_t negXnegZFluidLevel = GetFluidLevelNone();
 
 		bool IsTransparent() const
 		{

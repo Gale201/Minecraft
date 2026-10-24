@@ -186,6 +186,8 @@ namespace Minecraft
 			FaceDirection dir
 		);
 
+		NeighbourFluidData GetNeighbourFluidData(Mat3D<Block>& grid, int x, int y, int z, BlockType type, FaceDirection faceDirection) const;
+
 		void AddChunkToMeshingQueue(Chunk& chunk);
 
 		bool FrustumTestChunk(const Vec3i& chunkPos, const Frustum& frustum) const;
@@ -210,7 +212,7 @@ namespace Minecraft
 		std::unordered_map<Vec3i, std::unique_ptr<Chunk>, Vec3iHash> m_Chunks;
 		std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> m_ModifiedChunks;
 		std::queue<Vec3i> m_ChunkMeshingQueue;
-		int m_MaxMeshedChunksPerFrame = 8;
+		int m_MaxMeshedChunksPerFrame = 32;
 
 		std::vector<Item> m_Items;
 		std::vector<size_t> m_FreeItemSlots;
@@ -224,7 +226,7 @@ namespace Minecraft
 		const Texture* m_TextureAtlas = nullptr;
 
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 8;
+		int m_ChunkLoadRadius = 1;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 
 		ItemID m_CurrentItemID = 0;
@@ -237,6 +239,6 @@ namespace Minecraft
 		std::queue<Vec3i> m_WaterBlockUpdateQueue;
 		float m_WaterFlowUpdateInterval = 0.5f;
 		float m_WaterFlowUpdateTimer = 0.0f;
-		uint8_t m_MaxWaterFlowLevel = 7;
+		uint8_t m_MaxWaterFlowLevel = 8;
 	};
 }

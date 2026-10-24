@@ -39,11 +39,16 @@ namespace Minecraft
 		Vec3f size;
 	};
 
-	// Not needed anymore
-	struct BlockTypeInfo
+	struct NeighbourFluidData
 	{
-		Vec2f uvOffset[6];
-		Vec2f uvScale;
+		uint8_t posXFluidLevel = GetFluidLevelNone();
+		uint8_t negXFluidLevel = GetFluidLevelNone();
+		uint8_t posZFluidLevel = GetFluidLevelNone();
+		uint8_t negZFluidLevel = GetFluidLevelNone();
+		uint8_t posXposZFluidLevel = GetFluidLevelNone();
+		uint8_t negXposZFluidLevel = GetFluidLevelNone();
+		uint8_t posXnegZFluidLevel = GetFluidLevelNone();
+		uint8_t negXnegZFluidLevel = GetFluidLevelNone();
 	};
 
 	enum class TileType : uint8_t
@@ -102,7 +107,7 @@ namespace Minecraft
 
 	TileType GetTileTypeFromDirection(BlockType type, FaceDirection dir);
 
-	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop = false, uint8_t fluidLevel = 0);
+	BlockFace GetBlockFace(BlockType type, FaceDirection dir, bool isTop = false, uint8_t fluidLevel = 0, NeighbourFluidData neighbourFluidData = NeighbourFluidData());
 
 	BlockBoundingBox GetBlockBoundingBox(BlockType type, uint8_t fluidLevel = 0);
 
