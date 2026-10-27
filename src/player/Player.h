@@ -10,6 +10,7 @@
 #include "../world/World.h"
 #include "../physics/PhysicsSystem.h"
 #include "../animations/FrameAnimation.h"
+#include "../game/DebugOverlay.h"
 
 #define DEFAULT_PLAYER_SPEED 5.0f
 #define DEFAULT_PLAYER_SENSITIVITY 0.001f
@@ -29,7 +30,7 @@ namespace Minecraft
 		~Player() = default;
 
 		void UpdatePhysics(float deltaTime);
-		void Update(float deltaTime, World& world);
+		void Update(float deltaTime, World& world, DebugOverlay& debugOverlay);
 		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, int seaLevel);
 		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 

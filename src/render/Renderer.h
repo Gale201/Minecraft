@@ -10,7 +10,8 @@
 #include "Camera.h"
 #include "../thread/ThreadSystem.h"
 #include "../world/BlockFace.h"
-#include "../font/FontLoader.h"
+#include "../loaders/FontLoader.h"
+#include "RendererStats.h"
 
 /*
  Renderer class handles the 3d rendering of meshes to a frame buffer.
@@ -30,6 +31,7 @@ namespace Minecraft
 		inline void DrawPixel(int x, int y, uint32_t color);
 		inline void DrawDepthPixel(int x, int y, float z, uint32_t color);
 		inline void DrawPixelAlphaBlend(int x, int y, uint32_t color);
+		inline void DrawPixelAlphaBlendUnchecked(int x, int y, uint32_t color);
 		inline void DrawDepthPixelAlphaBlend(int x, int y, float z, uint32_t color, bool writeDepth = true);
 
 		void DrawLine(Vec3f start, Vec3f end, uint32_t color, int width, bool alphaBlend = false);
@@ -68,7 +70,9 @@ namespace Minecraft
 
 		int GetWidth() const { return m_Width; }
 		int GetHeight() const { return m_Height; }
-		uint32_t* GetFrameBuffer() const { return m_FrameBuffer; }
+		const uint32_t* GetFrameBuffer() const { return m_FrameBuffer.data(); }
+		uint32_t* GetFrameBuffer() { return m_FrameBuffer.data(); }
+		const RendererStats& GetStats() const { return m_Stats; }
 
 	private:
 		struct ScreenTriangle
@@ -84,6 +88,8 @@ namespace Minecraft
 			int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
 			std::vector<ScreenTriangle> opaqueTriangles;
 			std::vector<ScreenTriangle> transparentTriangles;
+			uint64_t pixelsTested = 0;
+			uint64_t pixelsDrawn = 0;
 		};
 
 		struct BoxedScreenTriangle
@@ -112,7 +118,7 @@ namespace Minecraft
 			const Triangle& triangle,
 			const Texture& texture,
 			AtlasTileInfo tileInfo,
-			const ScreenTile& tile
+			ScreenTile& tile
 		);
 		void DrawTriangleWireframeToTile(
 			const Triangle& triangle,
@@ -168,8 +174,8 @@ namespace Minecraft
 
 		const int TILE_SIZE = 64;
 
-		uint32_t* m_FrameBuffer = nullptr;
-		float* m_DepthBuffer = nullptr;
+		std::vector<uint32_t> m_FrameBuffer;
+		std::vector<float> m_DepthBuffer;
 
 		Vec3f m_DirectionalLight;
 		float m_AmbientLight = 0.4f;
@@ -180,5 +186,7 @@ namespace Minecraft
 
 		const std::vector<RenderCommand>* m_ActiveRenderList = nullptr;
 		const Camera* m_ActiveCamera = nullptr;
+
+		RendererStats m_Stats;
 	};
 }

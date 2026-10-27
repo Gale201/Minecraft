@@ -16,6 +16,8 @@ namespace Minecraft
 
 			m_Models.emplace(name, std::move(model.value()));
 		}
+
+		return true;
 	}
 
 	EntityModel EntityModelManager::CreateEntityModel(const std::string& name) const

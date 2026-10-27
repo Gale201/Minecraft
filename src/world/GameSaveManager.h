@@ -33,7 +33,7 @@ namespace Minecraft
 		std::unique_ptr<World> LoadWorld() const;
 		void SaveWorld(const World& world) const;
 
-		bool WorldExists() const;
+		bool WorldFolderExists() const;
 
 		// Player loading/saving
 		PlayerSaveData LoadPlayerData() const;

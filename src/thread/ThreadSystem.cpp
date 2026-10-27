@@ -1,6 +1,7 @@
 #include "ThreadSystem.h"
 
 #include "../core/Log.h"
+#include <assert.h>
 
 namespace Core
 {
@@ -8,7 +9,8 @@ namespace Core
 
 	void ThreadSystem::Initialize()
 	{
-		int threadCount = std::thread::hardware_concurrency() - 1;
+		unsigned int hw = std::thread::hardware_concurrency();
+		int threadCount = hw > 1 ? static_cast<int>(hw) - 1 : 0;
 
 		for (int i = 0; i < threadCount; i++)
 			m_Workers.emplace_back([this, i]()
@@ -17,6 +19,7 @@ namespace Core
 					WorkerLoop();
 				});
 
+		g_ThreadIndex = threadCount;
 		m_MainThreadId = std::this_thread::get_id();
 	}
 
@@ -35,48 +38,39 @@ namespace Core
 		}
 	}
 
-	void ThreadSystem::ParallelFor(int count, std::function<void(int)> function)
+	void ThreadSystem::ParallelFor(int count, const std::function<void(int)>& function)
 	{
-		if (count == 0) return;
-
-		if (std::this_thread::get_id() != m_MainThreadId)
-		{
-			LOG_ERROR("ParallelFor called from worker thread!");
-		}
+		assert(std::this_thread::get_id() == m_MainThreadId);
+		if (count <= 0) return;
 
 		auto state = std::make_shared<ParallelForState>();
 		state->remaining = count;
 
-		for (int i = 0; i < m_Workers.size(); i++)
-		{
-			Submit([state, function, count]() {
-				while (true)
+		auto run = [state, &function, count]() {
+			for (int i; (i = state->index.fetch_add(1)) < count; )
+			{
+				try
 				{
-					int i = state->index.fetch_add(1);
-					if (i >= count)
-						break;
-
-					try
-					{
-						function(i);
-					}
-					catch (const std::exception& e)
-					{
-						LOG_ERROR("Thread exception: %s\n", e.what());
-						__debugbreak();
-					}
-
-					{
-						std::lock_guard<std::mutex> lock(state->waitMutex);
-						state->remaining--;
-						if (state->remaining == 0) state->waitCV.notify_one();
-					}
+					function(i);
 				}
-				});
+				catch (const std::exception& e)
+				{
+					LOG_ERROR("Thread exception: %s\n", e.what());
+					__debugbreak();
+				}
+				std::lock_guard lock(state->waitMutex);
+				if (--state->remaining == 0) state->waitCV.notify_one();
+			}
+		};
+
+		for (size_t w = 0; w < m_Workers.size(); w++)
+		{
+			Submit(run);
 		}
+		run();
 
 		std::unique_lock lock(state->waitMutex);
-		state->waitCV.wait(lock, [&]() { return state->remaining == 0; });
+		state->waitCV.wait(lock, [&] { return state->remaining == 0; });
 	}
 
 	void ThreadSystem::WorkerLoop()

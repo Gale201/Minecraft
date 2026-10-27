@@ -6,9 +6,10 @@
 #include "../world/GameSaveManager.h"
 #include "../physics/PhysicsSystem.h"
 #include "../items/ItemRegistry.h"
-#include "../../font/FontLoader.h"
 #include "../loaders/ModelLoader.h"
 #include "../entities/EntityModelManager.h"
+#include "DebugOverlay.h"
+#include "../loaders/FontLoader.h"
 
 #define SKY_COLOR 0xFF99BBFF
 
@@ -32,6 +33,8 @@ namespace Minecraft
 		uint32_t* GetFrameBuffer() { return m_Renderer.GetFrameBuffer(); }
 		Core::MouseMode GetMouseMode() const { return m_MouseMode; }
 
+		void SetFrameTiming(float fps, float frameTime) { m_Fps = fps; m_FrameTime = frameTime; }
+
 	private:
 		int m_Width;
 		int m_Height;
@@ -42,7 +45,7 @@ namespace Minecraft
 		std::vector<RenderCommand> m_RenderList;
 
 		TextureLoader m_TextureLoader{ "res/textures/" };
-		std::string m_FontCharacters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_´abcdefghijklmnopqrstuvwxyz{|}~";
+		std::string m_FontCharacters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_xabcdefghijklmnopqrstuvwxyz{|}~";
 		FontLoader m_FontLoader{ m_FontCharacters };
 		ModelLoader m_ModelLoader{ "res/models/" };
 
@@ -61,5 +64,11 @@ namespace Minecraft
 		const float m_PhysicsFixedDelta = 1.0f / 40.0f;
 
 		Core::MouseMode m_MouseMode = Core::MouseMode::Captured;
+
+		DebugOverlay m_DebugOverlay;
+		float m_Fps = 0.0f;
+		float m_FrameTime = 0.0f;
+		float m_UpdateTime = 0.0f;
+		float m_RenderTime = 0.0f;
 	};
 }

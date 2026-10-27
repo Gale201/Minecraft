@@ -25,6 +25,7 @@
     <ClCompile Include="src\core\Window.cpp" />
     <ClCompile Include="src\entities\EntityModel.cpp" />
     <ClCompile Include="src\entities\EntityModelManager.cpp" />
+    <ClCompile Include="src\game\DebugOverlay.cpp" />
     <ClCompile Include="src\game\Game.cpp" />
     <ClCompile Include="src\game\GameMode.cpp" />
     <ClCompile Include="src\inventory\Inventory.cpp" />
@@ -48,7 +49,6 @@
     <ClCompile Include="src\world\GameSaveManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="font\FontLoader.h" />
     <ClInclude Include="src\animations\FrameAnimation.h" />
     <ClInclude Include="src\animations\ValueAnimation.h" />
     <ClInclude Include="src\core\Clock.h" />
@@ -60,12 +60,14 @@
     <ClInclude Include="src\entities\EntityModel.h" />
     <ClInclude Include="src\entities\EntityModelManager.h" />
     <ClInclude Include="src\entities\EntityModelPart.h" />
+    <ClInclude Include="src\game\DebugOverlay.h" />
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\game\GameMode.h" />
     <ClInclude Include="src\inventory\Inventory.h" />
     <ClInclude Include="src\items\Item.h" />
     <ClInclude Include="src\items\ItemRegistry.h" />
     <ClInclude Include="src\items\ItemStack.h" />
+    <ClInclude Include="src\loaders\FontLoader.h" />
     <ClInclude Include="src\loaders\ModelLoader.h" />
     <ClInclude Include="src\loaders\TextureLoader.h" />
     <ClInclude Include="src\math\Math.h" />
@@ -83,6 +85,7 @@
     <ClInclude Include="src\render\ModelPart.h" />
     <ClInclude Include="src\render\RenderCommand.h" />
     <ClInclude Include="src\render\Renderer.h" />
+    <ClInclude Include="src\render\RendererStats.h" />
     <ClInclude Include="src\render\RenderObject.h" />
     <ClInclude Include="src\render\Texture.h" />
     <ClInclude Include="src\render\Transform.h" />
@@ -99,6 +102,7 @@
     <ClInclude Include="src\world\Raycast.h" />
     <ClInclude Include="src\world\World.h" />
     <ClInclude Include="src\world\GameSaveManager.h" />
+    <ClInclude Include="src\world\WorldStats.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\textures\crosshair.png" />

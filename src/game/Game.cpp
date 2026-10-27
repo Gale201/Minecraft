@@ -37,9 +37,10 @@ namespace Minecraft
 
 	void Game::Load(unsigned int seed)
 	{
-		if (m_GameSaveManager.WorldExists())
+		m_World = m_GameSaveManager.LoadWorld();
+		const bool worldExists = m_World != nullptr;
+		if (worldExists)
 		{
-			m_World = m_GameSaveManager.LoadWorld();
 			m_GameSaveManager.LoadWorldItems(*m_World, m_PhysicsSystem);
 			PlayerSaveData playerData = m_GameSaveManager.LoadPlayerData();
 			m_Player.SetInitialPosition(playerData.position);
@@ -101,6 +102,7 @@ namespace Minecraft
 		inputBindings.AddKeyBinding(InputAction::OpenInventory, Key::E);
 		inputBindings.AddKeyBinding(InputAction::DropItem, Key::Q);
 		inputBindings.AddMouseButtonBinding(InputAction::PickBlock, MouseButton::Middle);
+		inputBindings.AddKeyBinding(InputAction::OpenDebugTools, Key::F3);
 		m_Player.SetInputBindings(inputBindings);
 
 		m_Player.SetPhysicsBodyPtr(m_PhysicsSystem.AddBody(
@@ -131,7 +133,7 @@ namespace Minecraft
 
 	void Game::Update(float deltaTime)
 	{
-		Core::Timer timer("Update");
+		Core::Timer timer(m_UpdateTime);
 
 		// Updating world
 		m_World->LoadAndUnloadChunks(m_Player.GetCamera().position, m_ThreadSystem);
@@ -152,7 +154,7 @@ namespace Minecraft
 			m_World->GetPhysicsAddQueue().pop();
 		}
 
-		m_Player.Update(deltaTime, *m_World);
+		m_Player.Update(deltaTime, *m_World, m_DebugOverlay);
 		m_Player.SyncCamera();
 
 		if (m_Player.IsInventoryOpen())
@@ -175,11 +177,13 @@ namespace Minecraft
 		m_Player.SyncCamera(m_PhysicsAccumulator / m_PhysicsFixedDelta);
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
+
+		m_DebugOverlay.Update(m_Fps, m_FrameTime, m_UpdateTime, m_RenderTime, m_World->GetStats(), m_Renderer.GetStats());
 	}
 
 	void Game::Render()
 	{
-		Core::Timer timer("Render");	
+		Core::Timer timer(m_RenderTime);	
 
 		m_Renderer.Clear(SKY_COLOR);
 
@@ -189,6 +193,8 @@ namespace Minecraft
 		
 		m_Player.Render(m_Renderer, m_ItemRegistry, m_World->GetSeaLevel());
 
+
+		// Temp: item debug rendering
 		for (Item& item : m_World->GetItems())
 		{
 			if (item.stack.size == 0 || item.body == nullptr) continue;
@@ -203,6 +209,8 @@ namespace Minecraft
 
 		// UI Rendering
 		m_Player.RenderUI(m_Renderer, m_ItemRegistry, m_FontLoader);
+
+		m_DebugOverlay.Render(m_Renderer, m_FontLoader);
 	}
 
 	void Game::Resize(int width, int height)

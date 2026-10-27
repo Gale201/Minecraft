@@ -42,6 +42,7 @@ namespace Core
 		);
 
 		SDL_SetRelativeMouseMode(SDL_TRUE);
+		SDL_SetWindowMinimumSize(static_cast<SDL_Window*>(m_WindowHandle), 320, 240);
 
 		m_Width = width;
 		m_Height = height;
@@ -80,24 +81,29 @@ namespace Core
 		SDL_Event e;
 		while (SDL_PollEvent(&e))
 		{
-			Event event;
-			if (e.window.event == SDL_WINDOWEVENT_RESIZED)
-			{
-				m_Width = e.window.data1;
-				m_Height = e.window.data2;
-				event.type = Event::Type::WindowResize;
-				outEvents.push_back(event);
-				m_Texture = SDL_CreateTexture(
-					static_cast<SDL_Renderer*>(m_Renderer),
-					SDL_PIXELFORMAT_ARGB8888,
-					SDL_TEXTUREACCESS_STREAMING,
-					m_Width, m_Height
-				);
-				continue;
-			}
-
+			Event event{};
 			switch (e.type)
 			{
+			case SDL_WINDOWEVENT:
+				if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+				{
+					m_Width = e.window.data1;
+					m_Height = e.window.data2;
+
+					SDL_DestroyTexture(static_cast<SDL_Texture*>(m_Texture));
+					m_Texture = SDL_CreateTexture(
+						static_cast<SDL_Renderer*>(m_Renderer),
+						SDL_PIXELFORMAT_ARGB8888,
+						SDL_TEXTUREACCESS_STREAMING,
+						m_Width, m_Height
+					);
+					if (!m_Texture)
+						LOG_ERROR("SDL_CreateTexture failed: %s", SDL_GetError());
+					
+					event.type = Event::Type::WindowResize;
+					outEvents.push_back(event);
+				}
+				break;
 			case SDL_QUIT:
 				running = false;
 				event.type = Event::Type::Quit;
@@ -131,6 +137,7 @@ namespace Core
 				case SDLK_7: event.key = Key::K_7; break;
 				case SDLK_8: event.key = Key::K_8; break;
 				case SDLK_9: event.key = Key::K_9; break;
+				case SDLK_F3: event.key = Key::F3; break;
 				default: event.key = Key::Unknown; break;
 				}
 				outEvents.push_back(event);

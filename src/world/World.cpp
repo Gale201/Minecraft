@@ -47,13 +47,20 @@ namespace Minecraft
 			meshedChunks++;
 		}
 
-		threadSystem.ParallelFor(
-			(int)chunksToBuild.size(),
-			[this, chunksToBuild](int index)
-			{
-				BuildChunkMesh(*chunksToBuild[index]);
-			}
-		);
+		m_Stats.chunksMeshed = meshedChunks;
+		m_Stats.meshQueueSize = (uint32_t)m_ChunkMeshingQueue.size();
+
+		{
+			Core::Timer timer(m_Stats.meshMs);
+
+			threadSystem.ParallelFor(
+				(int)chunksToBuild.size(),
+				[this, chunksToBuild](int index)
+				{
+					BuildChunkMesh(*chunksToBuild[index]);
+				}
+			);
+		}
 
 		// Check if there are any chunks that are meshed, and move their buildMesh buffer to the main mesh
 		// This needs to be on the main thread to avoid vector thread collisions
@@ -74,8 +81,12 @@ namespace Minecraft
 
 	void World::LoadAndUnloadChunks(Vec3f playerPosition, Core::ThreadSystem& threadSystem)
 	{
+		Core::Timer timer(m_Stats.loadMs);
+
 		LoadChunks(playerPosition, threadSystem);
 		UnloadChunks(playerPosition);
+
+		m_Stats.chunksLoaded = (uint32_t)m_Chunks.size();
 	}
 
 	void World::BuildRenderList(const Camera& camera, std::vector<RenderCommand>& outCommands)
@@ -417,7 +428,7 @@ namespace Minecraft
 		// Get relative block position in the chunk
 		Block block(type);
 		Vec3i blockPos = GetBlockPositionInChunk(pos);
-		chunk.blocks[blockPos.x][blockPos.y][blockPos.z] = block;
+		chunk.At(blockPos.x, blockPos.y, blockPos.z) = block;
 
 		// Add the chunk and the block to the modified chunks
 		m_ModifiedChunks[chunkPos].blocks[blockPos] = block;
@@ -878,7 +889,7 @@ namespace Minecraft
 			{
 				for (int z = 0; z < CHUNK_SIZE; z++)
 				{
-					Block& block = chunk.blocks[x][y][z];
+					Block& block = chunk.At(x, y, z);
 					if (block.type == BlockType::Undefined || block.type == BlockType::Air) continue;
 
 					if (!block.IsFullBlock())

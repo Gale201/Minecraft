@@ -13,7 +13,7 @@ namespace Minecraft
 		SetCameraConfig(cameraConfig);
 	}
 
-	void Player::Update(float deltaTime, World& world)
+	void Player::Update(float deltaTime, World& world, DebugOverlay& debugOverlay)
 	{
 		HandleInput();
 
@@ -42,6 +42,9 @@ namespace Minecraft
 		m_JustBrokeBlock = false;
 
 		m_DropItemStack = false;
+
+		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenDebugTools)))
+			debugOverlay.Toggle();
 	}
 
 	void Player::UpdatePhysics(float deltaTime)

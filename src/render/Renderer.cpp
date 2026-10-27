@@ -17,18 +17,14 @@ namespace Minecraft
 
 Renderer::~Renderer()
 {
-	delete[] m_FrameBuffer;
-	delete[] m_DepthBuffer;
 }
 
 bool Renderer::Initialize(int width, int height)
 {
 	m_Width = width;
 	m_Height = height;
-	m_FrameBuffer = new uint32_t[width * height];
-	m_DepthBuffer = new float[width * height];
-	if (!m_FrameBuffer || !m_DepthBuffer)
-		return false;
+	m_FrameBuffer.assign(size_t(width) * height, 0);
+	m_DepthBuffer.assign(size_t(width) * height, std::numeric_limits<float>::infinity());
 
 	return true;
 }
@@ -64,7 +60,7 @@ inline void Renderer::DrawDepthPixel(int x, int y, float z, uint32_t color)
 
 inline void Renderer::DrawPixelAlphaBlend(int x, int y, uint32_t color)
 {
-	//if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
+	if (x < 0 || x >= m_Width || y < 0 || y >= m_Height) return;
 
 	int pixel = y * m_Width + x;
 	uint32_t dest = m_FrameBuffer[pixel];
@@ -112,6 +108,36 @@ inline void Renderer::DrawPixelAlphaBlend(int x, int y, uint32_t color)
 	m_FrameBuffer[pixel] = outColor;
 	*/
 }
+
+inline void Renderer::DrawPixelAlphaBlendUnchecked(int x, int y, uint32_t color)
+{
+	assert(x >= 0 && x < m_Width && y >= 0 && y < m_Height);
+
+	int pixel = y * m_Width + x;
+	uint32_t dest = m_FrameBuffer[pixel];
+
+	uint8_t srcA = (color >> 24) & 0xFF;
+	if (srcA == 0) return;
+
+	uint32_t invA = 255 - srcA;
+
+	uint8_t srcR = (color >> 16) & 0xFF;
+	uint8_t srcG = (color >> 8) & 0xFF;
+	uint8_t srcB = color & 0xFF;
+
+	uint8_t destR = (dest >> 16) & 0xFF;
+	uint8_t destG = (dest >> 8) & 0xFF;
+	uint8_t destB = dest & 0xFF;
+
+	uint8_t outR = (srcR * srcA + destR * invA) >> 8;
+	uint8_t outG = (srcG * srcA + destG * invA) >> 8;
+	uint8_t outB = (srcB * srcA + destB * invA) >> 8;
+
+	uint32_t outColor = (0xFF << 24) | (outR << 16) | (outG << 8) | outB;
+
+	m_FrameBuffer[pixel] = outColor;
+}
+
 
 inline void Renderer::DrawDepthPixelAlphaBlend(int x, int y, float z, uint32_t color, bool writeDepth)
 {
@@ -707,17 +733,22 @@ void Renderer::DrawTexture(int x, int y, const Texture& texture, int width, int 
 {
 	if (width <= 0 || height <= 0) return;
 
+	int xStart = std::max(x, 0);
+	int yStart = std::max(y, 0);
+	int xEnd = std::min(x + width, m_Width);
+	int yEnd = std::min(y + height, m_Height);
+
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			float u = (float)j / (float)width;
-			float v = (float)i / (float)height;
+			float u = float(j) / float(width);
+			float v = float(i) / float(height);
 
 			uint32_t color = texture.GetPixelAtUV(u, v);
 
 			if (alphaBlend)
-				DrawPixelAlphaBlend(x + j, y + i, color);
+				DrawPixelAlphaBlendUnchecked(x + j, y + i, color);
 			else if (cutoff)
 			{
 				uint8_t alpha = (color >> 24) & 0xFF;
@@ -763,12 +794,14 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 	m_ActiveRenderList = &renderList;
 	m_ActiveCamera = &camera;
 
+	m_Stats.renderCommands = static_cast<uint32_t>(renderList.size());
+
 	{
-		Core::Timer timer("Build screen triangles");
+		Core::Timer timer(m_Stats.buildMs);
 
-		int threadCount = (int)threadSystem.GetThreadCount();
-		std::vector<std::vector<BoxedScreenTriangle>> threadBuffers(threadCount);
+		std::vector<std::vector<BoxedScreenTriangle>> threadBuffers(threadSystem.GetThreadSlotCount());
 
+		std::vector<uint32_t> trianglesSubmitted(threadSystem.GetThreadSlotCount(), 0);
 		threadSystem.ParallelFor(
 			(int)m_ActiveRenderList->size(),
 			[&](int index)
@@ -778,6 +811,8 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 
 				const RenderCommand& command = m_ActiveRenderList->at(index);
 				
+				trianglesSubmitted[threadIndex] += (uint32_t)(command.mesh->indices.size() / 3);
+
 				BuildScreenTriangles(
 					*command.mesh,
 					command.transform,
@@ -787,14 +822,20 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 				);
 			}
 		);
+		
+		m_Stats.trianglesSubmitted = std::accumulate(trianglesSubmitted.begin(), trianglesSubmitted.end(), 0u);
 
+		std::vector<uint32_t> trianglesBinned(threadSystem.GetThreadSlotCount(), 0);
 		threadSystem.ParallelFor(
 			(int)m_ScreenTiles.size(),
 			[&](int tileIndex)
 			{
+				int threadIndex = (int)threadSystem.GetCurrentThreadIndex();
 				ScreenTile& tile = m_ScreenTiles[tileIndex];
 				tile.opaqueTriangles.clear();
 				tile.transparentTriangles.clear();
+				tile.pixelsDrawn = 0;
+				tile.pixelsTested = 0;
 
 				int tilesPerRow = (m_Width + TILE_SIZE - 1) / TILE_SIZE;
 				int tilesPerCol = (m_Height + TILE_SIZE - 1) / TILE_SIZE;
@@ -813,14 +854,18 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 								tile.transparentTriangles.emplace_back(std::move(buffer.triangle));
 							else
 								tile.opaqueTriangles.emplace_back(std::move(buffer.triangle));
+
+							trianglesBinned[threadIndex]++;
 						}
 					}
 				}
 			}
 		);
+
+		m_Stats.trianglesBinned = std::accumulate(trianglesBinned.begin(), trianglesBinned.end(), 0u);
 	}
 
-	Core::Timer timer("Rasterize tiles");
+	Core::Timer timer(m_Stats.rasterMs);
 	threadSystem.ParallelFor(
 		(int)m_ScreenTiles.size(),
 		[this](int tileIndex)
@@ -828,6 +873,14 @@ void Renderer::Render(const std::vector<RenderCommand>& renderList, const Camera
 			RasterizeTile(m_ScreenTiles[tileIndex]);
 		}
 	);
+
+	m_Stats.pixelsDrawn = 0;
+	m_Stats.pixelsTested = 0;
+	for (size_t i = 0; i < m_ScreenTiles.size(); i++)
+	{
+		m_Stats.pixelsTested += m_ScreenTiles[i].pixelsTested;
+		m_Stats.pixelsDrawn += m_ScreenTiles[i].pixelsDrawn;
+	}
 }
 
 void Renderer::CreateTiles()
@@ -1110,7 +1163,7 @@ void Renderer::DrawTriangleBarycentricToTile(
 	const Triangle& triangle,
 	const Texture& texture,
 	AtlasTileInfo tileInfo,
-	const ScreenTile& tile
+	ScreenTile& tile
 )
 {
 	// Calculate the bounding box
@@ -1154,6 +1207,8 @@ void Renderer::DrawTriangleBarycentricToTile(
 
 			float w2 = 1.0f - w0 - w1;
 
+			tile.pixelsTested++;
+
 			// If the pixel is inside the triangle
 			float eps = 0.0f;
 			if (w0 >= eps && w1 >= eps && w2 >= eps)
@@ -1195,6 +1250,8 @@ void Renderer::DrawTriangleBarycentricToTile(
 					else
 						DrawDepthPixel(x, y, z, ShadeColor(color, triangle.lightIntensity));
 				}
+
+				tile.pixelsDrawn++;
 			}
 		}
 	}

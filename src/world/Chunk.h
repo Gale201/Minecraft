@@ -4,6 +4,7 @@
 
 #include "..\render\Mesh.h"
 #include "Block.h"
+#include <assert.h>
 
 namespace Minecraft
 {
@@ -30,6 +31,17 @@ namespace Minecraft
 		ChunkMesh mesh;
 		ChunkMesh buildMesh;
 		std::atomic<ChunkState> state = ChunkState::Unloaded;
+
+		static constexpr bool InBounds(int x, int y, int z)
+		{
+			return x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_SIZE;
+		}
+		
+		Block& At(int x, int y, int z)
+		{
+			assert(InBounds(x, y, z));
+			return blocks[x][y][z];
+		}
 	};
 
 	struct ModifiedChunk

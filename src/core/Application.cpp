@@ -25,15 +25,16 @@ namespace Core
 
 		Clock clock(TARGET_FPS);
 
+		float frameTime = 0.0f;
+
 		m_Running = true;
 		while (m_Running)
 		{
-			std::cout << '\n';
-
 			clock.Tick();
-			LOG_INFO("FPS: %f", clock.GetFps());
 
-			Timer frame("Frame");
+			m_Game->SetFrameTiming(clock.GetFps(), frameTime);
+
+			Timer frame(frameTime);
 
 			// Poll events
 			events.clear();

@@ -18,6 +18,7 @@
 #include "../thread/ThreadSystem.h"
 #include "../items/Item.h"
 #include "../items/ItemRegistry.h"
+#include "WorldStats.h"
 
 namespace Minecraft
 {
@@ -137,6 +138,8 @@ namespace Minecraft
 
 		float GetItemPickupCooldown() const { return m_ItemPickupCooldown; }
 
+		const WorldStats& GetStats() const { return m_Stats; }
+
 		void SetTextureAtlas(const Texture& texture)
 		{
 			m_TextureAtlas = &texture;
@@ -226,7 +229,7 @@ namespace Minecraft
 		const Texture* m_TextureAtlas = nullptr;
 
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 1;
+		int m_ChunkLoadRadius = 16;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 
 		ItemID m_CurrentItemID = 0;
@@ -240,5 +243,7 @@ namespace Minecraft
 		float m_WaterFlowUpdateInterval = 0.5f;
 		float m_WaterFlowUpdateTimer = 0.0f;
 		uint8_t m_MaxWaterFlowLevel = 8;
+
+		WorldStats m_Stats;
 	};
 }

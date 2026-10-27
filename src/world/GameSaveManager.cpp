@@ -113,7 +113,7 @@ namespace Minecraft
 		}
 	}
 
-	bool GameSaveManager::WorldExists() const
+	bool GameSaveManager::WorldFolderExists() const
 	{
 		for (const auto& entry : std::filesystem::directory_iterator(m_BaseFolderPath))
 		{

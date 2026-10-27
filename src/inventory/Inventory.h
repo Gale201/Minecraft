@@ -6,7 +6,7 @@
 #include "../items/ItemStack.h"
 #include "../items/ItemRegistry.h"
 #include "../render/Renderer.h"
-#include "../font/FontLoader.h"
+#include "../loaders/FontLoader.h"
 #include "../core/InputManager.h"
 #include "../entities/EntityModel.h"
 #include "../animations/ValueAnimation.h"
