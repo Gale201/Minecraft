@@ -87,6 +87,7 @@
     <ClInclude Include="src\render\Renderer.h" />
     <ClInclude Include="src\render\RendererStats.h" />
     <ClInclude Include="src\render\RenderObject.h" />
+    <ClInclude Include="src\render\TextOptions.h" />
     <ClInclude Include="src\render\Texture.h" />
     <ClInclude Include="src\render\Transform.h" />
     <ClInclude Include="src\render\Triangle.h" />

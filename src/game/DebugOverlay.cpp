@@ -4,8 +4,12 @@
 
 namespace Minecraft
 {
-	void DebugOverlay::Update(float fps, float frameTime, float updateTime, float renderTime, const WorldStats& worldStats, const RendererStats& rendererStats)
+	void DebugOverlay::Update(float fps, float frameTime, float updateTime, float renderTime, const WorldStats& worldStats, const RendererStats& rendererStats, float deltaTime)
 	{
+		m_AvgTimer += deltaTime;
+		m_MaxTimer += deltaTime;
+		m_FrameCount++;
+
 		m_FpsSum += fps;
 		m_FrameTimeSum += frameTime;
 
@@ -26,7 +30,7 @@ namespace Minecraft
 		m_RendererStats.pixelsTested = rendererStats.pixelsTested;
 		m_RendererStats.pixelsDrawn = rendererStats.pixelsDrawn;
 
-		if (m_FrameCount > 30)
+		if (m_AvgTimer > 0.8f)
 		{
 			m_AvgFps = m_FpsSum / float(m_FrameCount);
 			m_AvgFrameTime = m_FrameTimeSum / float(m_FrameCount);
@@ -47,13 +51,19 @@ namespace Minecraft
 			m_RendererStats.rasterMs = 0.0f;
 
 			m_FrameCount = 0;
+			m_AvgTimer = 0.0f;
+		}
+
+		if (m_MaxTimer > 4.0f)
+		{
+			m_WorldStats.meshMs = 0.0f;
+			m_WorldStats.loadMs = 0.0f;
+			m_MaxTimer = 0.0f;
 		}
 	}
 
 	void DebugOverlay::Render(Renderer& renderer, const FontLoader& fontLoader)
 	{
-		m_FrameCount++;
-
 		if (!m_Active)
 			return;
 
@@ -82,8 +92,8 @@ namespace Minecraft
 		worldStatsText += "chunks loaded: " + std::to_string(m_WorldStats.chunksLoaded) + "\n";
 		worldStatsText += "mesh queue size: " + std::to_string(m_WorldStats.meshQueueSize);
 
-		renderer.DrawText(gameStatsText, 10, 10, 12, 16, fontLoader, true);
-		renderer.DrawText(rendererStatsText, 10, 80, 12, 16, fontLoader, true);
-		renderer.DrawText(worldStatsText, renderer.GetWidth() - 250, 10, 12, 16, fontLoader, true);
+		renderer.DrawText(gameStatsText, 10, 10, 16, fontLoader, TextOptions());
+		renderer.DrawText(rendererStatsText, 10, 80, 16, fontLoader, TextOptions());
+		renderer.DrawText(worldStatsText, renderer.GetWidth() - 250, 10, 16, fontLoader, TextOptions());
 	}
 }

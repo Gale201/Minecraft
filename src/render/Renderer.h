@@ -12,6 +12,7 @@
 #include "../world/BlockFace.h"
 #include "../loaders/FontLoader.h"
 #include "RendererStats.h"
+#include "TextOptions.h"
 
 /*
  Renderer class handles the 3d rendering of meshes to a frame buffer.
@@ -30,8 +31,8 @@ namespace Minecraft
 		void Clear(uint32_t color);
 		inline void DrawPixel(int x, int y, uint32_t color);
 		inline void DrawDepthPixel(int x, int y, float z, uint32_t color);
-		inline void DrawPixelAlphaBlend(int x, int y, uint32_t color);
 		inline void DrawPixelAlphaBlendUnchecked(int x, int y, uint32_t color);
+		inline void DrawPixelAlphaBlend(int x, int y, uint32_t color);
 		inline void DrawDepthPixelAlphaBlend(int x, int y, float z, uint32_t color, bool writeDepth = true);
 
 		void DrawLine(Vec3f start, Vec3f end, uint32_t color, int width, bool alphaBlend = false);
@@ -60,7 +61,7 @@ namespace Minecraft
 
 		void DrawTexture(int x, int y, const Texture& texture, int width, int height, bool alphaBlend = false, bool cutoff = false, uint32_t maskColor = 0);
 
-		void DrawText(const std::string& text, int x, int y, int width, int height, const FontLoader& fontLoader, bool shadow = true);
+		void DrawText(const std::string& text, int x, int y, int height, const FontLoader& fontLoader, TextOptions options);
 
 		void Render(const std::vector<RenderCommand>& renderList, const Camera& camera, Core::ThreadSystem& threadSystem);
 

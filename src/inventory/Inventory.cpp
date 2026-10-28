@@ -25,7 +25,7 @@ namespace Minecraft
 		{
 			ReleaseOneItem(selectedSlotX, selectedSlotY);
 		}
-		
+
 		if (inputManager.IsMouseButtonJustDoublePressed(Core::MouseButton::Left))
 		{
 			CollectAllItems(selectedSlotX, selectedSlotY);
@@ -58,12 +58,12 @@ namespace Minecraft
 	void Inventory::UpdatePlayerModel(float deltaTime, const Core::InputManager& inputManager)
 	{
 		if (!m_PlayerModel) return;
-		
+
 		float mouseX = (inputManager.GetMouseX() - m_RendererWidth / 2) / static_cast<float>(m_RendererWidth);
 		float mouseY = (inputManager.GetMouseY() - m_RendererHeight / 3) / static_cast<float>(m_RendererHeight);
 
 		Vec3f absoluteHeadPos = m_PlayerModel->GetPosition() + m_PlayerModel->GetPart("Head")->position;
-	
+
 		float dx = mouseX - absoluteHeadPos.x;
 		float dy = mouseY - absoluteHeadPos.y;
 
@@ -137,7 +137,7 @@ namespace Minecraft
 		if (m_MouseY >= startY + 3 * s_SlotSize * ratioY + 4 * ratioY && m_MouseY < startY + 4 * s_SlotSize * ratioY + 4 * ratioY)
 			selectedSlotY = 3 + 4.f / s_SlotSize;
 		if (selectedSlotY > 2 && selectedSlotY < 3.1f) selectedSlotY = -1;
-		
+
 		if (selectedSlotX >= 0 && selectedSlotX < 9 && selectedSlotY >= 0 && selectedSlotY < 4)
 			renderer.DrawTexture(
 				static_cast<int>(startX + selectedSlotX * s_SlotSize * ratioX + ratioX + 1),
@@ -147,7 +147,7 @@ namespace Minecraft
 				static_cast<int>(16.0f * ratioY),
 				true
 			);
-		
+
 		// Render the holding item stack
 		if (m_HoldingStack.size > 0)
 		{
@@ -205,7 +205,7 @@ namespace Minecraft
 		for (size_t i = 0; i < 9; i++)
 		{
 			const ItemStack& stack = m_Slots[i];
-			
+
 			if (stack.size < 1) continue;
 
 			int x = static_cast<int>(std::ceilf(startX + (i % 9) * (s_HotbarSlotSize + 4) * ratioX));
@@ -214,14 +214,14 @@ namespace Minecraft
 			RenderItem(renderer, itemRegistry, fontLoader, stack, x, y, ratioX, ratioY);
 		}
 	}
-	
+
 	void Inventory::RenderHotbarIcons(Renderer& renderer, int health, int armor)
 	{
 		int textureHeight = renderer.GetHeight() * 1 / 11;
 		int textureWidth = textureHeight * m_HotbarTexture->GetWidth() / m_HotbarTexture->GetHeight();
 
 		int hotbarStartY = renderer.GetHeight() - textureHeight - 6;
-		
+
 		float ratioX = static_cast<float>(textureWidth) / static_cast<float>(m_HotbarTexture->GetWidth());
 		float ratioY = static_cast<float>(textureHeight) / static_cast<float>(m_HotbarTexture->GetHeight());
 
@@ -524,7 +524,7 @@ namespace Minecraft
 		}
 		return false;
 	}
-	
+
 	std::pair<int, int> Inventory::GetSlotCoordinatesFromScreenPosition(float x, float y) const
 	{
 		int textureHeight = m_RendererHeight * 11 / 16;
@@ -568,7 +568,7 @@ namespace Minecraft
 			int charHeight = static_cast<int>(fontLoader.GetCharHeight() * ratioY);
 			int textX = static_cast<int>(x + (s_SlotSize - 1) * ratioX - charWidth * itemCountStr.size());
 			int textY = static_cast<int>(y + s_SlotSize * ratioY - charHeight - ratioY);
-			renderer.DrawText(itemCountStr, textX, textY, charWidth, charHeight, fontLoader);
+			renderer.DrawText(itemCountStr, textX, textY, charHeight, fontLoader, TextOptions());
 		}
 	}
 }

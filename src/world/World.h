@@ -45,14 +45,14 @@ namespace Minecraft
 		}
 		World(
 			const std::string& name,
-			unsigned int seed, 
+			unsigned int seed,
 			std::unordered_map<Vec3i, ModifiedChunk, Vec3iHash> modifiedChunks,
 			ItemRegistry& itemRegistry
 		) : m_Name(name), m_Seed(seed), m_ModifiedChunks(modifiedChunks), m_ItemRegistry(itemRegistry)
 		{
 			InitItems();
 		}
-		
+
 		World(const World&) = delete;
 		~World() = default;
 
@@ -229,7 +229,7 @@ namespace Minecraft
 		const Texture* m_TextureAtlas = nullptr;
 
 		Vec3f m_LastChunkLoadPosition;
-		int m_ChunkLoadRadius = 16;
+		int m_ChunkLoadRadius = 8;
 		ChunkLoader m_ChunkLoader{ m_Seed, m_ModifiedChunks };
 
 		ItemID m_CurrentItemID = 0;

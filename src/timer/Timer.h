@@ -1,4 +1,5 @@
 #pragma once
+
 #include <chrono>
 #include <iostream>
 
@@ -9,7 +10,8 @@ namespace Core
 		float& resultTime;
 		std::chrono::steady_clock::time_point startTime;
 
-		Timer(float& resultTime) : resultTime(resultTime), startTime(std::chrono::steady_clock::now()) {}
+		explicit Timer(float& resultTime) : resultTime(resultTime), startTime(std::chrono::steady_clock::now()) {}
+		Timer(const Timer&) = delete;
 
 		~Timer()
 		{

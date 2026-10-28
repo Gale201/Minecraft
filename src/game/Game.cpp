@@ -11,7 +11,7 @@ namespace Minecraft
 	Game::Game(int width, int height, const std::string& name, Core::ThreadSystem& threadSystem, Core::InputManager& inputManager) :
 		m_Width(width),
 		m_Height(height),
-		m_ThreadSystem(threadSystem), 
+		m_ThreadSystem(threadSystem),
 		m_InputManager(inputManager),
 		m_GameSaveManager("saves/worlds/", name, m_ItemRegistry),
 		m_PhysicsSystem(threadSystem),
@@ -109,7 +109,11 @@ namespace Minecraft
 			PhysicsBody(m_Player.GetInitialPosition(), m_Player.GetInitialSize())
 		));
 
-		CameraConfig cameraConfig{ 1.0f, static_cast<float>(m_Width) / static_cast<float>(m_Height), 0.01f, 1000.0f };
+		CameraConfig cameraConfig;
+		cameraConfig.fovY = 1.4f;
+		cameraConfig.aspect = static_cast<float>(m_Width) / static_cast<float>(m_Height);
+		cameraConfig.nearPlane = 0.05f;
+		cameraConfig.farPlane = 1000.0f;
 		m_Player.SetCameraConfig(cameraConfig);
 
 		m_Player.SetTextures(
@@ -154,7 +158,7 @@ namespace Minecraft
 			m_World->GetPhysicsAddQueue().pop();
 		}
 
-		m_Player.Update(deltaTime, *m_World, m_DebugOverlay);
+		m_Player.Update(deltaTime, *m_World);
 		m_Player.SyncCamera();
 
 		if (m_Player.IsInventoryOpen())
@@ -178,19 +182,22 @@ namespace Minecraft
 
 		m_World->BuildRenderList(m_Player.GetCamera(), m_RenderList);
 
-		m_DebugOverlay.Update(m_Fps, m_FrameTime, m_UpdateTime, m_RenderTime, m_World->GetStats(), m_Renderer.GetStats());
+		if (m_InputManager.IsKeyJustPressed(m_Player.GetInputBindings().GetKeyForAction(InputAction::OpenDebugTools)))
+			m_DebugOverlay.Toggle();
+
+		m_DebugOverlay.Update(m_Fps, m_FrameTime, m_UpdateTime, m_RenderTime, m_World->GetStats(), m_Renderer.GetStats(), deltaTime);
 	}
 
 	void Game::Render()
 	{
-		Core::Timer timer(m_RenderTime);	
+		Core::Timer timer(m_RenderTime);
 
 		m_Renderer.Clear(SKY_COLOR);
 
 		m_Renderer.Render(m_RenderList, m_Player.GetCamera(), m_ThreadSystem);
 
 		m_BlockInteractionSystem.Render(m_Player, m_Renderer);
-		
+
 		m_Player.Render(m_Renderer, m_ItemRegistry, m_World->GetSeaLevel());
 
 

@@ -30,7 +30,7 @@ namespace Minecraft
 		~Player() = default;
 
 		void UpdatePhysics(float deltaTime);
-		void Update(float deltaTime, World& world, DebugOverlay& debugOverlay);
+		void Update(float deltaTime, World& world);
 		void Render(Renderer& renderer, const ItemRegistry& itemRegistry, int seaLevel);
 		void RenderUI(Renderer& renderer, const ItemRegistry& itemRegistry, const FontLoader& fontLoader);
 
@@ -68,6 +68,7 @@ namespace Minecraft
 		Inventory& GetInventory() { return m_Inventory; }
 		const Inventory& GetInventory() const { return m_Inventory; }
 		int GetSelectedHotbarSlotIndex() const { return m_Inventory.GetSelectedHotbarSlotIndex(); }
+		const InputBindings& GetInputBindings() const { return m_InputBindings; }
 
 		void SetPhysicsBodyPtr(PhysicsBody* body)
 		{
@@ -83,12 +84,12 @@ namespace Minecraft
 
 		void SetCameraConfig(CameraConfig cameraConfig)
 		{
-			m_Camera.fovY = cameraConfig.aspectRatio;
-			m_Camera.aspect = cameraConfig.fov;
+			m_Camera.fovY = cameraConfig.fovY;
+			m_Camera.aspect = cameraConfig.aspect;
 			m_Camera.nearPlane = cameraConfig.nearPlane;
 			m_Camera.farPlane = cameraConfig.farPlane;
-			m_CameraFovY = cameraConfig.fov;
-			m_CameraSprintFovY = cameraConfig.fov * 1.1f;
+			m_CameraFovY = cameraConfig.fovY;
+			m_CameraSprintFovY = cameraConfig.fovY * 1.1f;
 
 			SyncCamera();
 		}
@@ -107,7 +108,7 @@ namespace Minecraft
 
 		void SetStartedBreakingBlock(bool value) { m_StartedBreakingBlock = value; }
 
-		void SetTextures(Texture& crosshair, Texture& skinTexture) 
+		void SetTextures(Texture& crosshair, Texture& skinTexture)
 		{
 			m_CrosshairTexture = &crosshair;
 			m_SkinTexture = &skinTexture;
@@ -194,10 +195,10 @@ namespace Minecraft
 
 		std::unique_ptr<EntityModel> m_Model = nullptr;
 
-		Transform m_FirstPersonRightArmTransform{ 
-			Vec3f(-0.084f, -0.10f, -0.125f), 
-			Vec3f(2.0f, 3.7f, 0.0f), 
-			Vec3f(1.f / 128.f) 
+		Transform m_FirstPersonRightArmTransform{
+			Vec3f(-0.084f, -0.10f, -0.125f),
+			Vec3f(2.0f, 3.7f, 0.0f),
+			Vec3f(1.f / 128.f)
 		};
 
 		constexpr static int s_PunchingAnimationFrameCount = 12;
@@ -206,7 +207,7 @@ namespace Minecraft
 			s_PunchingAnimationFrameCount,
 			s_PunchingAnimationFrameDuration
 		};
-		std::array<Transform, s_PunchingAnimationFrameCount> m_PunchingAnimationFrames = 
+		std::array<Transform, s_PunchingAnimationFrameCount> m_PunchingAnimationFrames =
 		{
 			Transform(Vec3f(-0.084f, -0.10f, -0.125f), Vec3f(2.0f, 3.7f, 0.0f), Vec3f(1.f / 128.f)),
 			Transform(Vec3f(-0.090f, -0.11f, -0.115f), Vec3f(2.2f, 3.8f, 0.0f), Vec3f(1.f / 128.f)),

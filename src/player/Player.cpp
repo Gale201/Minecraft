@@ -13,7 +13,7 @@ namespace Minecraft
 		SetCameraConfig(cameraConfig);
 	}
 
-	void Player::Update(float deltaTime, World& world, DebugOverlay& debugOverlay)
+	void Player::Update(float deltaTime, World& world)
 	{
 		HandleInput();
 
@@ -42,9 +42,6 @@ namespace Minecraft
 		m_JustBrokeBlock = false;
 
 		m_DropItemStack = false;
-
-		if (m_InputManager.IsKeyJustPressed(m_InputBindings.GetKeyForAction(InputAction::OpenDebugTools)))
-			debugOverlay.Toggle();
 	}
 
 	void Player::UpdatePhysics(float deltaTime)
@@ -107,7 +104,7 @@ namespace Minecraft
 		{
 			ItemDefinition itemDef = itemRegistry.GetItemDefinition(m_Inventory.GetSelectedHotbarSlot().type);
 			AtlasTileInfo tileInfo = itemRegistry.GetAtlasTileInfoForItem(itemDef.type);
-			
+
 			Transform transform;
 			if (itemRegistry.IsItemFullBlock(itemDef.type))
 			{
@@ -370,7 +367,7 @@ namespace Minecraft
 
 		m_JustPlacedBlock = true;
 	}
-	
+
 	void Player::SyncCamera(float alpha)
 	{
 		Vec3f interpolated = m_PhysicsBody->GetPreviousPosition() * (1.0f - alpha) + m_PhysicsBody->position * alpha;
@@ -561,7 +558,7 @@ namespace Minecraft
 			m_PhysicsBody->AddForce({ 0.0f, 30.0f, 0.0f });
 		else if (m_Flying && m_InputManager.IsKeyDown(m_InputBindings.GetKeyForAction(InputAction::MoveUp)))
 			force += upVector;
-	
+
 		if (m_Sprinting && !m_PhysicsBody->inWater)
 			force = force.normalized() * m_SprintSpeed;
 		else
